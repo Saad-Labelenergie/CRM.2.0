@@ -1,3 +1,4 @@
+import {Product} from './useProducts';
 import { useFirebase } from './useFirebase';
 
 interface Client {
@@ -11,6 +12,7 @@ interface Client {
     secondaryEmail?: string;
     secondaryPhone?: string;
   };
+  products?: Product[];
   address: {
     street: string;
     city: string;
