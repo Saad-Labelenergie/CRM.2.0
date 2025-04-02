@@ -23,5 +23,20 @@ interface Client {
 }
 
 export function useClients() {
-  return useFirebase<Client>('clients', { orderByField: 'name' });
+  const firebase = useFirebase<Client>('clients', { orderByField: 'name' });
+
+  const addClient = async (clientData: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const now = new Date();
+    const clientWithTimestamps = {
+      ...clientData,
+      createdAt: now,
+      updatedAt: now
+    };
+    return firebase.add(clientWithTimestamps);
+  };
+
+  return {
+    ...firebase,
+    addClient
+  };
 }
