@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { NewClientModal } from './components/new-client-modal';
 import { Toast } from '../ui/toast';
 import { useClients } from '../../lib/hooks/useClients';
+import { Calendar } from 'lucide-react';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -39,6 +40,7 @@ const itemVariants = {
 
 type ViewMode = 'grid' | 'list';
 
+// D'abord, ajoutons un état pour gérer le statut
 export function Clients() {
   const navigate = useNavigate();
   const { data: clients = [], loading, add: addClient } = useClients();
@@ -46,6 +48,8 @@ export function Clients() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  // const [selectedStatus, setSelectedStatus] = useState<string>('pending');
+  const [clientStatuses, setClientStatuses] = useState<{ [key: string]: string }>({});
 
   const handleSaveClient = async (clientData: any) => {
     try {
@@ -213,23 +217,97 @@ export function Clients() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border/50">
+                <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Client</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Contact</th>
+                {/* <th className="text-left p-4 font-medium text-muted-foreground">Contact</th> */}
                 <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">Email</th>
                 <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Téléphone</th>
                 <th className="text-left p-4 font-medium text-muted-foreground hidden xl:table-cell">Adresse</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
                 <th className="text-center p-4 font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredClients.map((client) => (
+              {filteredClients.map((client, index) => (
                 <motion.tr
                   key={client.id}
                   variants={itemVariants}
                   onClick={() => navigate(`/clients/${client.id}`)}
-                  className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors cursor-pointer group"
+                  className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors cursor-pointer group z-10"
                 >
+                  <td className="p-4">
+                    <div className="relative group">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                        className="flex items-center space-x-2 px-3 py-1 rounded-full text-sm"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <span className={`w-2 h-2 rounded-full ${
+                            clientStatuses[client.id] === 'completed' ? 'bg-green-500' :
+                            clientStatuses[client.id] === 'pending' ? 'bg-orange-500' :
+                            'bg-blue-500'
+                          }`}></span>
+                          <span className="text-sm">{
+                            clientStatuses[client.id] === 'completed' ? 'Terminé' :
+                            clientStatuses[client.id] === 'pending' ? 'En attente' :
+                            'En cours'
+                          }</span>
+                        </div>
+                      </button>
+                      
+                      <div className={`absolute right w-48 bg-card rounded-lg shadow-lg border border-border/50 invisible group-hover:visible z-50 ${
+                        // Si c'est le premier élément, afficher en dessous
+                        index === 0 ? 'top-full mt-2' : 'bottom-full mb-2'
+                      }`}>
+                        <div className="py-1">
+                          <button 
+                            className="flex items-center w-full px-4 py-2 text-sm hover:bg-accent"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setClientStatuses(prev => ({
+                                ...prev,
+                                [client.id]: 'completed'
+                              }));
+                            }}
+                          >
+                            <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
+                            Terminé
+                          </button>
+                          <button 
+                            className="flex items-center w-full px-4 py-2 text-sm hover:bg-accent"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setClientStatuses(prev => ({
+                                ...prev,
+                                [client.id]: 'pending'
+                              }));
+                            }}
+                          >
+                            <span className="w-2 h-2 rounded-full bg-orange-500 mr-2"></span>
+                            En attente
+                          </button>
+                          <button 
+                            className="flex items-center w-full px-4 py-2 text-sm hover:bg-accent"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setClientStatuses(prev => ({
+                                ...prev,
+                                [client.id]: 'in-progress'
+                              }));
+                            }}
+                          >
+                            <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
+                            En cours
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
                   <td className="p-4">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -243,7 +321,7 @@ export function Clients() {
                       </div>
                     </div>
                   </td>
-                  <td className="p-4">{client.contact.firstName} {client.contact.lastName}</td>
+                  {/* <td className="p-4">{client.contact.firstName} {client.contact.lastName}</td> */}
                   <td className="p-4 hidden lg:table-cell">{client.contact.email}</td>
                   <td className="p-4 hidden md:table-cell">{client.contact.phone}</td>
                   <td className="p-4 hidden xl:table-cell">{client.address.street}, {client.address.postalCode} {client.address.city}</td>
@@ -273,7 +351,3 @@ export function Clients() {
     </motion.div>
   );
 }
-
-
-// Après les types existants
-type ClientStatus = 'completed' | 'pending' | 'in-progress';
