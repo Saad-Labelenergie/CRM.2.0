@@ -1,0 +1,52 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Layout } from './components/layout/layout';
+import { Dashboard } from './components/dashboard/dashboard';
+import { Teams } from './components/teams/teams';
+import { TeamDetail } from './components/teams/team-detail';
+import { Projects } from './components/projects/projects';
+import { ProjectDetail } from './components/projects/project-detail.tsx';
+import { Calendar } from './components/calendar/calendar';
+import { Users } from './components/users/users';
+import { SAV } from './components/sav/sav';
+import { Clients } from './components/clients/clients';
+import { ClientDetail } from './components/clients/client-detail';
+import { Loading } from './components/loading/loading';
+import { Products } from './components/products/products';
+import { ProductDetail } from './components/products/product-detail';
+import { Maintenance } from './components/maintenance/maintenance';
+
+function App() {
+  return (
+    <Router>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="min-h-screen bg-background"
+      >
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/teams" element={<Teams />} />
+            <Route path="/teams/:id" element={<TeamDetail />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/projects/:id" element={<ProjectDetail />} />
+            <Route path="/calendar" element={<Calendar />} />
+            <Route path="/loading" element={<Loading />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/products/:id" element={<ProductDetail />} />
+            <Route path="/sav" element={<SAV />} />
+            <Route path="/clients" element={<Clients />} />
+            <Route path="/clients/:id" element={<ClientDetail />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/maintenance" element={<Maintenance />} />
+          </Routes>
+        </Layout>
+      </motion.div>
+    </Router>
+  );
+}
+
+export default App;
