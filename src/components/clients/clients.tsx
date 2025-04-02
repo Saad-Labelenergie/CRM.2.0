@@ -1,19 +1,14 @@
 import React, { useState } from 'react';
-import { Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { 
   Plus, 
   Search, 
-  Filter,
   LayoutGrid,
   List,
-  TrendingUp,
   Star,
   Users,
-  ArrowRight,
   ChevronRight,
   Building2,
-  BarChart3
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { NewClientModal } from './components/new-client-modal';
@@ -76,18 +71,19 @@ type ViewMode = 'grid' | 'list';
 // D'abord, ajoutons un état pour gérer le statut
 export function Clients() {
   const navigate = useNavigate();
-  const { data: clients = [], loading, add: addClient } = useClients();
+  const { data: clients = [], loading, add: addClient, updateStatus } = useClients();
+  // Remove clientStatuses state since we'll use client.status from Firestore
+  
   const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showSuccessToast, setShowSuccessToast] = useState(false);
-  // const [selectedStatus, setSelectedStatus] = useState<string>('pending');
-  const [clientStatuses, setClientStatuses] = useState<{ [key: string]: string }>({});
 
   const handleSaveClient = async (clientData: any) => {
     try {
       await addClient({
         ...clientData,
+        status: 'in-progress', // Ajout du statut par défaut
         createdAt: new Date(),
         updatedAt: new Date()
       });
@@ -114,7 +110,6 @@ export function Clients() {
       </div>
     );
   }
-
   return (
     <motion.div
       variants={containerVariants}
@@ -137,7 +132,6 @@ export function Clients() {
           Nouveau Client
         </motion.button>
       </div>
-
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
@@ -176,7 +170,6 @@ export function Clients() {
           </motion.button>
         </div>
       </div>
-
       {clients.length === 0 ? (
         <div className="text-center py-12 bg-card rounded-xl border border-border/50">
           <Building2 className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -192,7 +185,7 @@ export function Clients() {
         >
           {filteredClients.map((client) => (
             <motion.div
-              key={client.id}
+              key={`${client.id}-${client.updatedAt?.getTime() || Date.now()}`}
               variants={itemVariants}
               whileHover={{ y: -5 }}
               onClick={() => navigate(`/clients/${client.id}`)}
@@ -213,7 +206,6 @@ export function Clients() {
                 </div>
                 <ChevronRight className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-
               <div className="mt-6 space-y-4">
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center text-muted-foreground">
@@ -221,7 +213,6 @@ export function Clients() {
                     <span>{client.contact.firstName} {client.contact.lastName}</span>
                   </div>
                 </div>
-
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center text-muted-foreground">
                     <Calendar className="w-4 h-4 mr-2" />
@@ -262,7 +253,7 @@ export function Clients() {
             <tbody>
               {filteredClients.map((client, index) => (
                 <motion.tr
-                  key={client.id}
+                  key={`${client.id}-${client.status}`}  // Modification de la clé
                   variants={itemVariants}
                   onClick={() => navigate(`/clients/${client.id}`)}
                   className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors cursor-pointer group z-10"
@@ -278,20 +269,19 @@ export function Clients() {
                       >
                         <div className="flex items-center space-x-2">
                           <span className={`w-2 h-2 rounded-full ${
-                            clientStatuses[client.id] === 'completed' ? 'bg-green-500' :
-                            clientStatuses[client.id] === 'pending' ? 'bg-orange-500' :
+                            client.status === 'completed' ? 'bg-green-500' :
+                            client.status === 'pending' ? 'bg-orange-500' :
                             'bg-blue-500'
                           }`}></span>
                           <span className="text-sm">{
-                            clientStatuses[client.id] === 'completed' ? 'Terminé' :
-                            clientStatuses[client.id] === 'pending' ? 'En attente' :
+                            client.status === 'completed' ? 'Terminé' :
+                            client.status === 'pending' ? 'En attente' :
                             'En cours'
                           }</span>
                         </div>
                       </button>
-                      
+                      {/* Menu déroulant du statut */}
                       <div className={`absolute right w-48 bg-card rounded-lg shadow-lg border border-border/50 invisible group-hover:visible z-50 ${
-                        // Si c'est le premier élément, afficher en dessous
                         index === 0 ? 'top-full mt-2' : 'bottom-full mb-2'
                       }`}>
                         <div className="py-1">
@@ -300,10 +290,8 @@ export function Clients() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              setClientStatuses(prev => ({
-                                ...prev,
-                                [client.id]: 'completed'
-                              }));
+                              console.log('Client ID:', client.id); // Ajout du log pour vérifier l'ID
+                              updateStatus(client.id, 'completed');
                             }}
                           >
                             <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
@@ -314,10 +302,7 @@ export function Clients() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              setClientStatuses(prev => ({
-                                ...prev,
-                                [client.id]: 'pending'
-                              }));
+                              updateStatus(client.id, 'pending');
                             }}
                           >
                             <span className="w-2 h-2 rounded-full bg-orange-500 mr-2"></span>
@@ -328,10 +313,7 @@ export function Clients() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              setClientStatuses(prev => ({
-                                ...prev,
-                                [client.id]: 'in-progress'
-                              }));
+                              updateStatus(client.id, 'in-progress');
                             }}
                           >
                             <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
