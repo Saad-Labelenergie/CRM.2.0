@@ -25,21 +25,21 @@ interface NewClientModalProps {
 // Mock data for products
 const products = [
   {
-    id: 1,
+    id: "1",
     name: "Climatiseur Mural 9000 BTU",
     type: "climatisation",
     installationTime: 240,
     price: 599.99
   },
   {
-    id: 2,
+    id: "2",
     name: "Unité Extérieure Multi-Split",
     type: "climatisation",
     installationTime: 480,
     price: 1299.99
   },
   {
-    id: 3,
+    id: "3",
     name: "Pompe à Chaleur Air/Eau",
     type: "chauffage",
     installationTime: 960,
