@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { 
   Plus, 
@@ -36,6 +37,38 @@ const itemVariants = {
     opacity: 1
   }
 };
+
+// Fonction utilitaire pour formater la date
+const formatClientSinceDate = (dateInput: any) => {
+  // Si la date est déjà un objet Date valide
+  if (dateInput instanceof Date && !isNaN(dateInput.getTime())) {
+    return formatDate(dateInput);
+  }
+  
+  // Si c'est un string ou un timestamp Firestore
+  const date = new Date(dateInput);
+  if (!isNaN(date.getTime())) {
+    return formatDate(date);
+  }
+
+  // Si c'est un objet timestamp Firestore
+  if (dateInput?.seconds) {
+    const firestoreDate = new Date(dateInput.seconds * 1000);
+    return formatDate(firestoreDate);
+  }
+
+  return "Date inconnue";
+};
+
+// Sous-fonction de formatage
+const formatDate = (date: Date) => {
+  return `Client depuis le ${date.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  })}`;
+};
+
 
 type ViewMode = 'grid' | 'list';
 
@@ -188,7 +221,7 @@ export function Clients() {
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center text-muted-foreground">
                     <Calendar className="w-4 h-4 mr-2" />
-                    <span>Client depuis {format(new Date(client.createdAt), 'dd/MM/yyyy')}</span>
+                    <span>{formatClientSinceDate(client.createdAt)}</span>
                   </div>
                 </div>
 
