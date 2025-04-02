@@ -53,7 +53,7 @@ export function ClientDetail() {
             onClick={() => navigate('/clients')}
             className="text-primary hover:underline"
           >
-            Retour à la liste des clients
+            Retour à la liste des 
           </button>
         </div>
       </div>
