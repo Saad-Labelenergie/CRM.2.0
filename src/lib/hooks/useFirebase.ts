@@ -16,7 +16,6 @@ import {
   getDoc,
   setDoc,
   QuerySnapshot,
-  QueryDocumentSnapshot,
   FirestoreError
 } from 'firebase/firestore';
 import { Query } from 'firebase/firestore';
@@ -126,7 +125,7 @@ export function useFirebase<T>(collectionName: string, options: FirebaseOptions 
         });
       }
 
-      console.log('Document operation successful:', docRef.path);
+      
     } catch (err: any) {
       console.error('Operation error:', {
         error: err,

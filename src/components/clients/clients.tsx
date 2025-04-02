@@ -9,6 +9,7 @@ import {
   Users,
   ChevronRight,
   Building2,
+  Filter, // Add this import
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { NewClientModal } from './components/new-client-modal';
@@ -34,20 +35,14 @@ const itemVariants = {
   }
 };
 
-// Fonction utilitaire pour formater la date
 const formatClientSinceDate = (dateInput: any) => {
-  // Si la date est déjà un objet Date valide
   if (dateInput instanceof Date && !isNaN(dateInput.getTime())) {
     return formatDate(dateInput);
   }
-  
-  // Si c'est un string ou un timestamp Firestore
   const date = new Date(dateInput);
   if (!isNaN(date.getTime())) {
     return formatDate(date);
   }
-
-  // Si c'est un objet timestamp Firestore
   if (dateInput?.seconds) {
     const firestoreDate = new Date(dateInput.seconds * 1000);
     return formatDate(firestoreDate);
@@ -72,12 +67,25 @@ type ViewMode = 'grid' | 'list';
 export function Clients() {
   const navigate = useNavigate();
   const { data: clients = [], loading, add: addClient, updateStatus } = useClients();
-  // Remove clientStatuses state since we'll use client.status from Firestore
   
   const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false); // Ajout de l'état pour le menu filtre
+
+  // Modifier la logique de filtrage pour inclure le filtre de statut
+  const filteredClients = clients.filter(client => {
+    const matchesSearch = 
+      client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.contact.phone.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = !statusFilter || client.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
 
   const handleSaveClient = async (clientData: any) => {
     try {
@@ -93,12 +101,6 @@ export function Clients() {
       console.error('Erreur lors de la création du client:', error);
     }
   };
-
-  const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.contact.phone.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   if (loading) {
     return (
@@ -143,31 +145,93 @@ export function Clients() {
             className="w-full pl-12 pr-4 py-3 bg-background border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
           />
         </div>
-        <div className="flex items-center bg-card rounded-xl border border-border/50 p-1">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setViewMode('grid')}
-            className={`p-2 rounded-lg transition-colors ${
-              viewMode === 'grid' 
-                ? 'bg-primary text-primary-foreground' 
-                : 'hover:bg-accent'
-            }`}
-          >
-            <LayoutGrid className="w-5 h-5" />
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setViewMode('list')}
-            className={`p-2 rounded-lg transition-colors ${
-              viewMode === 'list' 
-                ? 'bg-primary text-primary-foreground' 
-                : 'hover:bg-accent'
-            }`}
-          >
-            <List className="w-5 h-5" />
-          </motion.button>
+        <div className="flex items-center space-x-2">
+          <div className="relative">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsFilterMenuOpen(!isFilterMenuOpen);
+              }}
+              className={`p-2 rounded-lg transition-colors hover:bg-accent ${
+                statusFilter ? 'text-primary' : ''
+              }`}
+            >
+              <Filter className="w-5 h-5" />
+            </motion.button>
+            {isFilterMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-card rounded-lg shadow-lg border border-border/50 z-50">
+                <div className="py-1">
+                  <button 
+                    className="flex items-center w-full px-4 py-2 text-sm hover:bg-accent"
+                    onClick={() => {
+                      setStatusFilter('completed');
+                      setIsFilterMenuOpen(false);
+                    }}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
+                    Terminé
+                  </button>
+                  <button 
+                    className="flex items-center w-full px-4 py-2 text-sm hover:bg-accent"
+                    onClick={() => {
+                      setStatusFilter('pending');
+                      setIsFilterMenuOpen(false);
+                    }}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-orange-500 mr-2"></span>
+                    En attente
+                  </button>
+                  <button 
+                    className="flex items-center w-full px-4 py-2 text-sm hover:bg-accent"
+                    onClick={() => {
+                      setStatusFilter('in-progress');
+                      setIsFilterMenuOpen(false);
+                    }}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
+                    En cours
+                  </button>
+                  <button 
+                    className="flex items-center w-full px-4 py-2 text-sm hover:bg-accent"
+                    onClick={() => {
+                      setStatusFilter(null);
+                      setIsFilterMenuOpen(false);
+                    }}
+                  >
+                    Tous les statuts
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center bg-card rounded-xl border border-border/50 p-1">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-lg transition-colors ${
+                viewMode === 'grid' 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'hover:bg-accent'
+              }`}
+            >
+              <LayoutGrid className="w-5 h-5" />
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setViewMode('list')}
+              className={`p-2 rounded-lg transition-colors ${
+                viewMode === 'list' 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'hover:bg-accent'
+              }`}
+            >
+              <List className="w-5 h-5" />
+            </motion.button>
+          </div>
         </div>
       </div>
       {clients.length === 0 ? (
@@ -290,7 +354,6 @@ export function Clients() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              console.log('Client ID:', client.id); // Ajout du log pour vérifier l'ID
                               updateStatus(client.id, 'completed');
                             }}
                           >
