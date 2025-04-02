@@ -53,12 +53,44 @@ export function ClientDetail() {
             onClick={() => navigate('/clients')}
             className="text-primary hover:underline"
           >
-            Retour à la liste des 
+            Retour à la liste des clients
           </button>
         </div>
       </div>
     );
   }
+
+  // Fonction utilitaire pour formater la date
+const formatClientSinceDate = (dateInput: any) => {
+  // Si la date est déjà un objet Date valide
+  if (dateInput instanceof Date && !isNaN(dateInput.getTime())) {
+    return formatDate(dateInput);
+  }
+  
+  // Si c'est un string ou un timestamp Firestore
+  const date = new Date(dateInput);
+  if (!isNaN(date.getTime())) {
+    return formatDate(date);
+  }
+
+  // Si c'est un objet timestamp Firestore
+  if (dateInput?.seconds) {
+    const firestoreDate = new Date(dateInput.seconds * 1000);
+    return formatDate(firestoreDate);
+  }
+
+  return "Date inconnue";
+};
+
+// Sous-fonction de formatage
+const formatDate = (date: Date) => {
+  return `${date.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  })}`;
+};
+
 
   const handleDeleteClient = async () => {
     try {
@@ -156,7 +188,7 @@ export function ClientDetail() {
                 )}
                 <div>
                   <div className="text-sm text-muted-foreground">Client depuis</div>
-                  <div className="font-medium mt-1">{new Date(client.createdAt).toLocaleDateString('fr-FR')}</div>
+                  <div className="font-medium mt-1">{formatClientSinceDate(client.createdAt)}</div>
                 </div>
               </div>
             </div>
