@@ -16,7 +16,6 @@ import {
   getDoc,
   setDoc,
   QuerySnapshot,
-  QueryDocumentSnapshot,
   FirestoreError
 } from 'firebase/firestore';
 import { Query } from 'firebase/firestore';
@@ -51,13 +50,14 @@ export function useFirebase<T>(collectionName: string, options: FirebaseOptions 
           const data = doc.data();
           const key = `${doc.id}-${data.status || 'default'}`;
           
-          // Vérifier si le document existe déjà avec un timestamp plus récent
+          // Get existing document from the Map
           const existingDoc = uniqueDocs.get(key);
           const currentTimestamp = data.updatedAt?.toDate()?.getTime() || 0;
           
           if (!existingDoc || (existingDoc.updatedAt?.getTime() || 0) < currentTimestamp) {
             uniqueDocs.set(key, {
-              id: doc.id,
+              id: data.id, // ID numérique
+              _id: doc.id, // ID Firestore
               ...data,
               createdAt: data.createdAt?.toDate() || new Date(),
               updatedAt: data.updatedAt?.toDate() || new Date()
@@ -83,11 +83,20 @@ export function useFirebase<T>(collectionName: string, options: FirebaseOptions 
 
   const add = async (item: Omit<T, 'id'>) => {
     try {
+      // Créer un nouvel objet sans le champ id
+      const { id, ...itemWithoutId } = item as any;
+      
       const docRef = await addDoc(collection(db, collectionName), {
-        ...item,
+        ...itemWithoutId,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now()
       });
+      
+      // Update the document with the Firestore ID
+      await updateDoc(docRef, {
+        id: docRef.id
+      });
+      
       return docRef.id;
     } catch (err: any) {
       setError(err.message);
@@ -95,38 +104,25 @@ export function useFirebase<T>(collectionName: string, options: FirebaseOptions 
     }
   };
 
-  const update = async (id: string, item: Partial<T>) => {
+  const update = async (id: string | number, item: Partial<T>) => {
     try {
-      const localDoc = data.find((doc: any) => doc.id === id);
-      if (!localDoc) {
-        throw new Error(`Document ${id} not found in local data`);
+      // Find the document in the current data using the numeric ID
+      const existingDoc = data.find(doc => (doc as any).id.toString() === id.toString());
+      if (!existingDoc) {
+        throw new Error(`Document with ID ${id} not found in collection ${collectionName}`);
       }
-
-      const docRef = doc(db, collectionName, id.trim());
-      
-      // Create the document if it doesn't exist
-      const docSnap = await getDoc(docRef);
-      if (!docSnap.exists()) {
-        console.log('Document not found in Firestore, creating it...', {
-          id,
-          localData: localDoc
-        });
-        
-        // Create the document with local data
-        await setDoc(docRef, {
-          ...localDoc,
-          ...item,
-          updatedAt: Timestamp.now()
-        });
-      } else {
-        // Update existing document
-        await updateDoc(docRef, {
-          ...item,
-          updatedAt: Timestamp.now()
-        });
+  
+      // Get the Firestore document ID from the document data
+      const firestoreId = (existingDoc as any)._id || (existingDoc as any).firestoreId;
+      if (!firestoreId) {
+        throw new Error(`Firestore ID not found for document ${id}`);
       }
-
-      console.log('Document operation successful:', docRef.path);
+  
+      const docRef = doc(db, collectionName, firestoreId);
+      await updateDoc(docRef, {
+        ...item,
+        updatedAt: Timestamp.now()
+      });
     } catch (err: any) {
       console.error('Operation error:', {
         error: err,
@@ -137,9 +133,21 @@ export function useFirebase<T>(collectionName: string, options: FirebaseOptions 
     }
   };
 
-  const remove = async (id: string) => {
+  const remove = async (id: string | number) => {
     try {
-      const docRef = doc(db, collectionName, id);
+      // Find the document in the current data using the numeric ID
+      const existingDoc = data.find(doc => (doc as any).id.toString() === id.toString());
+      if (!existingDoc) {
+        throw new Error(`Document with ID ${id} not found in collection ${collectionName}`);
+      }
+  
+      // Get the Firestore document ID from the document data
+      const firestoreId = (existingDoc as any)._id || (existingDoc as any).firestoreId;
+      if (!firestoreId) {
+        throw new Error(`Firestore ID not found for document ${id}`);
+      }
+  
+      const docRef = doc(db, collectionName, firestoreId);
       await deleteDoc(docRef);
     } catch (err: any) {
       setError(err.message);
