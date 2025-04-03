@@ -16,6 +16,8 @@ import { NewClientModal } from './components/new-client-modal';
 import { Toast } from '../ui/toast';
 import { useClients } from '../../lib/hooks/useClients';
 import { Calendar } from 'lucide-react';
+// Ajoutez cette importation avec les autres imports
+import { ChangeStatusModal } from './components/change-status-modal';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -74,6 +76,19 @@ export function Clients() {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+  
+  // Ajout du nouvel état pour le modal de changement de statut
+  const [statusChangeModal, setStatusChangeModal] = useState<{
+    isOpen: boolean;
+    clientId: string;
+    clientName: string;
+    newStatus: 'completed' | 'pending' | 'in-progress';
+  }>({
+    isOpen: false,
+    clientId: '',
+    clientName: '',
+    newStatus: 'in-progress'
+  });
   const filteredClients = clients.filter(client => {
     const matchesSearch = 
       client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -347,7 +362,12 @@ export function Clients() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              updateStatus(client.id, 'completed');
+                              setStatusChangeModal({
+                                isOpen: true,
+                                clientId: client.id,
+                                clientName: client.name,
+                                newStatus: 'completed'
+                              });
                             }}
                           >
                             <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
@@ -358,7 +378,12 @@ export function Clients() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              updateStatus(client.id, 'pending');
+                              setStatusChangeModal({
+                                isOpen: true,
+                                clientId: client.id,
+                                clientName: client.name,
+                                newStatus: 'pending'
+                              });
                             }}
                           >
                             <span className="w-2 h-2 rounded-full bg-orange-500 mr-2"></span>
@@ -369,7 +394,12 @@ export function Clients() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              updateStatus(client.id, 'in-progress');
+                              setStatusChangeModal({
+                                isOpen: true,
+                                clientId: client.id,
+                                clientName: client.name,
+                                newStatus: 'in-progress'
+                              });
                             }}
                           >
                             <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
@@ -416,6 +446,16 @@ export function Clients() {
         message="Le client a été créé avec succès !"
         isVisible={showSuccessToast}
         onClose={() => setShowSuccessToast(false)}
+      />
+      <ChangeStatusModal
+        isOpen={statusChangeModal.isOpen}
+        onClose={() => setStatusChangeModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={async (status) => {
+          await updateStatus(statusChangeModal.clientId, status);
+          setStatusChangeModal(prev => ({ ...prev, isOpen: false }));
+        }}
+        clientName={statusChangeModal.clientName}
+        newStatus={statusChangeModal.newStatus}
       />
     </motion.div>
   );
