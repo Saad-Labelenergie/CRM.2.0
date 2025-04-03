@@ -81,13 +81,10 @@ export function Users() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const { data: users, loading, add: addUser, remove: removeUser, update: updateUser } = useFirebase<User>('users', { orderByField: 'name' });
 
-  const handleSaveUser = async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt' | 'avatar'>) => {
+  const handleSaveUser = async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      const defaultAvatar = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80";
-      
       await addUser({
         ...userData,
-        avatar: defaultAvatar,
         createdAt: new Date(),
         updatedAt: new Date()
       });
@@ -118,14 +115,12 @@ export function Users() {
     setIsDetailsModalOpen(true);
   };
 
-  const handleUpdateUser = async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt' | 'avatar'>) => {
+  const handleUpdateUser = async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (!selectedUser?.id) return;
     
     try {
       await updateUser(selectedUser.id, {
         ...userData,
-        // Keep the existing avatar
-        avatar: selectedUser.avatar,
         updatedAt: new Date()
       });
       setIsEditModalOpen(false);
