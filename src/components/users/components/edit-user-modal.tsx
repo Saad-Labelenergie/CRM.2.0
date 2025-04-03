@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Shield, Building2 } from 'lucide-react';
+import { X, Shield, Building2, Edit2 } from 'lucide-react';
+import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
 
 interface User {
   id: string;
@@ -19,20 +20,23 @@ interface User {
 interface EditUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt' | 'avatar'>) => void;
+  onSave: (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => void;
   user: User | null;
 }
 
 export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalProps) {
-  const [userData, setUserData] = useState<Omit<User, 'id' | 'createdAt' | 'updatedAt' | 'avatar'>>({
+  const [userData, setUserData] = useState<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>({
     name: '',
     email: '',
     role: '',
     department: '',
     phone: '',
     location: '',
-    status: 'active'
+    status: 'active',
+    avatar: ''
   });
+
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -43,28 +47,66 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
         department: user.department,
         phone: user.phone,
         location: user.location,
-        status: user.status
+        status: user.status,
+        avatar: user.avatar || ''
       });
+      setPreviewImage(user.avatar || null);
     }
   }, [user]);
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+    
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const imageDataUrl = reader.result as string;
+      
+      try {
+        const storage = getStorage();
+        console.log('Storage initialized:', storage.app.options); // Add this line
+        
+        const storageRef = ref(storage, `avatars/${user.id}/${Date.now()}.jpg`);
+        
+        const snapshot = await uploadString(storageRef, imageDataUrl, 'data_url');
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        
+        setPreviewImage(downloadURL);
+        setUserData(prev => ({
+          ...prev,
+          avatar: downloadURL
+        }));
+        
+        console.log('Image téléchargée avec succès:', downloadURL);
+      } catch (error) {
+        console.error('Erreur lors du téléchargement:', error);
+      }
+    };
+    
+    reader.readAsDataURL(file);
+};
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     
-    onSave({
-      name: userData.name,
-      email: userData.email,
-      role: userData.role,
-      department: userData.department,
-      phone: userData.phone,
-      location: userData.location,
-      status: userData.status
-    });
+    // Ensure we're using the most up-to-date data
+    const finalUserData = {
+      ...userData,
+      avatar: userData.avatar // Use userData.avatar directly as it's already synchronized
+    };
     
+    console.log('Submitting final data:', finalUserData);
+    onSave(finalUserData);
+    handleClose();
+  };
+
+  const handleClose = () => {
+    setPreviewImage(null);
     onClose();
   };
 
+  // Remove the floating JSX element and keep it only in the return statement
   return (
     <AnimatePresence>
       {isOpen && (
@@ -83,6 +125,33 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Add image upload section at the top */}
+              <div className="flex flex-col items-center space-y-4">
+                <div className="relative">
+                  <img
+                    src={previewImage || userData.avatar}
+                    alt={userData.name}
+                    className="w-32 h-32 rounded-full object-cover border-4 border-primary/20"
+                  />
+                  <label 
+                    htmlFor="avatar-upload" 
+                    className="absolute bottom-0 right-0 bg-primary text-primary-foreground p-2 rounded-full cursor-pointer hover:bg-primary/90 transition-colors"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </label>
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Click the edit icon to upload a new photo
+                </p>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium mb-1">Nom complet</label>
                 <input

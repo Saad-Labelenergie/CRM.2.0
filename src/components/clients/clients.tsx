@@ -32,7 +32,6 @@ interface HistoryEntry {
   newValue?: string;
   timestamp: Date;
 }
-
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -89,6 +88,19 @@ export function Clients() {
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
 
 
+  
+  // Ajout du nouvel état pour le modal de changement de statut
+  const [statusChangeModal, setStatusChangeModal] = useState<{
+    isOpen: boolean;
+    clientId: string;
+    clientName: string;
+    newStatus: 'completed' | 'pending' | 'in-progress';
+  }>({
+    isOpen: false,
+    clientId: '',
+    clientName: '',
+    newStatus: 'in-progress'
+  });
   const filteredClients = clients.filter(client => {
     const matchesSearch = 
       client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -439,7 +451,14 @@ const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) =>
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              handleStatusUpdate(client.id, 'completed', client.name, client.status);
+                              setStatusChangeModal({
+                                isOpen: true,
+                                clientId: client.id,
+                                clientName: client.name,
+                                newStatus: 'completed'
+                              });
+                              handleStatusUpdate(client.id, 'in-progress', client.name, client.status);
+
                             }}
                           >
                             <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
@@ -450,7 +469,14 @@ const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) =>
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
+                              setStatusChangeModal({
+                                isOpen: true,
+                                clientId: client.id,
+                                clientName: client.name,
+                                newStatus: 'pending'
+                              });
                               handleStatusUpdate(client.id, 'pending', client.name, client.tag);
+
                             }}
                           >
                             <span className="w-2 h-2 rounded-full bg-orange-500 mr-2"></span>
@@ -461,7 +487,14 @@ const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) =>
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
+                              setStatusChangeModal({
+                                isOpen: true,
+                                clientId: client.id,
+                                clientName: client.name,
+                                newStatus: 'in-progress'
+                              });
                               handleStatusUpdate(client.id, 'in-progress', client.name, client.status);
+
                             }}
                           >
                             <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
@@ -569,6 +602,16 @@ const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) =>
         message="Le client a été créé avec succès !"
         isVisible={showSuccessToast}
         onClose={() => setShowSuccessToast(false)}
+      />
+      <ChangeStatusModal
+        isOpen={statusChangeModal.isOpen}
+        onClose={() => setStatusChangeModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={async (status) => {
+          await updateStatus(statusChangeModal.clientId, status);
+          setStatusChangeModal(prev => ({ ...prev, isOpen: false }));
+        }}
+        clientName={statusChangeModal.clientName}
+        newStatus={statusChangeModal.newStatus}
       />
     </motion.div>
   );
