@@ -40,11 +40,11 @@ export function Login() {
 
       // 4. Authentifier avec Firebase Auth (si vous utilisez aussi l'authentification)
       // Note: Vous devrez peut-être adapter cette partie selon votre configuration
-      try {
-        await signInWithEmailAndPassword(auth, email, userId.toString());
-      } catch (authError) {
-        console.log("Authentification Firebase optionnelle échouée, continuation avec Firestore");
-      }
+      //try {
+       // await signInWithEmailAndPassword(auth, email, userId.toString());
+      //} catch (authError) {
+       // console.log("Authentification Firebase optionnelle échouée, continuation avec Firestore");
+      //}
 
       // 5. Stocker les données utilisateur et rediriger
       localStorage.setItem("currentUser", JSON.stringify(userData));
