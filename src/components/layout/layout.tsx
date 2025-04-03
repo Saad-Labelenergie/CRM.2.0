@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, 
@@ -18,31 +18,45 @@ import {
   PackageCheck,
   Search,
   FolderOpen,
-  PenTool as Tool
+  PenTool as Tool,
+  LogOut // Icône de déconnexion ajoutée
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { auth } from '../../lib/firebase'; 
 
 const navigation = [
-  { name: 'Tableau de bord', href: '/', icon: LayoutDashboard },
-  { name: 'Dossiers', href: '/clients', icon: FolderOpen },
-  { name: 'Produits', href: '/products', icon: Package },
-  { name: 'Planning', href: '/calendar', icon: CalendarIcon },
-  { name: 'Equipes', href: '/teams', icon: Users },
-  { name: 'Chargements', href: '/loading', icon: PackageCheck },
-  { name: 'Chantiers', href: '/projects', icon: HardHat },
-  { name: 'SAV', href: '/sav', icon: Wrench },
-  { name: 'Entretien', href: '/maintenance', icon: Tool },
-  { name: 'Utilisateurs', href: '/users', icon: UserCog },
+  { name: 'Tableau de bord', href: '/', icon: LayoutDashboard, roles: ['administrateur', 'technicien', 'manager'] },
+  { name: 'Dossiers', href: '/clients', icon: FolderOpen, roles: ['administrateur'] },
+  { name: 'Produits', href: '/products', icon: Package, roles: ['administrateur'] },
+  { name: 'Planning', href: '/calendar', icon: CalendarIcon, roles: ['administrateur', 'technicien', 'manager'] },
+  { name: 'Equipes', href: '/teams', icon: Users, roles: ['administrateur'] },
+  { name: 'Chargements', href: '/loading', icon: PackageCheck, roles: ['administrateur', 'manager'] },
+  { name: 'Chantiers', href: '/projects', icon: HardHat, roles: ['administrateur', 'technicien', 'manager'] },
+  { name: 'SAV', href: '/sav', icon: Wrench, roles: ['administrateur', 'manager'] },
+  { name: 'Entretien', href: '/maintenance', icon: Tool, roles: ['administrateur'] },
+  { name: 'Utilisateurs', href: '/users', icon: UserCog, roles: ['administrateur','technicien'] },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
+  const navigate = useNavigate();
+ 
   const [isDark, setIsDark] = React.useState(() => {
     const saved = localStorage.getItem('theme');
     return saved === 'dark';
   });
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [isSearchOpen, setIsSearchOpen] = React.useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      localStorage.removeItem('currentUser');
+      navigate('/login');
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+    }
+  };
 
   React.useEffect(() => {
     if (isDark) {
@@ -70,6 +84,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
       }
     }
   };
+     // Récupérer l'utilisateur connecté depuis le localStorage
+     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+     const userName = currentUser?.name || 'Utilisateur';
+     const userRole = currentUser?.role.toLowerCase() || 'Administrateur';
+
+    // Filtrer la navigation en fonction du rôle
+    const filteredNavigation = navigation.filter(item => 
+    item.roles.includes(userRole.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -108,7 +131,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
 
           <nav className="mt-6 flex-1 px-3">
-            {navigation.map((item) => {
+            {filteredNavigation.map((item) => { // Utilisez filteredNavigation au lieu de navigation
               const isActive = location.pathname === item.href;
               return (
                 <Link
@@ -149,6 +172,37 @@ export function Layout({ children }: { children: React.ReactNode }) {
               );
             })}
           </nav>
+
+          {/* Bouton de déconnexion ajouté ici */}
+          <div className="p-3 border-t border-border/50">
+            <motion.button
+              onClick={handleLogout}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className={cn(
+                "flex items-center w-full px-3 py-3 text-sm font-medium transition-all duration-200 rounded-lg",
+                "text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              )}
+            >
+              <LogOut className="w-5 h-5 flex-shrink-0" />
+              <motion.span
+                animate={{ 
+                  opacity: isCollapsed ? 0 : 1,
+                  marginLeft: isCollapsed ? 0 : "0.75rem",
+                  display: isCollapsed ? "none" : "block"
+                }}
+                transition={{ duration: 0.2 }}
+                className="whitespace-nowrap font-medium"
+              >
+                Déconnexion
+              </motion.span>
+              {isCollapsed && (
+                <div className="absolute left-full ml-2 px-2 py-1 bg-destructive text-destructive-foreground text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                  Déconnexion
+                </div>
+              )}
+            </motion.button>
+          </div>
 
           <div className="p-4 border-t border-border/50">
             <motion.div
@@ -249,6 +303,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           {/* Page content */}
           <main className="flex-1 overflow-auto p-6">
+            {/* Ajout du message de bienvenue */}
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-foreground">
+                Bonjour, <span className="text-primary">{userName}</span>
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Bienvenue sur votre tableau de bord
+              </p>
+            </div>
+            
+            {/* Contenu des pages enfants */}
             {children}
           </main>
         </div>
