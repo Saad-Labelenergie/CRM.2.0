@@ -9,15 +9,15 @@ import {
   Users,
   ChevronRight,
   Building2,
-  Filter, // Add this import
+  Filter,
+  Calendar,
+  Clock
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { NewClientModal } from './components/new-client-modal';
 import { Toast } from '../ui/toast';
 import { useClients } from '../../lib/hooks/useClients';
 import { Calendar } from 'lucide-react';
-// Ajoutez cette importation avec les autres imports
-import { ChangeStatusModal } from './components/change-status-modal';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -49,11 +49,9 @@ const formatClientSinceDate = (dateInput: any) => {
     const firestoreDate = new Date(dateInput.seconds * 1000);
     return formatDate(firestoreDate);
   }
-
   return "Date inconnue";
 };
 
-// Sous-fonction de formatage
 const formatDate = (date: Date) => {
   return `Client depuis le ${date.toLocaleDateString('fr-FR', {
     day: 'numeric',
@@ -62,33 +60,19 @@ const formatDate = (date: Date) => {
   })}`;
 };
 
-
 type ViewMode = 'grid' | 'list';
 
-// D'abord, ajoutons un état pour gérer le statut
 export function Clients() {
   const navigate = useNavigate();
   const { data: clients = [], loading, add: addClient, updateStatus } = useClients();
-  
+  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
-  
-  // Ajout du nouvel état pour le modal de changement de statut
-  const [statusChangeModal, setStatusChangeModal] = useState<{
-    isOpen: boolean;
-    clientId: string;
-    clientName: string;
-    newStatus: 'completed' | 'pending' | 'in-progress';
-  }>({
-    isOpen: false,
-    clientId: '',
-    clientName: '',
-    newStatus: 'in-progress'
-  });
   const filteredClients = clients.filter(client => {
     const matchesSearch = 
       client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -97,20 +81,96 @@ export function Clients() {
     const matchesStatus = !statusFilter || client.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+ // Chargez l'historique depuis Firestore
+ React.useEffect(() => {
+  const q = query(
+    collection(db, 'historique_dossier'),
+    orderBy('timestamp', 'desc')
+  );
+  
+  const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const entries: HistoryEntry[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      entries.push({
+        id: doc.id,
+        action: data.action,
+        user: data.user,
+        userId: data.userId,
+        clientName: data.clientName,
+        clientId: data.clientId,
+        details: data.details,
+        previousValue: data.previousValue,
+        newValue: data.newValue,
+        timestamp: data.timestamp.toDate()
+      });
+    });
+    setHistory(entries);
+  });
+
+  return () => unsubscribe();
+}, []);
+
+// Fonction pour ajouter une entrée d'historique
+const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) => {
+  try {
+    await addDoc(collection(db, 'historique_dossier'), {
+      ...entry,
+      timestamp: serverTimestamp()
+    });
+  } catch (error) {
+    console.error("Erreur lors de l'ajout à l'historique:", error);
+  }
+};
+
+
+
+  // Modifiez handleSaveClient pour utiliser addHistoryEntry
   const handleSaveClient = async (clientData: any) => {
     try {
-      await addClient({
+      const newClient = await addClient({
         ...clientData,
         status: 'in-progress', 
         createdAt: new Date(),
         updatedAt: new Date()
       });
+      
+      await addHistoryEntry({
+        action: 'created',
+        user: currentUser.name,
+        userId: currentUser.id,
+        clientName: clientData.name,
+        clientId: newClient.id,
+        details: 'Nouveau client ajouté'
+      });
+      
       setShowSuccessToast(true);
       setIsNewClientModalOpen(false);
     } catch (error) {
       console.error('Erreur lors de la création du client:', error);
     }
   };
+
+  // Modifiez handleStatusUpdate pour utiliser addHistoryEntry
+  const handleStatusUpdate = async (clientId: string, newStatus: string, clientName: string, currentStatus: string) => {
+    try {
+      await updateStatus(clientId, newStatus);
+      
+      await addHistoryEntry({
+        action: 'status_changed',
+        user: currentUser.name,
+        userId: currentUser.id,
+        clientName: clientName,
+        clientId: clientId,
+        details: 'Modification de statut',
+        previousValue: currentStatus,
+        newValue: newStatus
+      });
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
@@ -121,6 +181,7 @@ export function Clients() {
       </div>
     );
   }
+
   return (
     <motion.div
       variants={containerVariants}
@@ -143,6 +204,7 @@ export function Clients() {
           Nouveau Client
         </motion.button>
       </div>
+
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
@@ -243,6 +305,7 @@ export function Clients() {
           </div>
         </div>
       </div>
+
       {clients.length === 0 ? (
         <div className="text-center py-12 bg-card rounded-xl border border-border/50">
           <Building2 className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -315,7 +378,6 @@ export function Clients() {
               <tr className="border-b border-border/50">
                 <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Client</th>
-                {/* <th className="text-left p-4 font-medium text-muted-foreground">Contact</th> */}
                 <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">Email</th>
                 <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Téléphone</th>
                 <th className="text-left p-4 font-medium text-muted-foreground hidden xl:table-cell">Adresse</th>
@@ -328,7 +390,7 @@ export function Clients() {
                   key={`${client.id}-${client.status}`} 
                   variants={itemVariants}
                   onClick={() => navigate(`/clients/${client.id}`)}
-                  className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors cursor-pointer group z-10"
+                  className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors cursor-pointer group"
                 >
                   <td className="p-4">
                     <div className="relative group">
@@ -352,7 +414,6 @@ export function Clients() {
                           }</span>
                         </div>
                       </button>
-                      {/* Menu déroulant du statut */}
                       <div className={`absolute right w-48 bg-card rounded-lg shadow-lg border border-border/50 invisible group-hover:visible z-50 ${
                         index === 0 ? 'top-full mt-2' : 'bottom-full mb-2'
                       }`}>
@@ -362,12 +423,7 @@ export function Clients() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              setStatusChangeModal({
-                                isOpen: true,
-                                clientId: client.id,
-                                clientName: client.name,
-                                newStatus: 'completed'
-                              });
+                              updateStatus(client.id, 'completed');
                             }}
                           >
                             <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
@@ -378,12 +434,7 @@ export function Clients() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              setStatusChangeModal({
-                                isOpen: true,
-                                clientId: client.id,
-                                clientName: client.name,
-                                newStatus: 'pending'
-                              });
+                              updateStatus(client.id, 'pending');
                             }}
                           >
                             <span className="w-2 h-2 rounded-full bg-orange-500 mr-2"></span>
@@ -394,12 +445,7 @@ export function Clients() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              setStatusChangeModal({
-                                isOpen: true,
-                                clientId: client.id,
-                                clientName: client.name,
-                                newStatus: 'in-progress'
-                              });
+                              updateStatus(client.id, 'in-progress');
                             }}
                           >
                             <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
@@ -422,7 +468,6 @@ export function Clients() {
                       </div>
                     </div>
                   </td>
-                  {/* <td className="p-4">{client.contact.firstName} {client.contact.lastName}</td> */}
                   <td className="p-4 hidden lg:table-cell">{client.contact.email}</td>
                   <td className="p-4 hidden md:table-cell">{client.contact.phone}</td>
                   <td className="p-4 hidden xl:table-cell">{client.address.street}, {client.address.postalCode} {client.address.city}</td>
@@ -437,6 +482,68 @@ export function Clients() {
           </table>
         </motion.div>
       )}
+
+      {/* Section Historique */}
+      <div className="mt-12">
+        <h2 className="text-xl font-bold mb-4 flex items-center">
+          <Clock className="w-5 h-5 mr-2 text-primary" />
+          Historique des modifications
+        </h2>
+        <div className="bg-card rounded-xl shadow-lg border border-border/50 overflow-hidden">
+          <div className="overflow-y-auto max-h-96">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border/50">
+                  <th className="text-left p-4 font-medium text-muted-foreground">Action</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Utilisateur</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Client</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Détails</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((entry) => (
+                  <motion.tr
+                    key={entry.id}
+                    variants={itemVariants}
+                    className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors"
+                  >
+                    <td className="p-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        entry.action === 'created' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {entry.action === 'created' ? 'Création' : 'Modification'}
+                      </span>
+                    </td>
+                    <td className="p-4 font-medium">{entry.user}</td>
+                    <td className="p-4">{entry.clientName}</td>
+                    <td className="p-4">
+                      {entry.details}
+                      {entry.previousValue && entry.newValue && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          De <span className="font-medium">{entry.previousValue}</span> à <span className="font-medium">{entry.newValue}</span>
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      {entry.timestamp.toLocaleString('fr-FR', {
+                        day: 'numeric',
+                        month: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <NewClientModal
         isOpen={isNewClientModalOpen}
         onClose={() => setIsNewClientModalOpen(false)}
