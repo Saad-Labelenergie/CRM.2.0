@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ChangeStatusModal } from './components/change-status-modal';
 import { motion } from 'framer-motion';
 import { 
   Plus, 
