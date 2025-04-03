@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ChangeStatusModal } from './components/change-status-modal';
 import { motion } from 'framer-motion';
 import { 
   Plus, 
@@ -17,8 +18,21 @@ import { useNavigate } from 'react-router-dom';
 import { NewClientModal } from './components/new-client-modal';
 import { Toast } from '../ui/toast';
 import { useClients } from '../../lib/hooks/useClients';
-import { Calendar } from 'lucide-react';
+import {collection,addDoc,serverTimestamp,query,orderBy,onSnapshot } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 
+interface HistoryEntry {
+  id?: string; // Optionnel car généré par Firestore
+  action: string;
+  user: string;
+  userId: string;
+  clientName: string;
+  clientId: string;
+  details: string;
+  previousValue?: string;
+  newValue?: string;
+  timestamp: Date;
+}
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -73,6 +87,21 @@ export function Clients() {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+
+
+  
+  // Ajout du nouvel état pour le modal de changement de statut
+  const [statusChangeModal, setStatusChangeModal] = useState<{
+    isOpen: boolean;
+    clientId: string;
+    clientName: string;
+    newStatus: 'completed' | 'pending' | 'in-progress';
+  }>({
+    isOpen: false,
+    clientId: '',
+    clientName: '',
+    newStatus: 'in-progress'
+  });
   const filteredClients = clients.filter(client => {
     const matchesSearch = 
       client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -128,7 +157,8 @@ const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) =>
   // Modifiez handleSaveClient pour utiliser addHistoryEntry
   const handleSaveClient = async (clientData: any) => {
     try {
-      const newClient = await addClient({
+      // Option 1: Si addClient retourne directement l'ID
+      const clientId = await addClient({
         ...clientData,
         status: 'in-progress', 
         createdAt: new Date(),
@@ -140,7 +170,7 @@ const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) =>
         user: currentUser.name,
         userId: currentUser.id,
         clientName: clientData.name,
-        clientId: newClient.id,
+        clientId: clientId, // Utilisez directement l'ID retourné
         details: 'Nouveau client ajouté'
       });
       
@@ -152,7 +182,11 @@ const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) =>
   };
 
   // Modifiez handleStatusUpdate pour utiliser addHistoryEntry
-  const handleStatusUpdate = async (clientId: string, newStatus: string, clientName: string, currentStatus: string) => {
+  // Ajoutez cette définition de type en haut du fichier
+  type ClientStatus = 'completed' | 'pending' | 'in-progress';
+  
+  // Modifiez la signature de la fonction handleStatusUpdate
+  const handleStatusUpdate = async (clientId: string, newStatus: ClientStatus, clientName: string, currentStatus: string) => {
     try {
       await updateStatus(clientId, newStatus);
       
@@ -266,7 +300,7 @@ const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) =>
                   </button>
                   <button 
                     className="flex items-center w-full px-4 py-2 text-sm hover:bg-accent"
-                    onClick={() => {
+                    onClick={(e) => {
                       setStatusFilter(null);
                       setIsFilterMenuOpen(false);
                     }}
@@ -423,7 +457,13 @@ const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) =>
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              updateStatus(client.id, 'completed');
+                              setStatusChangeModal({
+                                isOpen: true,
+                                clientId: client.id,
+                                clientName: client.name,
+                                newStatus: 'completed'
+                              });
+                              // Supprimé: handleStatusUpdate(client.id, 'in-progress', client.name, client.status);
                             }}
                           >
                             <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
@@ -434,7 +474,13 @@ const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) =>
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              updateStatus(client.id, 'pending');
+                              setStatusChangeModal({
+                                isOpen: true,
+                                clientId: client.id,
+                                clientName: client.name,
+                                newStatus: 'pending'
+                              });
+                              // Supprimé: handleStatusUpdate(client.id, 'pending', client.name, client.tag);
                             }}
                           >
                             <span className="w-2 h-2 rounded-full bg-orange-500 mr-2"></span>
@@ -445,7 +491,13 @@ const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) =>
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              updateStatus(client.id, 'in-progress');
+                              setStatusChangeModal({
+                                isOpen: true,
+                                clientId: client.id,
+                                clientName: client.name,
+                                newStatus: 'in-progress'
+                              });
+                              // Supprimé: handleStatusUpdate(client.id, 'in-progress', client.name, client.status);
                             }}
                           >
                             <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
@@ -565,5 +617,4 @@ const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) =>
         newStatus={statusChangeModal.newStatus}
       />
     </motion.div>
-  );
-}
+  );} // Add this closing brace for the Clients function
