@@ -11,10 +11,30 @@ interface Product {
 }
 
 interface ProductsStepProps {
-  selectedProducts: Product[];
+  products: {
+    id: string;
+    name: string;
+    type: string;
+    installationTime: number;
+    price: number;
+  }[];
+  selectedProducts: {
+    id: string;
+    name: string;
+    type: string;
+    installationTime: number;
+    price: number;
+  }[];
   errors: Record<string, string>;
-  onProductSelect: (product: Product) => void;
+  onProductSelect: (product: {
+    id: string;
+    name: string;
+    type: string;
+    installationTime: number;
+    price: number;
+  }) => void;
 }
+
 
 export function ProductsStep({
   selectedProducts,

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { UpdateClientModal } from './components/update-client-modal';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -22,13 +23,16 @@ import {
 } from 'lucide-react';
 import { useClients } from '../../lib/hooks/useClients';
 import { DeleteClientModal } from './components/delete-client-modal';
+import { NewClientModal } from './components/new-client-modal';
 import { Toast } from '../ui/toast';
+import { ProductsStep } from './components/steps/products-step';
 
 export function ClientDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data: clients = [], loading, remove: removeClient } = useClients();
+  const { data: clients = [], loading, remove: removeClient,update} = useClients();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   const client = clients.find(c => c.id === id);
@@ -91,6 +95,17 @@ const formatDate = (date: Date) => {
   })}`;
 };
 
+const handleUpdateClient  = async (updatedClient: any) => {
+  try {
+    await update(client.id, updatedClient); // Make sure you have this function in your useClients hook
+    setShowSuccessToast(true);
+    setIsEditModalOpen(false);
+    // Optionally refresh client data
+  } catch (error) {
+    console.error('Error updating client:', error);
+  }
+};
+
 
   const handleDeleteClient = async () => {
     try {
@@ -129,14 +144,14 @@ const formatDate = (date: Date) => {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => navigate(`/clients/${client.id}/edit`)}
-            className="p-2 hover:bg-accent rounded-lg transition-colors"
-          >
-            <Edit2 className="w-5 h-5 text-muted-foreground" />
-          </motion.button>
+        <motion.button
+  whileHover={{ scale: 1.05 }}
+  whileTap={{ scale: 0.95 }}
+  onClick={() => setIsEditModalOpen(true)}
+  className="p-2 hover:bg-accent/10 rounded-lg transition-colors"
+>
+  <Edit2 className="w-5 h-5 text-muted-foreground" />
+</motion.button>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -277,6 +292,14 @@ const formatDate = (date: Date) => {
         onConfirm={handleDeleteClient}
         clientName={client.name}
       />
+<UpdateClientModal
+  isOpen={isEditModalOpen}
+  onClose={() => setIsEditModalOpen(false)}
+  onSave={handleUpdateClient}
+  initialData={{
+    ...client,
+  }}
+/>
 
       <Toast
         message="Le client a été supprimé avec succès"

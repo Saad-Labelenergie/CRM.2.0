@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, 
   Check, 
-  Plus, 
-  Building2, 
-  ArrowRight, 
-  AlertCircle 
+  ArrowRight,
+  Building2,
+  AlertCircle
 } from 'lucide-react';
 import { ContactStep } from './steps/contact-step';
 import { AddressStep } from './steps/address-step';
@@ -16,13 +15,14 @@ import { StepIndicator } from './steps/step-indicator';
 import { Toast } from '../../ui/toast';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
 
-interface NewClientModalProps {
+interface UpdateClientModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (client: any) => void;
+  initialData: any;
 }
 
-// Mock data for products
+// Mock data for products (same as NewClientModal)
 const products = [
   {
     id: "1",
@@ -49,7 +49,7 @@ const products = [
 
 type Step = 'contact' | 'address' | 'products' | 'planning';
 
-export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps) {
+export function UpdateClientModal({ isOpen, onClose, onSave, initialData }: UpdateClientModalProps) {
   const [step, setStep] = useState<Step>('contact');
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [formData, setFormData] = useState({
@@ -74,8 +74,42 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { addProject, addAppointment } = useScheduling();
+  const { updateProject, updateAppointment } = useScheduling();
 
+  useEffect(() => {
+    if (isOpen && initialData) {
+      // Normaliser les produits sélectionnés
+      const normalizedProducts = initialData.products?.map((prod: any) => {
+        // Si le produit a déjà toute la structure, on le garde
+        if (prod.id && prod.name && prod.type) {
+          return prod;
+        }
+        // Sinon, on cherche le produit correspondant dans la liste complète
+        return products.find(p => p.id === prod.id) || prod;
+      }) || [];
+  
+      setFormData({
+        contact: {
+          firstName: initialData.contact?.firstName || '',
+          lastName: initialData.contact?.lastName || '',
+          email: initialData.contact?.email || '',
+          phone: initialData.contact?.phone || '',
+          secondaryEmail: initialData.contact?.secondaryEmail || '',
+          secondaryPhone: initialData.contact?.secondaryPhone || '',
+        },
+        address: {
+          street: initialData.address?.street || '',
+          city: initialData.address?.city || '',
+          postalCode: initialData.address?.postalCode || '',
+          country: initialData.address?.country || 'France',
+        },
+        tag: initialData.tag || null,
+        selectedProducts: normalizedProducts,
+        installationDate: initialData.installationDate || '',
+        selectedTeam: initialData.team || null
+      });
+    }
+  }, [isOpen, initialData]);
   const handleFieldUpdate = (field: string, value: any) => {
     const fields = field.split('.');
     setFormData(prev => {
@@ -96,6 +130,21 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
       });
     }
   };
+  const handleProductSelect = (product) => {
+    setFormData((prev) => {
+      const isSelected = prev.selectedProducts.some((p) => p.id === product.id);
+      
+      const updatedProducts = isSelected
+        ? prev.selectedProducts.filter((p) => p.id !== product.id) // Retirer le produit
+        : [...prev.selectedProducts, product]; // Ajouter le produit
+  
+      return { ...prev, selectedProducts: updatedProducts };
+    });
+  
+    // Vérifier si le produit est bien ajouté ou retiré
+    console.log("Produits sélectionnés mis à jour :", formData.selectedProducts);
+  };
+  
 
   const validateStep = () => {
     const newErrors: Record<string, string> = {};
@@ -174,62 +223,61 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
   const handleSubmit = async () => {
     if (validateStep()) {
       try {
-        // Créer le client
+        // Update client data
         const clientData = {
-          id: Math.random().toString(36).substr(2, 9),
+          id: initialData.id, // Keep the same ID
           name: `${formData.contact.firstName} ${formData.contact.lastName}`,
           contact: formData.contact,
           address: formData.address,
-          tag: formData.tag
+          tag: formData.tag,
+          products: formData.selectedProducts
         };
         onSave(clientData);
 
-        // Créer le projet
-        const projectId = Math.random().toString(36).substr(2, 9);
-        const projectName = formData.selectedProducts.map(p => p.name).join(", ");
-        
-        // Créer le rendez-vous
-        const appointmentId = Math.random().toString(36).substr(2, 9);
-        const appointment = {
-          id: appointmentId,
-          title: projectName,
-          client: {
-            id: parseInt(clientData.id),
-            name: clientData.name,
-            postalCode: formData.address.postalCode
-          },
-          date: formData.installationDate,
-          time: "09:00",
-          team: formData.selectedTeam?.name || null,
-          teamColor: formData.selectedTeam?.color || null,
-          type: "installation",
-          duration: `${Math.ceil(formData.selectedProducts.reduce((acc, p) => acc + p.installationTime, 0) / 60)}h`,
-          status: formData.selectedTeam ? 'attribue' : 'non_attribue'
-        };
+        // Update project and appointment if they exist
+        if (initialData.projectId) {
+          const projectName = formData.selectedProducts.map(p => p.name).join(", ");
+          
+          const appointment = {
+            id: initialData.appointmentId || Math.random().toString(36).substr(2, 9),
+            title: projectName,
+            client: {
+              id: parseInt(clientData.id),
+              name: clientData.name,
+              postalCode: formData.address.postalCode
+            },
+            date: formData.installationDate,
+            time: "09:00",
+            team: formData.selectedTeam?.name || null,
+            teamColor: formData.selectedTeam?.color || null,
+            type: "installation",
+            duration: `${Math.ceil(formData.selectedProducts.reduce((acc, p) => acc + p.installationTime, 0) / 60)}h`,
+            status: formData.selectedTeam ? 'attribue' : 'non_attribue'
+          };
 
-        // Créer le projet avec le rendez-vous
-        const project = {
-          id: projectId,
-          name: projectName,
-          client: {
-            id: parseInt(clientData.id),
-            name: clientData.name
-          },
-          status: formData.selectedTeam ? 'attribue' : 'en_attente',
-          startDate: formData.installationDate,
-          type: formData.selectedProducts[0].type.toUpperCase(),
-          team: formData.selectedTeam?.name || null,
-          appointments: [appointment]
-        };
+          const project = {
+            id: initialData.projectId,
+            name: projectName,
+            client: {
+              id: parseInt(clientData.id),
+              name: clientData.name
+            },
+            status: formData.selectedTeam ? 'attribue' : 'en_attente',
+            startDate: formData.installationDate,
+            type: formData.selectedProducts[0]?.type.toUpperCase() || '',
+            team: formData.selectedTeam?.name || null,
+            appointments: [appointment],
+            products: formData.selectedProducts
+          };
 
-        // Sauvegarder le projet et le rendez-vous
-        await addProject(project);
-        await addAppointment(appointment);
+          await updateProject(project);
+          await updateAppointment(appointment);
+        }
 
         setShowSuccessToast(true);
         onClose();
       } catch (error) {
-        console.error('Erreur lors de la création du dossier:', error);
+        console.error('Erreur lors de la mise à jour du dossier:', error);
       }
     }
   };
@@ -255,7 +303,7 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold flex items-center">
                   <Building2 className="w-5 h-5 mr-2 text-primary" />
-                  Nouveau Dossier
+                  Modifier Dossier Client
                 </h2>
                 <button
                   onClick={onClose}
@@ -283,20 +331,21 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
                   />
                 )}
                 {step === 'products' && (
-                  <ProductsStep
-                    products={products}
-                    selectedProducts={formData.selectedProducts}
-                    errors={errors}
-                    onProductSelect={(product) => {
-                      const isSelected = formData.selectedProducts.some(p => p.id === product.id);
-                      handleFieldUpdate(
-                        'selectedProducts',
-                        isSelected
-                          ? formData.selectedProducts.filter(p => p.id !== product.id)
-                          : [...formData.selectedProducts, product]
-                      );
-                    }}
-                  />
+                    <ProductsStep
+  products={products}  // Tous les produits disponibles
+  selectedProducts={formData.selectedProducts}  // Produits déjà associés + modifs
+  errors={errors}
+  onProductSelect={(product) => {
+    const isSelected = formData.selectedProducts.some(p => p.id === product.id);
+    handleFieldUpdate(
+      'selectedProducts',
+      isSelected
+        ? formData.selectedProducts.filter(p => p.id !== product.id)  // Supprime
+        : [...formData.selectedProducts, product]  // Ajoute
+    );
+  }}
+/>
+
                 )}
                 {step === 'planning' && (
                   <PlanningStep
@@ -332,7 +381,7 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
                   {step === 'planning' ? (
                     <>
                       <Check className="w-4 h-4 mr-2" />
-                      Créer le dossier
+                      Mettre à jour
                     </>
                   ) : (
                     <>
@@ -347,8 +396,9 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
         )}
       </AnimatePresence>
 
+
       <Toast
-        message="Le dossier a été créé avec succès ! Le rendez-vous et le projet ont été créés."
+        message="Le dossier client a été mis à jour avec succès !"
         isVisible={showSuccessToast}
         onClose={() => setShowSuccessToast(false)}
       />

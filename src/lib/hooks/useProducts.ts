@@ -1,6 +1,6 @@
 import { useFirebase } from './useFirebase';
 
-interface Product {
+export interface Product {
   id: string;
   name: string;
   reference: string;
