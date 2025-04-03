@@ -11,7 +11,7 @@ import {
   Search,
   AlertCircle
 } from 'lucide-react';
-import { format, addDays, setHours, setMinutes, isBefore, isAfter, addMinutes } from 'date-fns';
+import { format, setHours, setMinutes, isBefore, addMinutes } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 interface NewAppointmentModalProps {

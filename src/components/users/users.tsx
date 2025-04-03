@@ -1,42 +1,60 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { UserPlus, Search, Mail, Phone, MapPin, Building2, Shield, MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import { NewUserModal } from './components/new-user-modal';
+import { useFirebase } from '../../lib/hooks/useFirebase';
+import { EditUserModal } from './components/edit-user-modal';
+import { UserDetailsModal } from './components/user-details-modal';
 
-const users = [
-  {
-    id: 1,
-    name: "Jean Dupont",
-    email: "jean.dupont@example.com",
-    role: "Administrateur",
-    department: "Direction",
-    phone: "+33 6 12 34 56 78",
-    location: "Paris",
-    status: "active",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-  },
-  {
-    id: 2,
-    name: "Marie Martin",
-    email: "marie.martin@example.com",
-    role: "Manager",
-    department: "Ressources Humaines",
-    phone: "+33 6 23 45 67 89",
-    location: "Lyon",
-    status: "active",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-  },
-  {
-    id: 3,
-    name: "Pierre Bernard",
-    email: "pierre.bernard@example.com",
-    role: "Technicien",
-    department: "Maintenance",
-    phone: "+33 6 34 56 78 90",
-    location: "Marseille",
-    status: "inactive",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-  }
-];
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  department: string;
+  phone: string;
+  location: string;
+  status: 'active' | 'inactive';
+  avatar?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// const users = [
+//   {
+//     id: 1,
+//     name: "Jean Dupont",
+//     email: "jean.dupont@example.com",
+//     role: "Administrateur",
+//     department: "Direction",
+//     phone: "+33 6 12 34 56 78",
+//     location: "Paris",
+//     status: "active",
+//     avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+//   },
+//   {
+//     id: 2,
+//     name: "Marie Martin",
+//     email: "marie.martin@example.com",
+//     role: "Manager",
+//     department: "Ressources Humaines",
+//     phone: "+33 6 23 45 67 89",
+//     location: "Lyon",
+//     status: "active",
+//     avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+//   },
+//   {
+//     id: 3,
+//     name: "Pierre Bernard",
+//     email: "pierre.bernard@example.com",
+//     role: "Technicien",
+//     department: "Maintenance",
+//     phone: "+33 6 34 56 78 90",
+//     location: "Marseille",
+//     status: "inactive",
+//     avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+//   }
+// ];
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -57,6 +75,76 @@ const itemVariants = {
 };
 
 export function Users() {
+  const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const { data: users, loading, add: addUser, remove: removeUser, update: updateUser } = useFirebase<User>('users', { orderByField: 'name' });
+
+  const handleSaveUser = async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt' | 'avatar'>) => {
+    try {
+      const defaultAvatar = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80";
+      
+      await addUser({
+        ...userData,
+        avatar: defaultAvatar,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      setIsNewUserModalOpen(false);
+    } catch (error) {
+      console.error('Error adding new user:', error);
+    }
+  };
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
+      try {
+        await removeUser(userId);
+      } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+      }
+    }
+  };
+
+  const handleShowDetails = (user: User) => {
+    setSelectedUser(user);
+    setIsDetailsModalOpen(true);
+  };
+
+  const handleUpdateUser = async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt' | 'avatar'>) => {
+    if (!selectedUser?.id) return;
+    
+    try {
+      await updateUser(selectedUser.id, {
+        ...userData,
+        // Keep the existing avatar
+        avatar: selectedUser.avatar,
+        updatedAt: new Date()
+      });
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="text-center">
+          <UserPlus className="w-12 h-12 mx-auto text-muted-foreground animate-pulse" />
+          <h2 className="text-xl font-semibold mt-4">Loading users...</h2>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       variants={containerVariants}
@@ -72,6 +160,7 @@ export function Users() {
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
+          onClick={() => setIsNewUserModalOpen(true)}
           className="flex items-center px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors shadow-lg"
         >
           <UserPlus className="w-4 h-4 mr-2" />
@@ -94,7 +183,8 @@ export function Users() {
       >
         {users.map((user) => (
           <motion.div
-            key={user.id}
+            // Use a composite key with timestamp to ensure uniqueness
+            key={`${user.id}-${user.updatedAt?.getTime()}`}
             variants={itemVariants}
             className="bg-card rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-border/50"
           >
@@ -121,6 +211,7 @@ export function Users() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  onClick={() => handleEditUser(user)}
                   className="p-2 hover:bg-accent rounded-lg transition-colors"
                 >
                   <Edit2 className="w-4 h-4 text-muted-foreground" />
@@ -128,6 +219,7 @@ export function Users() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  onClick={() => handleDeleteUser(user.id)}
                   className="p-2 hover:bg-destructive/10 rounded-lg transition-colors"
                 >
                   <Trash2 className="w-4 h-4 text-destructive" />
@@ -135,11 +227,23 @@ export function Users() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  onClick={() => handleShowDetails(user)}
                   className="p-2 hover:bg-accent rounded-lg transition-colors"
                 >
                   <MoreVertical className="w-4 h-4 text-muted-foreground" />
                 </motion.button>
               </div>
+              <EditUserModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                onSave={handleUpdateUser}
+                user={selectedUser}
+              />
+              <UserDetailsModal
+                isOpen={isDetailsModalOpen}
+                onClose={() => setIsDetailsModalOpen(false)}
+                user={selectedUser}
+              />
             </div>
 
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -173,6 +277,12 @@ export function Users() {
           </motion.div>
         ))}
       </motion.div>
+
+      <NewUserModal
+        isOpen={isNewUserModalOpen}
+        onClose={() => setIsNewUserModalOpen(false)}
+        onSave={handleSaveUser}
+      />
     </motion.div>
   );
 }

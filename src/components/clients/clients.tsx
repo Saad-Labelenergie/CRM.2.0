@@ -73,25 +73,20 @@ export function Clients() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false); // Ajout de l'état pour le menu filtre
-
-  // Modifier la logique de filtrage pour inclure le filtre de statut
+  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const filteredClients = clients.filter(client => {
     const matchesSearch = 
       client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.contact.phone.toLowerCase().includes(searchTerm.toLowerCase());
-
     const matchesStatus = !statusFilter || client.status === statusFilter;
-
     return matchesSearch && matchesStatus;
   });
-
   const handleSaveClient = async (clientData: any) => {
     try {
       await addClient({
         ...clientData,
-        status: 'in-progress', // Ajout du statut par défaut
+        status: 'in-progress', 
         createdAt: new Date(),
         updatedAt: new Date()
       });
@@ -101,7 +96,6 @@ export function Clients() {
       console.error('Erreur lors de la création du client:', error);
     }
   };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
@@ -283,7 +277,6 @@ export function Clients() {
                     <span>{formatClientSinceDate(client.createdAt)}</span>
                   </div>
                 </div>
-
                 {client.tag && (
                   <div className="mt-4 pt-4 border-t border-border/50">
                     <div className="flex items-center">
@@ -317,7 +310,7 @@ export function Clients() {
             <tbody>
               {filteredClients.map((client, index) => (
                 <motion.tr
-                  key={`${client.id}-${client.status}`}  // Modification de la clé
+                  key={`${client.id}-${client.status}`} 
                   variants={itemVariants}
                   onClick={() => navigate(`/clients/${client.id}`)}
                   className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors cursor-pointer group z-10"
@@ -414,13 +407,11 @@ export function Clients() {
           </table>
         </motion.div>
       )}
-
       <NewClientModal
         isOpen={isNewClientModalOpen}
         onClose={() => setIsNewClientModalOpen(false)}
         onSave={handleSaveClient}
       />
-
       <Toast
         message="Le client a été créé avec succès !"
         isVisible={showSuccessToast}
