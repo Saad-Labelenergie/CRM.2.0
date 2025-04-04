@@ -25,19 +25,4 @@ pie
     "Tailwind CSS" : 15
     "Framer Motion" : 5
 
-##🏗️ Structure du Projet
 
-src/
-├── lib/
-│   ├── firebase.ts       # Configuration Firebase
-│   └── hooks/            # useClients, useAuth, etc.
-├── components/
-│   ├── ui/               # Composants génériques
-│   ├── modals/           # Tous les modals
-│   └── clients/          # Composants spécifiques
-├── pages/
-│   └── Clients/          # Page principale
-└── types/                # Définitions TypeScript
-
-
-<div align="center"> <em>Développé avec ❤️ par CHAH SAAD et DOUMBIA SEYBOU DIOKOLO</em> </div> ```
