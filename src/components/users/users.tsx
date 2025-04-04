@@ -4,8 +4,7 @@ import {
   UserPlus, 
   Search, 
   Mail, 
-  Phone, 
-  MapPin, 
+  Phone,
   Building2, 
   Shield, 
   MoreVertical, 
@@ -18,7 +17,7 @@ import { NewUserModal } from './components/new-user-modal';
 import { useFirebase } from '../../lib/hooks/useFirebase';
 import { EditUserModal } from './components/edit-user-modal';
 import { UserDetailsModal } from './components/user-details-modal';
-
+import { AlertTriangle } from 'lucide-react';
 interface User {
   id: string;
   name: string;
@@ -34,7 +33,6 @@ interface User {
   updatedAt: Date;
   lastLogin?: Date;
 }
-
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -44,7 +42,6 @@ const containerVariants = {
     }
   }
 };
-
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
   visible: {
@@ -52,69 +49,52 @@ const itemVariants = {
     opacity: 1
   }
 };
-
-// Remove the static userStats object at the top of the file
-// const userStats = { ... }
-
 export function Users() {
   const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  // Add this new state for delete modal
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  
   const { data: users = [], loading, add: addUser, remove: removeUser, update: updateUser } = useFirebase<User>('users', { orderByField: 'name' });
   const [monthlyStats, setMonthlyStats] = useState<Array<{ month: string, count: number }>>([]);
-
   const calculateGrowth = () => {
     if (monthlyStats.length < 2) return '0.0';
-    
     const currentCount = monthlyStats[monthlyStats.length - 1]?.count || 0;
     const previousCount = monthlyStats[monthlyStats.length - 2]?.count || currentCount;
-    
     return ((currentCount / previousCount - 1) * 100).toFixed(1);
   };
-
   useEffect(() => {
-    const calculateMonthlyStats = () => {      // Créer un tableau des 12 derniers mois
+    const calculateMonthlyStats = () => { 
       const last12Months = Array.from({ length: 12 }, (_, i) => {
         const date = new Date();
         date.setMonth(date.getMonth() - i);
         return date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
       }).reverse();
-  
-      // Initialiser les statistiques avec tous les mois à 0
       const initialStats = last12Months.reduce((acc, month) => {
         acc[month] = { month, count: 0 };
         return acc;
       }, {} as Record<string, { month: string, count: number }>);
-  
-      // Calculer les totaux cumulatifs
       const stats = users.reduce((acc, user) => {
         const userDate = new Date(user.createdAt);
         const userMonth = userDate.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
-        
-        // Mettre à jour tous les mois après la création de l'utilisateur
         last12Months.forEach(month => {
           const [m, y] = month.split(' ');
           const [userM, userY] = userMonth.split(' ');
           const monthDate = new Date(`${m} 20${y}`);
           const userMonthDate = new Date(`${userM} 20${userY}`);
-          
           if (monthDate >= userMonthDate) {
             acc[month].count++;
           }
         });
-        
         return acc;
       }, initialStats);
-  
       const sortedStats = Object.values(stats);
       setMonthlyStats(sortedStats);
     };
-  
     calculateMonthlyStats();
   }, [users]);
-
-  // Dans la section du graphique, remplacer userStats.monthlyGrowth par monthlyStats
   <div className="mt-4">
     <div className="flex items-end justify-between h-12 gap-1">
       {monthlyStats.slice(-5).map((stat) => (
@@ -134,7 +114,6 @@ export function Users() {
       ))}
     </div>
   </div>
-
   const handleSaveUser = async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       await addUser({
@@ -147,30 +126,67 @@ export function Users() {
       console.error('Error adding new user:', error);
     }
   };
-
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setIsEditModalOpen(true);
   };
-
-  const handleDeleteUser = async (userId: string) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
-      try {
-        await removeUser(userId);
-      } catch (error) {
-        console.error('Erreur lors de la suppression:', error);
-      }
+  const handleDeleteUser = (user: User) => {
+    setSelectedUser(user);
+    setIsDeleteModalOpen(true);
+  };
+  
+  // Add this function to handle the actual deletion
+  const confirmDelete = async () => {
+    if (!selectedUser?.id) return;
+    try {
+      await removeUser(selectedUser.id);
+      setIsDeleteModalOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
     }
   };
-
+  
+  // Add this modal component before the closing tag of your return statement
+  {isDeleteModalOpen && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-card w-full max-w-md rounded-xl p-6 shadow-xl mx-4"
+      >
+        <div className="flex flex-col items-center text-center">
+          <div className="p-3 rounded-full bg-destructive/10 text-destructive mb-4">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Confirmation</h2>
+          <p className="text-muted-foreground mb-6">
+            Êtes-vous sûr de vouloir désactiver l'équipe {selectedUser?.name} ?
+          </p>
+          <div className="flex gap-4">
+            <button
+              onClick={() => setIsDeleteModalOpen(false)}
+              className="px-4 py-2 rounded-lg hover:bg-accent"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90"
+            >
+              Confirmer
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  )}
   const handleShowDetails = (user: User) => {
     setSelectedUser(user);
     setIsDetailsModalOpen(true);
   };
-
   const handleUpdateUser = async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (!selectedUser?.id) return;
-    
     try {
       await updateUser(selectedUser.id, {
         ...userData,
@@ -181,7 +197,6 @@ export function Users() {
       console.error('Erreur lors de la mise à jour:', error);
     }
   };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
@@ -192,7 +207,6 @@ export function Users() {
       </div>
     );
   }
-
   return (
     <motion.div
       variants={containerVariants}
@@ -251,7 +265,6 @@ export function Users() {
             </div>
           </div>
         </motion.div>
-
         <motion.div
           whileHover={{ y: -5 }}
           className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
@@ -292,7 +305,6 @@ export function Users() {
             </div>
           </div>
         </motion.div>
-
         <motion.div
           whileHover={{ y: -5 }}
           className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
@@ -388,7 +400,6 @@ export function Users() {
           </div>
         </motion.div>
       </div>
-
       <div className="relative">
         <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
         <input
@@ -397,7 +408,6 @@ export function Users() {
           className="w-full pl-12 pr-4 py-3 bg-background border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
         />
       </div>
-
       <motion.div
         variants={containerVariants}
         className="grid gap-6"
@@ -439,7 +449,7 @@ export function Users() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => handleDeleteUser(user.id)}
+                  onClick={() => handleDeleteUser(user)}
                   className="p-2 hover:bg-destructive/10 rounded-lg transition-colors"
                 >
                   <Trash2 className="w-4 h-4 text-destructive" />
@@ -454,7 +464,6 @@ export function Users() {
                 </motion.button>
               </div>
             </div>
-
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="flex items-center space-x-2 text-sm">
                 <Mail className="w-4 h-4 text-muted-foreground" />
@@ -469,7 +478,6 @@ export function Users() {
                 <span>{user.department}</span>
               </div>
             </div>
-
             <div className="mt-4 flex items-center">
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                 user.status === 'active' 
@@ -482,25 +490,57 @@ export function Users() {
           </motion.div>
         ))}
       </motion.div>
-
       <NewUserModal
         isOpen={isNewUserModalOpen}
         onClose={() => setIsNewUserModalOpen(false)}
         onSave={handleSaveUser}
       />
-
       <EditUserModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onSave={handleUpdateUser}
         user={selectedUser}
       />
-
       <UserDetailsModal
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
         user={selectedUser}
       />
+      {/* Add the delete confirmation modal here */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-card w-full max-w-md rounded-xl p-6 shadow-xl mx-4"
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="p-3 rounded-full bg-destructive/10 text-destructive mb-4">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Confirmation</h2>
+              <p className="text-muted-foreground mb-6">
+                Êtes-vous sûr de vouloir supprimer l'utilisateur {selectedUser?.name} ?
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setIsDeleteModalOpen(false)}
+                  className="px-4 py-2 rounded-lg hover:bg-accent"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90"
+                >
+                  Confirmer
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </motion.div>
   );
 }

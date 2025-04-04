@@ -62,7 +62,6 @@ export function UserDetailsModal({ isOpen, onClose, user }: UserDetailsModalProp
                 </div>
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div className="flex items-center space-x-3">
@@ -72,7 +71,6 @@ export function UserDetailsModal({ isOpen, onClose, user }: UserDetailsModalProp
                     <p className="font-medium">{user.email}</p>
                   </div>
                 </div>
-
                 <div className="flex items-center space-x-3">
                   <Phone className="w-5 h-5 text-muted-foreground" />
                   <div>
@@ -80,7 +78,6 @@ export function UserDetailsModal({ isOpen, onClose, user }: UserDetailsModalProp
                     <p className="font-medium">{user.phone}</p>
                   </div>
                 </div>
-
                 <div className="flex items-center space-x-3">
                   <Building2 className="w-5 h-5 text-muted-foreground" />
                   <div>
@@ -89,7 +86,6 @@ export function UserDetailsModal({ isOpen, onClose, user }: UserDetailsModalProp
                   </div>
                 </div>
               </div>
-
               <div className="space-y-4">
                 <div className="flex items-center space-x-3">
                   <Building2 className="w-5 h-5 text-muted-foreground" />
@@ -98,7 +94,6 @@ export function UserDetailsModal({ isOpen, onClose, user }: UserDetailsModalProp
                     <p className="font-medium">{user.department}</p>
                   </div>
                 </div>
-
                 <div className="flex items-center space-x-3">
                   <Calendar className="w-5 h-5 text-muted-foreground" />
                   <div>
@@ -112,7 +107,6 @@ export function UserDetailsModal({ isOpen, onClose, user }: UserDetailsModalProp
                     </p>
                   </div>
                 </div>
-
                 <div>
                   <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                     user.status === 'active' 
@@ -124,7 +118,6 @@ export function UserDetailsModal({ isOpen, onClose, user }: UserDetailsModalProp
                 </div>
               </div>
             </div>
-
             <div className="mt-8 flex justify-end">
               <button
                 onClick={onClose}

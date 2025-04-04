@@ -5,8 +5,6 @@ import { X,Edit2 } from 'lucide-react';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
 import { Eye, EyeOff } from 'lucide-react';
 import { hashPassword } from '../../../lib/utils/password';
-
-// Update User interface
 interface User {
   id: string;
   name: string;
@@ -16,18 +14,16 @@ interface User {
   phone: string;
   status: 'active' | 'inactive';
   avatar?: string;
-  team?: string; // Add team field
+  team?: string; 
   createdAt: Date;
   updatedAt: Date;
 }
-
 interface EditUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => void;
   user: User | null;
 }
-
 export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalProps) {
   const { teams } = useScheduling(); // Add teams from context
   const [userData, setUserData] = useState<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>({
@@ -38,11 +34,9 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
     phone: '',
     status: 'active',
     avatar: '',
-    team: '' // Add team field
+    team: '' 
   });
-
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-
   useEffect(() => {
     if (user) {
       setUserData({
@@ -53,16 +47,13 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
         phone: user.phone,
         status: user.status,
         avatar: user.avatar || '',
-        team: user.team || '' // Add team field
+        team: user.team || '' 
       });
       setPreviewImage(user.avatar || null);
     }
-  }, [user]);
-
+  }, [user])
   const [showPassword, setShowPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
-
-  // Modifiez handleImageChange pour utiliser le bon chemin
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -72,14 +63,11 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
       const imageDataUrl = reader.result as string;
       
       try {
-        // Compression de l'image
-        const compressedImage = await compressImage(imageDataUrl, 200); // Taille réduite à 200px
-        
-        // Mise à jour directe avec l'image en base64
+        const compressedImage = await compressImage(imageDataUrl, 200);
         setPreviewImage(compressedImage);
         setUserData(prev => ({
           ...prev,
-          avatar: compressedImage // Sauvegarde directe en base64
+          avatar: compressedImage 
         }));
       } catch (error) {
         console.error('Erreur lors du traitement de l\'image:', error);
@@ -88,8 +76,6 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
     };
     reader.readAsDataURL(file);
   };
-
-  // Ajouter la fonction de compression d'image
   const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
     return new Promise((resolve) => {
       const img = new Image();
@@ -98,37 +84,29 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
         const canvas = document.createElement('canvas');
         let width = img.width;
         let height = img.height;
-        
         if (width > maxWidth) {
           height = Math.round((height * maxWidth) / width);
           width = maxWidth;
         }
-        
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.7)); // Compression JPEG à 70%
+        resolve(canvas.toDataURL('image/jpeg', 0.7)); 
       };
     });
   };
-
-  // Modifiez handleSubmit pour inclure le nouveau mot de passe
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    
     const finalUserData = {
       ...userData,
       ...(newPassword && { password: await hashPassword(newPassword) })
     };
-    
     onSave(finalUserData);
     setNewPassword('');
-    onClose(); // Changed handleClose to onClose
+    onClose();
   };
-
-  // Ajoutez le champ de mot de passe dans le formulaire, après le champ email
   return (
     <AnimatePresence>
       {isOpen && (
@@ -184,7 +162,6 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
                   required
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-1">Email</label>
                 <input
@@ -195,7 +172,6 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
                   required
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-1">Nouveau mot de passe (optionnel)</label>
                 <div className="relative">
@@ -218,7 +194,6 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
                   </button>
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Rôle</label>
@@ -244,7 +219,6 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
                   />
                 </div>
               </div>
-
               {userData.role === 'technician' && (
                 <div>
                   <label className="block text-sm font-medium mb-1">Équipe</label>
@@ -263,7 +237,6 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
                   </select>
                 </div>
               )}
-
               <div>
                 <label className="block text-sm font-medium mb-1">Téléphone</label>
                 <input
@@ -274,7 +247,6 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
                   required
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-1">Statut</label>
                 <select
@@ -286,7 +258,6 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
                   <option value="inactive">Inactif</option>
                 </select>
               </div>
-
               <div className="flex justify-end space-x-2 mt-6">
                 <button
                   type="button"
