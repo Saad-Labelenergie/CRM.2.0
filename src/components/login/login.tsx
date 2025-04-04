@@ -9,7 +9,7 @@ import { collection,query,getDocs,where } from "firebase/firestore";
 
 export function Login() {
   const [email, setEmail] = useState("");
-  const [userId, setUserId] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -18,45 +18,32 @@ export function Login() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
+  
     try {
-      // 1. Vérifier d'abord dans Firestore si l'utilisateur existe avec cet email et ID
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("email", "==", email), where("id", "==", String(userId)));
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-        throw new Error("Email ou ID incorrect");
+      const res = await fetch("http://localhost:8000/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+  
+      const data = await res.json();
+  
+      if (!res.ok) {
+        throw new Error(data.message || "Erreur lors de la connexion");
       }
-
-      // 2. Si trouvé, récupérer le premier utilisateur (normalement il ne devrait y en avoir qu'un)
-      const userDoc = querySnapshot.docs[0];
-      const userData = userDoc.data();
-
-      // 3. Vérifier le statut
-      if (userData.status !== "active") {
-        throw new Error("Compte désactivé");
-      }
-
-      // 4. Authentifier avec Firebase Auth (si vous utilisez aussi l'authentification)
-      // Note: Vous devrez peut-être adapter cette partie selon votre configuration
-      //try {
-       // await signInWithEmailAndPassword(auth, email, userId.toString());
-      //} catch (authError) {
-       // console.log("Authentification Firebase optionnelle échouée, continuation avec Firestore");
-      //}
-
-      // 5. Stocker les données utilisateur et rediriger
-      localStorage.setItem("currentUser", JSON.stringify(userData));
+  
+      localStorage.setItem("currentUser", JSON.stringify(data.user));
       navigate("/");
-
     } catch (err) {
       setError(err.message);
-      console.error("Erreur de connexion:", err);
+      console.error("Erreur de connexion :", err);
     } finally {
       setLoading(false);
     }
   };
+  
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
@@ -73,7 +60,7 @@ export function Login() {
         >
           <h2 className="text-2xl font-bold text-center text-primary">Connexion</h2>
           <p className="text-muted-foreground text-center mt-1">
-            Entrez votre email et votre ID utilisateur
+            Entrez votre email et votre mot de passe utilisateur
           </p>
 
           {error && (
@@ -98,10 +85,11 @@ export function Login() {
             <div className="relative">
               <Hash className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
               <input
-                type="text"
-                placeholder="ID Utilisateur"
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)} // N'autorise que les chiffres
+  type="password"
+  placeholder="Mot de passe"
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+
                 className="w-full pl-12 pr-4 py-3 bg-background border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
                 required
               />
