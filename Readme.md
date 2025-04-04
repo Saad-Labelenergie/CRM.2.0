@@ -48,7 +48,7 @@
 ## 🛠️ Installation
 
 ### Clonage du dépôt
-\`\`\`bash
+\`bash
 git clone https://github.com/votre-repo/gestion-clients.git
 cd gestion-clients
 
