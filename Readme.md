@@ -1,6 +1,6 @@
 # 📋 Application de Gestion des Clients
 
-![Banner](https://via.placeholder.com/1200x400?text=Gestion+Clients+Application) <!-- Ajoutez une bannière réelle ici -->
+![Banner](https://labelenergie.fr/logo.jpg) <!-- Ajoutez une bannière réelle ici -->
 
 ## 👨‍💻 Développeurs
 - **CHAH SAAD**
