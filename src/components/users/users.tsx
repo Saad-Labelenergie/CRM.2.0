@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   UserPlus, 
@@ -26,12 +26,13 @@ interface User {
   role: string;
   department: string;
   phone: string;
-  location: string;
   status: 'active' | 'inactive';
   avatar?: string;
+  team?: string;
+  password?: string;
   createdAt: Date;
   updatedAt: Date;
-  lastLogin?: Date;  // Added lastLogin as optional property
+  lastLogin?: Date;
 }
 
 const containerVariants = {
@@ -52,15 +53,8 @@ const itemVariants = {
   }
 };
 
-const userStats = {
-  monthlyGrowth: [
-    { month: 'Jan', count: 12 },
-    { month: 'Fév', count: 15 },
-    { month: 'Mar', count: 18 },
-    { month: 'Avr', count: 22 },
-    { month: 'Mai', count: 25 }
-  ]
-};
+// Remove the static userStats object at the top of the file
+// const userStats = { ... }
 
 export function Users() {
   const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
@@ -68,15 +62,78 @@ export function Users() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const { data: users = [], loading, add: addUser, remove: removeUser, update: updateUser } = useFirebase<User>('users', { orderByField: 'name' });
+  const [monthlyStats, setMonthlyStats] = useState<Array<{ month: string, count: number }>>([]);
 
   const calculateGrowth = () => {
-    const currentMonth = new Date().getMonth();
-    const previousMonth = currentMonth > 0 ? currentMonth - 1 : 11;
-    const currentCount = users.length;
-    const previousCount = userStats.monthlyGrowth[previousMonth]?.count || currentCount;
+    if (monthlyStats.length < 2) return '0.0';
+    
+    const currentCount = monthlyStats[monthlyStats.length - 1]?.count || 0;
+    const previousCount = monthlyStats[monthlyStats.length - 2]?.count || currentCount;
     
     return ((currentCount / previousCount - 1) * 100).toFixed(1);
   };
+
+  useEffect(() => {
+    const calculateMonthlyStats = () => {      // Créer un tableau des 12 derniers mois
+      const last12Months = Array.from({ length: 12 }, (_, i) => {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        return date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+      }).reverse();
+  
+      // Initialiser les statistiques avec tous les mois à 0
+      const initialStats = last12Months.reduce((acc, month) => {
+        acc[month] = { month, count: 0 };
+        return acc;
+      }, {} as Record<string, { month: string, count: number }>);
+  
+      // Calculer les totaux cumulatifs
+      const stats = users.reduce((acc, user) => {
+        const userDate = new Date(user.createdAt);
+        const userMonth = userDate.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+        
+        // Mettre à jour tous les mois après la création de l'utilisateur
+        last12Months.forEach(month => {
+          const [m, y] = month.split(' ');
+          const [userM, userY] = userMonth.split(' ');
+          const monthDate = new Date(`${m} 20${y}`);
+          const userMonthDate = new Date(`${userM} 20${userY}`);
+          
+          if (monthDate >= userMonthDate) {
+            acc[month].count++;
+          }
+        });
+        
+        return acc;
+      }, initialStats);
+  
+      const sortedStats = Object.values(stats);
+      setMonthlyStats(sortedStats);
+    };
+  
+    calculateMonthlyStats();
+  }, [users]);
+
+  // Dans la section du graphique, remplacer userStats.monthlyGrowth par monthlyStats
+  <div className="mt-4">
+    <div className="flex items-end justify-between h-12 gap-1">
+      {monthlyStats.slice(-5).map((stat) => (
+        <div
+          key={stat.month}
+          className="w-full bg-blue-500/20 rounded-t"
+          style={{
+            height: `${(stat.count / Math.max(...monthlyStats.map(s => s.count))) * 100}%`,
+            transition: 'height 0.3s ease'
+          }}
+        />
+      ))}
+    </div>
+    <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+      {monthlyStats.slice(-5).map(stat => (
+        <span key={stat.month}>{stat.month}</span>
+      ))}
+    </div>
+  </div>
 
   const handleSaveUser = async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
@@ -176,19 +233,19 @@ export function Users() {
           </div>
           <div className="mt-4">
             <div className="flex items-end justify-between h-12 gap-1">
-              {userStats.monthlyGrowth.slice(-5).map((stat) => (
+              {monthlyStats.slice(-5).map((stat) => (
                 <div
                   key={stat.month}
                   className="w-full bg-blue-500/20 rounded-t"
                   style={{
-                    height: `${(stat.count / Math.max(...userStats.monthlyGrowth.map(s => s.count))) * 100}%`,
+                    height: `${(stat.count / Math.max(...monthlyStats.map(s => s.count))) * 100}%`,
                     transition: 'height 0.3s ease'
                   }}
                 />
               ))}
             </div>
             <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-              {userStats.monthlyGrowth.slice(-5).map(stat => (
+              {monthlyStats.slice(-5).map(stat => (
                 <span key={stat.month}>{stat.month}</span>
               ))}
             </div>
@@ -398,7 +455,7 @@ export function Users() {
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="flex items-center space-x-2 text-sm">
                 <Mail className="w-4 h-4 text-muted-foreground" />
                 <span>{user.email}</span>
@@ -406,10 +463,6 @@ export function Users() {
               <div className="flex items-center space-x-2 text-sm">
                 <Phone className="w-4 h-4 text-muted-foreground" />
                 <span>{user.phone}</span>
-              </div>
-              <div className="flex items-center space-x-2 text-sm">
-                <MapPin className="w-4 h-4 text-muted-foreground" />
-                <span>{user.location}</span>
               </div>
               <div className="flex items-center space-x-2 text-sm">
                 <Building2 className="w-4 h-4 text-muted-foreground" />
