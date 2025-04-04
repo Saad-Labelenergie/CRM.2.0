@@ -545,156 +545,254 @@ export function Clients() {
           variants={containerVariants}
           className="bg-card rounded-xl shadow-lg border border-border/50 overflow-hidden"
         >
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border/50">
-                <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Client</th>
-                <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">Email</th>
-                <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Téléphone</th>
-                <th className="text-left p-4 font-medium text-muted-foreground hidden xl:table-cell">Adresse</th>
-                <th className="text-center p-4 font-medium text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredClients.slice(clientsIndexOfFirstItem, clientsIndexOfLastItem).map((client, index) => (
-                <motion.tr
-                  key={`${client.id}-${client.status}`} 
-                  variants={itemVariants}
-                  onClick={() => navigate(`/clients/${client.id}`)}
-                  className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors cursor-pointer group"
-                >
-                  <td className="p-4">
-                    <div className="relative group">
-                      <div className="flex items-center space-x-2 px-3 py-1 rounded-full text-sm">
-                        <span className={`w-2 h-2 rounded-full ${
-                          client.status === 'completed' ? 'bg-green-500' :
-                          client.status === 'pending' ? 'bg-orange-500' :
-                          'bg-blue-500'
-                        }`}></span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          client.status === 'completed' 
-                            ? 'bg-green-100 text-green-800' 
-                            : client.status === 'pending'
-                            ? 'bg-orange-100 text-orange-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {client.status === 'completed' ? 'Terminé' : 
-                           client.status === 'pending' ? 'En attente' : 'En cours'}
-                        </span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <Building2 className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <div className="font-medium">{client.name}</div>
-                        {client.tag && (
-                          <div className="text-sm text-primary font-medium mt-1">{client.tag}</div>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4 hidden lg:table-cell">{client.contact.email}</td>
-                  <td className="p-4 hidden md:table-cell">{client.contact.phone}</td>
-                  <td className="p-4 hidden xl:table-cell">{client.address.street}, {client.address.postalCode} {client.address.city}</td>
-                  <td className="p-4">
-                    <div className="flex items-center justify-center">
-                      <ChevronRight className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  </td>
-                </motion.tr>
+<div className="rounded-lg border border-border/50 bg-card overflow-hidden">
+  <div className="relative overflow-x-auto">
+    <table className="w-full">
+      <thead className="bg-muted/50">
+        <tr className="border-b border-border/50">
+          <th className="text-left p-4 font-medium text-muted-foreground">Statut</th>
+          <th className="text-left p-4 font-medium text-muted-foreground">Client</th>
+          <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">Email</th>
+          <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Téléphone</th>
+          <th className="text-left p-4 font-medium text-muted-foreground hidden xl:table-cell">Adresse</th>
+          <th className="text-center p-4 font-medium text-muted-foreground">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {filteredClients.slice(clientsIndexOfFirstItem, clientsIndexOfLastItem).map((client, index) => (
+          <motion.tr
+            key={`${client.id}-${client.status}`}
+            variants={itemVariants}
+            onClick={() => navigate(`/clients/${client.id}`)}
+            className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors cursor-pointer group"
+          >
+            {/* Cellule Statut avec menu déroulant */}
+            <td className="p-4">
+              <div className="relative group">
+                <div className="flex items-center space-x-2 px-3 py-1 rounded-full text-sm cursor-default">
+                  <span className={`w-2 h-2 rounded-full ${
+                    client.status === 'completed' ? 'bg-green-500' :
+                    client.status === 'pending' ? 'bg-orange-500' :
+                    'bg-blue-500'
+                  }`}></span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    client.status === 'completed' 
+                      ? 'bg-green-100 text-green-800' 
+                      : client.status === 'pending'
+                      ? 'bg-orange-100 text-orange-800'
+                      : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {client.status === 'completed' ? 'Terminé' : 
+                    client.status === 'pending' ? 'En attente' : 'En cours'}
+                  </span>
+                </div>
+
+                {/* Menu déroulant du statut */}
+                <div className={`absolute right-0 w-48 bg-card rounded-lg shadow-lg border border-border/50 invisible group-hover:visible z-50 ${
+                  index === filteredClients.length - 1 ? 'bottom-full mb-2' : 'top-full mt-2'
+                }`}>
+                  <ul className="py-1">
+                    <li>
+                      <button
+                        className="flex items-center px-4 py-2 text-sm hover:bg-accent w-full text-left"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setStatusChangeModal({
+                            isOpen: true,
+                            clientId: client.id,
+                            clientName: client.name,
+                            newStatus: 'completed'
+                          });
+                        }}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
+                        <span>Terminé</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        className="flex items-center px-4 py-2 text-sm hover:bg-accent w-full text-left"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setStatusChangeModal({
+                            isOpen: true,
+                            clientId: client.id,
+                            clientName: client.name,
+                            newStatus: 'pending'
+                          });
+                        }}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-orange-500 mr-2"></span>
+                        <span>En attente</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        className="flex items-center px-4 py-2 text-sm hover:bg-accent w-full text-left"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setStatusChangeModal({
+                            isOpen: true,
+                            clientId: client.id,
+                            clientName: client.name,
+                            newStatus: 'in-progress'
+                          });
+                        }}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
+                        <span>En cours</span>
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </td>
+
+            {/* Cellule Client */}
+            <td className="p-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <div className="font-medium">{client.name}</div>
+                  {client.tag && (
+                    <div className="text-sm text-primary font-medium mt-1">{client.tag}</div>
+                  )}
+                </div>
+              </div>
+            </td>
+
+            {/* Cellule Email */}
+            <td className="p-4 hidden lg:table-cell">
+              <a 
+                href={`mailto:${client.contact.email}`} 
+                className="hover:text-primary hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {client.contact.email}
+              </a>
+            </td>
+
+            {/* Cellule Téléphone */}
+            <td className="p-4 hidden md:table-cell">
+              <a 
+                href={`tel:${client.contact.phone}`}
+                className="hover:text-primary hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {client.contact.phone}
+              </a>
+            </td>
+
+            {/* Cellule Adresse */}
+            <td className="p-4 hidden xl:table-cell">
+              <div className="line-clamp-1">
+                {client.address.street}, {client.address.postalCode} {client.address.city}
+              </div>
+            </td>
+
+            {/* Cellule Actions */}
+            <td className="p-4">
+              <div className="flex items-center justify-center">
+                <ChevronRight className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            </td>
+          </motion.tr>
+        ))}
+      </tbody>
+    </table>
+
+    {/* Pagination */}
+    {filteredClients.length > 0 && (
+      <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-border/50 gap-4">
+        <div className="flex items-center space-x-4">
+          <div className="text-sm text-muted-foreground">
+            Affichage de {clientsIndexOfFirstItem + 1} à {Math.min(clientsIndexOfLastItem, filteredClients.length)} sur {filteredClients.length} clients
+          </div>
+          <div className="flex items-center space-x-2">
+            <label htmlFor="clientsPerPage" className="text-sm text-muted-foreground">
+              Lignes par page:
+            </label>
+            <select
+              id="clientsPerPage"
+              value={clientsPerPage}
+              onChange={(e) => {
+                setClientsPerPage(Number(e.target.value));
+                setCurrentClientsPage(1);
+              }}
+              className="bg-card border border-border/50 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            >
+              {[5, 10, 15, 20].map(option => (
+                <option key={option} value={option}>{option}</option>
               ))}
-            </tbody>
-          </table>
+            </select>
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => paginateClients(Math.max(1, currentClientsPage - 1))}
+            disabled={currentClientsPage === 1}
+            className={`px-3 py-1 rounded-lg transition-colors ${
+              currentClientsPage === 1
+                ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                : 'bg-accent hover:bg-accent/80'
+            }`}
+          >
+            Précédent
+          </button>
+          
+          {Array.from({ length: Math.min(5, clientsTotalPages) }, (_, i) => {
+            let pageNumber;
+            if (clientsTotalPages <= 5) {
+              pageNumber = i + 1;
+            } else if (currentClientsPage <= 3) {
+              pageNumber = i + 1;
+            } else if (currentClientsPage >= clientsTotalPages - 2) {
+              pageNumber = clientsTotalPages - 4 + i;
+            } else {
+              pageNumber = currentClientsPage - 2 + i;
+            }
+            
+            return (
+              <button
+                key={pageNumber}
+                onClick={() => paginateClients(pageNumber)}
+                className={`px-3 py-1 rounded-lg transition-colors min-w-[2.5rem] ${
+                  currentClientsPage === pageNumber
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-accent hover:bg-accent/80'
+                }`}
+              >
+                {pageNumber}
+              </button>
+            );
+          })}
+          
+          <button
+            onClick={() => paginateClients(Math.min(clientsTotalPages, currentClientsPage + 1))}
+            disabled={currentClientsPage === clientsTotalPages}
+            className={`px-3 py-1 rounded-lg transition-colors ${
+              currentClientsPage === clientsTotalPages
+                ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                : 'bg-accent hover:bg-accent/80'
+            }`}
+          >
+            Suivant
+          </button>
+        </div>
+      </div>
+    )}
+  </div>
+</div>
         </motion.div>
       )}
 
-      {/* Pagination for clients table */}
-      {filteredClients.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-border/50 gap-4">
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-muted-foreground">
-              Affichage de {clientsIndexOfFirstItem + 1} à {Math.min(clientsIndexOfLastItem, filteredClients.length)} sur {filteredClients.length} clients
-            </div>
-            <div className="flex items-center space-x-2">
-              <label htmlFor="clientsPerPage" className="text-sm text-muted-foreground">
-                Lignes par page:
-              </label>
-              <select
-                id="clientsPerPage"
-                value={clientsPerPage}
-                onChange={(e) => {
-                  setClientsPerPage(Number(e.target.value));
-                  setCurrentClientsPage(1);
-                }}
-                className="bg-card border border-border/50 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              >
-                <option value="5">5</option>
-                <option value="10">10</option>
-                <option value="15">15</option>
-                <option value="20">20</option>
-              </select>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => paginateClients(Math.max(1, currentClientsPage - 1))}
-              disabled={currentClientsPage === 1}
-              className={`px-3 py-1 rounded-lg ${
-                currentClientsPage === 1
-                  ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                  : 'bg-accent hover:bg-accent/80'
-              }`}
-            >
-              Précédent
-            </button>
-            
-            {Array.from({ length: Math.min(5, clientsTotalPages) }, (_, i) => {
-              let pageNumber;
-              if (clientsTotalPages <= 5) {
-                pageNumber = i + 1;
-              } else if (currentClientsPage <= 3) {
-                pageNumber = i + 1;
-              } else if (currentClientsPage >= clientsTotalPages - 2) {
-                pageNumber = clientsTotalPages - 4 + i;
-              } else {
-                pageNumber = currentClientsPage - 2 + i;
-              }
-              
-              return (
-                <button
-                  key={pageNumber}
-                  onClick={() => paginateClients(pageNumber)}
-                  className={`px-3 py-1 rounded-lg ${
-                    currentClientsPage === pageNumber
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-accent hover:bg-accent/80'
-                  }`}
-                >
-                  {pageNumber}
-                </button>
-              );
-            })}
-            
-            <button
-              onClick={() => paginateClients(Math.min(clientsTotalPages, currentClientsPage + 1))}
-              disabled={currentClientsPage === clientsTotalPages}
-              className={`px-3 py-1 rounded-lg ${
-                currentClientsPage === clientsTotalPages
-                  ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                  : 'bg-accent hover:bg-accent/80'
-              }`}
-            >
-              Suivant
-            </button>
-          </div>
-        </div>
-      )}
+
 
       {/* Historique section with accordion */}
       <div className="mt-12">
