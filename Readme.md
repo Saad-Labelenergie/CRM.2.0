@@ -25,57 +25,88 @@ pie
     "Tailwind CSS" : 15
     "Framer Motion" : 5
 
-🛠️ Installation
-----------------
+## 🛠️ Installation
 
-1.  Cloner le dépôt :
-    
+1. 1.  Cloner le dépôt :
+1.     
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   git clone https://github.com/votre-repo/gestion-clients.git  cd gestion-clients   `
+bash
 
-1.  Installer les dépendances :
-    
+Copy
 
-bashCopy
+git clone https://github.com/votre-repo/gestion-clients.git
+cd gestion-clients
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   npm install   `
+1. 2.  Installer les dépendances :
+1.     
 
-🔧 Configuration
-----------------
+bash
 
-1.  Créer un fichier .env :
-    
+Copy
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   cp .env.example .env   `
+npm install
 
-1.  Configurer Firebase :
-    
+## 🔧 Configuration
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   VITE_FIREBASE_API_KEY=votre_cle_api  VITE_FIREBASE_AUTH_DOMAIN=votre_domaine  VITE_FIREBASE_PROJECT_ID=votre_id  VITE_FIREBASE_STORAGE_BUCKET=votre_bucket  VITE_FIREBASE_MESSAGING_SENDER_ID=votre_sender  VITE_FIREBASE_APP_ID=votre_app_id   `
+1. 1.  Créer un fichier `.env` :
+1.     
 
-1.  Lancer l'application :
-    
+bash
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   npm run dev   `
+Copy
 
-📂 Structure
-------------
+cp .env.example .env
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   src/  ├── components/  │   ├── clients/  │   ├── modals/  │   └── ui/  ├── lib/  │   ├── firebase.ts  │   └── hooks/  ├── pages/  │   └── Clients.tsx  └── types/   `
+1. 2.  Configurer Firebase :
+1.     
 
-🚀 Déploiement
---------------
+Copy
+
+VITE\_FIREBASE\_API\_KEY=votre\_cle\_api
+VITE\_FIREBASE\_AUTH\_DOMAIN=votre\_domaine
+VITE\_FIREBASE\_PROJECT\_ID=votre\_id
+VITE\_FIREBASE\_STORAGE\_BUCKET=votre\_bucket
+VITE\_FIREBASE\_MESSAGING\_SENDER\_ID=votre\_sender
+VITE\_FIREBASE\_APP\_ID=votre\_app\_id
+
+1. 3.  Lancer l'application :
+1.     
+
+bash
+
+Copy
+
+npm run dev
+
+## 📂 Structure
+
+Copy
+
+src/
+├── components/
+│   ├── clients/
+│   ├── modals/
+│   └── ui/
+├── lib/
+│   ├── firebase.ts
+│   └── hooks/
+├── pages/
+│   └── Clients.tsx
+└── types/
+
+## 🚀 Déploiement
+
+[![Déployer sur Vercel](https://vercel.com/button)](https://vercel.com/new)
 
 **Options:**
 
-*   Vercel
-    
-*   Firebase Hosting
-    
-*   Netlify
-    
+* *   Vercel
+*     
+* *   Firebase Hosting
+*     
+* *   Netlify
+*     
 
-📜 Licence
-----------
+## 📜 Licence
 
 MIT © 2023 CHAH SAAD & DOUMBIA SEYBOU DIOKOLO
