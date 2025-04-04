@@ -671,17 +671,17 @@ const renderDashboard = () => {
           Historique des modifications
         </h2>
         <div className="bg-card rounded-xl shadow-lg border border-border/50 overflow-hidden">
-          <div className="overflow-y-auto max-h-96">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border/50">
-                  <th className="text-left p-4 font-medium text-muted-foreground">Action</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground">Utilisateur</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground">Client</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground">Détails</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground">Date</th>
-                </tr>
-              </thead>
+        <div className="relative h-96 overflow-y-auto"> 
+         <table className="w-full">
+            <thead className="sticky top-0 z-10 bg-card">
+              <tr className="border-b border-border/50">
+                <th className="text-left p-4 font-medium text-muted-foreground">Action</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Utilisateur</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Client</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Détails</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Date</th>
+              </tr>
+            </thead>
               <tbody>
               {currentItems.map((entry) => (
             <motion.tr
