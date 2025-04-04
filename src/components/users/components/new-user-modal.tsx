@@ -37,14 +37,11 @@ export function NewUserModal({ isOpen, onClose, onSave }: NewUserModalProps) {
       const imageDataUrl = reader.result as string;
       
       try {
-        // Compression de l'image
-        const compressedImage = await compressImage(imageDataUrl, 200); // Taille réduite à 200px
-        
-        // Mise à jour directe avec l'image en base64
+        const compressedImage = await compressImage(imageDataUrl, 200);
         setPreviewImage(compressedImage);
         setUserData(prev => ({
           ...prev,
-          avatar: compressedImage // Sauvegarde directe en base64
+          avatar: compressedImage
         }));
       } catch (error) {
         console.error('Erreur lors du traitement de l\'image:', error);
@@ -53,8 +50,6 @@ export function NewUserModal({ isOpen, onClose, onSave }: NewUserModalProps) {
     };
     reader.readAsDataURL(file);
   };
-
-// Ajouter cette fonction utilitaire
 const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
   return new Promise((resolve) => {
     const img = new Image();
@@ -63,21 +58,18 @@ const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
       const canvas = document.createElement('canvas');
       let width = img.width;
       let height = img.height;
-      
       if (width > maxWidth) {
         height = Math.round((height * maxWidth) / width);
         width = maxWidth;
       }
-      
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       ctx?.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', 0.7)); // Compression JPEG à 70%
+      resolve(canvas.toDataURL('image/jpeg', 0.7)); 
     };
   });
 };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const hashedPassword = await hashPassword(userData.password);
@@ -85,7 +77,6 @@ const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
       ...userData,
       password: hashedPassword
     });
-    // Reset form
     setUserData({
       name: '',
       email: '',
@@ -99,7 +90,6 @@ const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
     });
     setPreviewImage(null);
   };
-
   return (
     <>
       {isOpen && (
@@ -112,7 +102,6 @@ const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Add image upload section at the top */}
               <div className="flex flex-col items-center space-y-4">
@@ -140,7 +129,6 @@ const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
                   Click the edit icon to upload a profile photo
                 </p>
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-1">Nom</label>
                 <input
@@ -151,7 +139,6 @@ const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
                   required
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-1">Email</label>
                 <input
@@ -162,7 +149,6 @@ const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
                   required
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-1">Mot de passe</label>
                 <div className="relative">
@@ -186,7 +172,6 @@ const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
                   </button>
                 </div>
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-1">Rôle</label>
                 <select
@@ -201,7 +186,6 @@ const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
                   <option value="technician">Technicien</option>
                 </select>
               </div>
-
               {userData.role === 'technician' && (
                 <div>
                   <label className="block text-sm font-medium mb-1">Équipe</label>
@@ -220,7 +204,6 @@ const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
                   </select>
                 </div>
               )}
-
               <div>
                 <label className="block text-sm font-medium mb-1">Département</label>
                 <input
@@ -231,7 +214,6 @@ const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
                   required
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-1">Téléphone</label>
                 <input
@@ -242,7 +224,6 @@ const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
                   required
                 />
               </div>
-
               <div className="flex justify-end space-x-2 mt-6">
                 <button
                   type="button"
