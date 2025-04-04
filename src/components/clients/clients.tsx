@@ -12,7 +12,12 @@ import {
   Building2,
   Filter,
   Calendar,
-  Clock
+  Clock,
+  BarChart3,
+  Power,
+  TrendingDown,
+  TrendingUp
+
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { NewClientModal } from './components/new-client-modal';
@@ -87,7 +92,15 @@ export function Clients() {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+const [currentPage, setCurrentPage] = useState(1);
+const [itemsPerPage, setItemsPerPage] = useState(15); // Remplacez la ligne existante
+// Fonctions pour gérer la pagination
+const indexOfLastItem = currentPage * itemsPerPage;
+const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+const currentItems = history.slice(indexOfFirstItem, indexOfLastItem);
+const totalPages = Math.ceil(history.length / itemsPerPage);
 
+const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   
   // Ajout du nouvel état pour le modal de changement de statut
@@ -152,6 +165,120 @@ const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) =>
   }
 };
 
+const dashboardData = {
+  totalClients: 0,
+  activeClients: 0,
+  inactiveClients: 0,
+  monthlyGrowth: [
+    { month: 'Jan', count: 0 },
+    { month: 'Fév', count: 0 },
+    { month: 'Mar', count: 0 }
+  ]
+};
+
+// Ajoutez cette fonction dans votre composant Clients
+const renderDashboard = () => {
+  const lastMonth = dashboardData.monthlyGrowth[dashboardData.monthlyGrowth.length - 1];
+  const previousMonth = dashboardData.monthlyGrowth[dashboardData.monthlyGrowth.length - 2];
+  const growthPercentage = previousMonth.count === 0 ? 0 : 
+    ((lastMonth.count - previousMonth.count) / previousMonth.count * 100).toFixed(1);
+
+  // Calcul des statistiques basées sur les clients
+  const completedClients = clients.filter(c => c.status === 'completed').length;
+  const pendingClients = clients.filter(c => c.status === 'pending').length;
+  const inProgressClients = clients.filter(c => c.status === 'in-progress').length;
+  const totalClients = clients.length;
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <motion.div
+        variants={itemVariants}
+        className="bg-card rounded-xl p-6 shadow-lg border border-border/50"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm font-medium text-muted-foreground">Total des clients</div>
+            <div className="text-3xl font-bold mt-2">{totalClients}</div>
+          </div>
+          <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+            <Building2 className="w-6 h-6 text-primary" />
+          </div>
+        </div>
+        <div className="mt-4 flex items-center text-sm">
+          {Number(growthPercentage) > 0 ? (
+            <>
+              <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
+              <span className="text-green-500">+{growthPercentage}%</span>
+            </>
+          ) : (
+            <>
+              <TrendingDown className="w-4 h-4 text-red-500 mr-1" />
+              <span className="text-red-500">{growthPercentage}%</span>
+            </>
+          )}
+          <span className="text-muted-foreground ml-1">vs mois dernier</span>
+        </div>
+      </motion.div>
+
+      <motion.div
+        variants={itemVariants}
+        className="bg-card rounded-xl p-6 shadow-lg border border-border/50"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-sm font-medium text-muted-foreground">Statut des clients</div>
+          <Power className="w-5 h-5 text-orange-500" />
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <span className="w-2 h-2 rounded-full bg-green-500 mr-2" />
+              <span className="text-sm">Terminés</span>
+            </div>
+            <span className="font-medium">{completedClients}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <span className="w-2 h-2 rounded-full bg-blue-500 mr-2" />
+              <span className="text-sm">En cours</span>
+            </div>
+            <span className="font-medium">{inProgressClients}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <span className="w-2 h-2 rounded-full bg-orange-500 mr-2" />
+              <span className="text-sm">En attente</span>
+            </div>
+            <span className="font-medium">{pendingClients}</span>
+          </div>
+        </div>
+      </motion.div>
+
+      <motion.div
+        variants={itemVariants}
+        className="bg-card rounded-xl p-6 shadow-lg border border-border/50"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-sm font-medium text-muted-foreground">Évolution mensuelle</div>
+          <BarChart3 className="w-5 h-5 text-blue-500" />
+        </div>
+        <div className="flex items-end justify-between h-12">
+          {dashboardData.monthlyGrowth.map((data, index) => (
+            <div key={data.month} className="flex flex-col items-center">
+              <div 
+                className="w-8 bg-primary/10 rounded-t-lg"
+                style={{
+                  height: `${totalClients > 0 ? (data.count / totalClients) * 100 : 0}%`,
+                  opacity: index === dashboardData.monthlyGrowth.length - 1 ? 1 : 0.5
+                }}
+              />
+              <div className="mt-2 text-xs text-muted-foreground">{data.month}</div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 
 
   // Modifiez handleSaveClient pour utiliser addHistoryEntry
@@ -238,6 +365,8 @@ const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) =>
           Nouveau Client
         </motion.button>
       </div>
+      {renderDashboard()}
+
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
@@ -554,12 +683,12 @@ const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) =>
                 </tr>
               </thead>
               <tbody>
-                {history.map((entry) => (
-                  <motion.tr
-                    key={entry.id}
-                    variants={itemVariants}
-                    className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors"
-                  >
+              {currentItems.map((entry) => (
+            <motion.tr
+              key={entry.id}
+              variants={itemVariants}
+              className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors"
+            >
                     <td className="p-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         entry.action === 'created' 
@@ -593,6 +722,89 @@ const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) =>
               </tbody>
             </table>
           </div>
+              {/*  la pagination ici */}
+              {history.length > 0 && (
+  <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-border/50 gap-4">
+    <div className="flex items-center space-x-4">
+      <div className="text-sm text-muted-foreground">
+        Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, history.length)} sur {history.length} entrées
+      </div>
+      <div className="flex items-center space-x-2">
+        <label htmlFor="itemsPerPage" className="text-sm text-muted-foreground">
+          Lignes par page:
+        </label>
+        <select
+          id="itemsPerPage"
+          value={itemsPerPage}
+          onChange={(e) => {
+            setItemsPerPage(Number(e.target.value));
+            setCurrentPage(1);
+          }}
+          className="bg-card border border-border/50 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary"
+        >
+          <option value="5">5</option>
+          <option value="10">10</option>
+          <option value="15">15</option>
+          <option value="20">20</option>
+          <option value="50">50</option>
+        </select>
+      </div>
+    </div>
+    
+    <div className="flex items-center space-x-2">
+      <button
+        onClick={() => paginate(Math.max(1, currentPage - 1))}
+        disabled={currentPage === 1}
+        className={`px-3 py-1 rounded-lg ${
+          currentPage === 1
+            ? 'bg-muted text-muted-foreground cursor-not-allowed'
+            : 'bg-accent hover:bg-accent/80'
+        }`}
+      >
+        Précédent
+      </button>
+      
+      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+        let pageNumber;
+        if (totalPages <= 5) {
+          pageNumber = i + 1;
+        } else if (currentPage <= 3) {
+          pageNumber = i + 1;
+        } else if (currentPage >= totalPages - 2) {
+          pageNumber = totalPages - 4 + i;
+        } else {
+          pageNumber = currentPage - 2 + i;
+        }
+        
+        return (
+          <button
+            key={pageNumber}
+            onClick={() => paginate(pageNumber)}
+            className={`px-3 py-1 rounded-lg ${
+              currentPage === pageNumber
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-accent hover:bg-accent/80'
+            }`}
+          >
+            {pageNumber}
+          </button>
+        );
+      })}
+      
+      <button
+        onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
+        disabled={currentPage === totalPages}
+        className={`px-3 py-1 rounded-lg ${
+          currentPage === totalPages
+            ? 'bg-muted text-muted-foreground cursor-not-allowed'
+            : 'bg-accent hover:bg-accent/80'
+        }`}
+      >
+        Suivant
+      </button>
+    </div>
+  </div>
+)}
         </div>
       </div>
 
@@ -606,15 +818,24 @@ const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) =>
         isVisible={showSuccessToast}
         onClose={() => setShowSuccessToast(false)}
       />
-      <ChangeStatusModal
-        isOpen={statusChangeModal.isOpen}
-        onClose={() => setStatusChangeModal(prev => ({ ...prev, isOpen: false }))}
-        onConfirm={async (status) => {
-          await updateStatus(statusChangeModal.clientId, status);
-          setStatusChangeModal(prev => ({ ...prev, isOpen: false }));
-        }}
-        clientName={statusChangeModal.clientName}
-        newStatus={statusChangeModal.newStatus}
-      />
+<ChangeStatusModal
+  isOpen={statusChangeModal.isOpen}
+  onClose={() => setStatusChangeModal(prev => ({ ...prev, isOpen: false }))}
+  onConfirm={async (status) => {
+    // Récupérer le client actuel pour obtenir son statut précédent
+    const currentClient = clients.find(c => c.id === statusChangeModal.clientId);
+    if (currentClient) {
+      await handleStatusUpdate(
+        statusChangeModal.clientId, 
+        status, 
+        statusChangeModal.clientName,
+        currentClient.status
+      );
+    }
+    setStatusChangeModal(prev => ({ ...prev, isOpen: false }));
+  }}
+  clientName={statusChangeModal.clientName}
+  newStatus={statusChangeModal.newStatus}
+/>
     </motion.div>
-  );} // Add this closing brace for the Clients function
+  );} 
