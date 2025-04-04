@@ -16,8 +16,9 @@ import {
   BarChart3,
   Power,
   TrendingDown,
-  TrendingUp
-
+  TrendingUp,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { NewClientModal } from './components/new-client-modal';
@@ -27,7 +28,7 @@ import {collection,addDoc,serverTimestamp,query,orderBy,onSnapshot } from 'fireb
 import { db } from '../../lib/firebase';
 
 interface HistoryEntry {
-  id?: string; // Optionnel car généré par Firestore
+  id?: string;
   action: string;
   user: string;
   userId: string;
@@ -38,6 +39,7 @@ interface HistoryEntry {
   newValue?: string;
   timestamp: Date;
 }
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -80,6 +82,7 @@ const formatDate = (date: Date) => {
 };
 
 type ViewMode = 'grid' | 'list';
+type ClientStatus = 'completed' | 'pending' | 'in-progress';
 
 export function Clients() {
   const navigate = useNavigate();
@@ -92,29 +95,39 @@ export function Clients() {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
-const [currentPage, setCurrentPage] = useState(1);
-const [itemsPerPage, setItemsPerPage] = useState(15); // Remplacez la ligne existante
-// Fonctions pour gérer la pagination
-const indexOfLastItem = currentPage * itemsPerPage;
-const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-const currentItems = history.slice(indexOfFirstItem, indexOfLastItem);
-const totalPages = Math.ceil(history.length / itemsPerPage);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [currentClientsPage, setCurrentClientsPage] = useState(1);
+  const [clientsPerPage, setClientsPerPage] = useState(10);
+  const [expandedHistory, setExpandedHistory] = useState(false);
 
-const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  // Pagination for clients
+  const clientsIndexOfLastItem = currentClientsPage * clientsPerPage;
+  const clientsIndexOfFirstItem = clientsIndexOfLastItem - clientsPerPage;
+  const currentClients = clients.slice(clientsIndexOfFirstItem, clientsIndexOfLastItem);
+  const clientsTotalPages = Math.ceil(clients.length / clientsPerPage);
 
-  
-  // Ajout du nouvel état pour le modal de changement de statut
+  // Pagination for history
+  const historyIndexOfLastItem = currentPage * itemsPerPage;
+  const historyIndexOfFirstItem = historyIndexOfLastItem - itemsPerPage;
+  const currentHistoryItems = history.slice(historyIndexOfFirstItem, historyIndexOfLastItem);
+  const historyTotalPages = Math.ceil(history.length / itemsPerPage);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  const paginateClients = (pageNumber: number) => setCurrentClientsPage(pageNumber);
+
   const [statusChangeModal, setStatusChangeModal] = useState<{
     isOpen: boolean;
     clientId: string;
     clientName: string;
-    newStatus: 'completed' | 'pending' | 'in-progress';
+    newStatus: ClientStatus;
   }>({
     isOpen: false,
     clientId: '',
     clientName: '',
     newStatus: 'in-progress'
   });
+
   const filteredClients = clients.filter(client => {
     const matchesSearch = 
       client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -123,168 +136,162 @@ const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
     const matchesStatus = !statusFilter || client.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
- // Chargez l'historique depuis Firestore
- React.useEffect(() => {
-  const q = query(
-    collection(db, 'historique_dossier'),
-    orderBy('timestamp', 'desc')
-  );
-  
-  const unsubscribe = onSnapshot(q, (querySnapshot) => {
-    const entries: HistoryEntry[] = [];
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      entries.push({
-        id: doc.id,
-        action: data.action,
-        user: data.user,
-        userId: data.userId,
-        clientName: data.clientName,
-        clientId: data.clientId,
-        details: data.details,
-        previousValue: data.previousValue,
-        newValue: data.newValue,
-        timestamp: data.timestamp.toDate()
+
+  React.useEffect(() => {
+    const q = query(
+      collection(db, 'historique_dossier'),
+      orderBy('timestamp', 'desc')
+    );
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const entries: HistoryEntry[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        entries.push({
+          id: doc.id,
+          action: data.action,
+          user: data.user,
+          userId: data.userId,
+          clientName: data.clientName,
+          clientId: data.clientId,
+          details: data.details,
+          previousValue: data.previousValue,
+          newValue: data.newValue,
+          timestamp: data.timestamp.toDate()
+        });
       });
+      setHistory(entries);
     });
-    setHistory(entries);
-  });
 
-  return () => unsubscribe();
-}, []);
+    return () => unsubscribe();
+  }, []);
 
-// Fonction pour ajouter une entrée d'historique
-const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) => {
-  try {
-    await addDoc(collection(db, 'historique_dossier'), {
-      ...entry,
-      timestamp: serverTimestamp()
-    });
-  } catch (error) {
-    console.error("Erreur lors de l'ajout à l'historique:", error);
-  }
-};
+  const addHistoryEntry = async (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) => {
+    try {
+      await addDoc(collection(db, 'historique_dossier'), {
+        ...entry,
+        timestamp: serverTimestamp()
+      });
+    } catch (error) {
+      console.error("Erreur lors de l'ajout à l'historique:", error);
+    }
+  };
 
-const dashboardData = {
-  totalClients: 0,
-  activeClients: 0,
-  inactiveClients: 0,
-  monthlyGrowth: [
-    { month: 'Jan', count: 0 },
-    { month: 'Fév', count: 0 },
-    { month: 'Mar', count: 0 }
-  ]
-};
+  const dashboardData = {
+    totalClients: 0,
+    activeClients: 0,
+    inactiveClients: 0,
+    monthlyGrowth: [
+      { month: 'Jan', count: 0 },
+      { month: 'Fév', count: 0 },
+      { month: 'Mar', count: 0 }
+    ]
+  };
 
-// Ajoutez cette fonction dans votre composant Clients
-const renderDashboard = () => {
-  const lastMonth = dashboardData.monthlyGrowth[dashboardData.monthlyGrowth.length - 1];
-  const previousMonth = dashboardData.monthlyGrowth[dashboardData.monthlyGrowth.length - 2];
-  const growthPercentage = previousMonth.count === 0 ? 0 : 
-    ((lastMonth.count - previousMonth.count) / previousMonth.count * 100).toFixed(1);
+  const renderDashboard = () => {
+    const lastMonth = dashboardData.monthlyGrowth[dashboardData.monthlyGrowth.length - 1];
+    const previousMonth = dashboardData.monthlyGrowth[dashboardData.monthlyGrowth.length - 2];
+    const growthPercentage = previousMonth.count === 0 ? 0 : 
+      ((lastMonth.count - previousMonth.count) / previousMonth.count * 100).toFixed(1);
 
-  // Calcul des statistiques basées sur les clients
-  const completedClients = clients.filter(c => c.status === 'completed').length;
-  const pendingClients = clients.filter(c => c.status === 'pending').length;
-  const inProgressClients = clients.filter(c => c.status === 'in-progress').length;
-  const totalClients = clients.length;
+    const completedClients = clients.filter(c => c.status === 'completed').length;
+    const pendingClients = clients.filter(c => c.status === 'pending').length;
+    const inProgressClients = clients.filter(c => c.status === 'in-progress').length;
+    const totalClients = clients.length;
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <motion.div
-        variants={itemVariants}
-        className="bg-card rounded-xl p-6 shadow-lg border border-border/50"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm font-medium text-muted-foreground">Total des clients</div>
-            <div className="text-3xl font-bold mt-2">{totalClients}</div>
-          </div>
-          <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
-            <Building2 className="w-6 h-6 text-primary" />
-          </div>
-        </div>
-        <div className="mt-4 flex items-center text-sm">
-          {Number(growthPercentage) > 0 ? (
-            <>
-              <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-              <span className="text-green-500">+{growthPercentage}%</span>
-            </>
-          ) : (
-            <>
-              <TrendingDown className="w-4 h-4 text-red-500 mr-1" />
-              <span className="text-red-500">{growthPercentage}%</span>
-            </>
-          )}
-          <span className="text-muted-foreground ml-1">vs mois dernier</span>
-        </div>
-      </motion.div>
-
-      <motion.div
-        variants={itemVariants}
-        className="bg-card rounded-xl p-6 shadow-lg border border-border/50"
-      >
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-sm font-medium text-muted-foreground">Statut des clients</div>
-          <Power className="w-5 h-5 text-orange-500" />
-        </div>
-        <div className="space-y-2">
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <motion.div
+          variants={itemVariants}
+          className="bg-card rounded-xl p-6 shadow-lg border border-border/50"
+        >
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <span className="w-2 h-2 rounded-full bg-green-500 mr-2" />
-              <span className="text-sm">Terminés</span>
+            <div>
+              <div className="text-sm font-medium text-muted-foreground">Total des clients</div>
+              <div className="text-3xl font-bold mt-2">{totalClients}</div>
             </div>
-            <span className="font-medium">{completedClients}</span>
+            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+              <Building2 className="w-6 h-6 text-primary" />
+            </div>
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <span className="w-2 h-2 rounded-full bg-blue-500 mr-2" />
-              <span className="text-sm">En cours</span>
-            </div>
-            <span className="font-medium">{inProgressClients}</span>
+          <div className="mt-4 flex items-center text-sm">
+            {Number(growthPercentage) > 0 ? (
+              <>
+                <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
+                <span className="text-green-500">+{growthPercentage}%</span>
+              </>
+            ) : (
+              <>
+                <TrendingDown className="w-4 h-4 text-red-500 mr-1" />
+                <span className="text-red-500">{growthPercentage}%</span>
+              </>
+            )}
+            <span className="text-muted-foreground ml-1">vs mois dernier</span>
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <span className="w-2 h-2 rounded-full bg-orange-500 mr-2" />
-              <span className="text-sm">En attente</span>
-            </div>
-            <span className="font-medium">{pendingClients}</span>
+        </motion.div>
+
+        <motion.div
+          variants={itemVariants}
+          className="bg-card rounded-xl p-6 shadow-lg border border-border/50"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-sm font-medium text-muted-foreground">Statut des clients</div>
+            <Power className="w-5 h-5 text-orange-500" />
           </div>
-        </div>
-      </motion.div>
-
-      <motion.div
-        variants={itemVariants}
-        className="bg-card rounded-xl p-6 shadow-lg border border-border/50"
-      >
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-sm font-medium text-muted-foreground">Évolution mensuelle</div>
-          <BarChart3 className="w-5 h-5 text-blue-500" />
-        </div>
-        <div className="flex items-end justify-between h-12">
-          {dashboardData.monthlyGrowth.map((data, index) => (
-            <div key={data.month} className="flex flex-col items-center">
-              <div 
-                className="w-8 bg-primary/10 rounded-t-lg"
-                style={{
-                  height: `${totalClients > 0 ? (data.count / totalClients) * 100 : 0}%`,
-                  opacity: index === dashboardData.monthlyGrowth.length - 1 ? 1 : 0.5
-                }}
-              />
-              <div className="mt-2 text-xs text-muted-foreground">{data.month}</div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <span className="w-2 h-2 rounded-full bg-green-500 mr-2" />
+                <span className="text-sm">Terminés</span>
+              </div>
+              <span className="font-medium">{completedClients}</span>
             </div>
-          ))}
-        </div>
-      </motion.div>
-    </div>
-  );
-};
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <span className="w-2 h-2 rounded-full bg-blue-500 mr-2" />
+                <span className="text-sm">En cours</span>
+              </div>
+              <span className="font-medium">{inProgressClients}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <span className="w-2 h-2 rounded-full bg-orange-500 mr-2" />
+                <span className="text-sm">En attente</span>
+              </div>
+              <span className="font-medium">{pendingClients}</span>
+            </div>
+          </div>
+        </motion.div>
 
+        <motion.div
+          variants={itemVariants}
+          className="bg-card rounded-xl p-6 shadow-lg border border-border/50"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-sm font-medium text-muted-foreground">Évolution mensuelle</div>
+            <BarChart3 className="w-5 h-5 text-blue-500" />
+          </div>
+          <div className="flex items-end justify-between h-12">
+            {dashboardData.monthlyGrowth.map((data, index) => (
+              <div key={data.month} className="flex flex-col items-center">
+                <div 
+                  className="w-8 bg-primary/10 rounded-t-lg"
+                  style={{
+                    height: `${totalClients > 0 ? (data.count / totalClients) * 100 : 0}%`,
+                    opacity: index === dashboardData.monthlyGrowth.length - 1 ? 1 : 0.5
+                  }}
+                />
+                <div className="mt-2 text-xs text-muted-foreground">{data.month}</div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
 
-  // Modifiez handleSaveClient pour utiliser addHistoryEntry
   const handleSaveClient = async (clientData: any) => {
     try {
-      // Option 1: Si addClient retourne directement l'ID
       const clientId = await addClient({
         ...clientData,
         status: 'in-progress', 
@@ -297,7 +304,7 @@ const renderDashboard = () => {
         user: currentUser.name,
         userId: currentUser.id,
         clientName: clientData.name,
-        clientId: clientId, // Utilisez directement l'ID retourné
+        clientId: clientId,
         details: 'Nouveau client ajouté'
       });
       
@@ -308,11 +315,6 @@ const renderDashboard = () => {
     }
   };
 
-  // Modifiez handleStatusUpdate pour utiliser addHistoryEntry
-  // Ajoutez cette définition de type en haut du fichier
-  type ClientStatus = 'completed' | 'pending' | 'in-progress';
-  
-  // Modifiez la signature de la fonction handleStatusUpdate
   const handleStatusUpdate = async (clientId: string, newStatus: ClientStatus, clientName: string, currentStatus: string) => {
     try {
       await updateStatus(clientId, newStatus);
@@ -366,7 +368,6 @@ const renderDashboard = () => {
         </motion.button>
       </div>
       {renderDashboard()}
-
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
@@ -482,7 +483,7 @@ const renderDashboard = () => {
           variants={containerVariants}
           className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
         >
-          {filteredClients.map((client) => (
+          {filteredClients.slice(clientsIndexOfFirstItem, clientsIndexOfLastItem).map((client) => (
             <motion.div
               key={`${client.id}-${client.updatedAt?.getTime() || Date.now()}`}
               variants={itemVariants}
@@ -498,8 +499,16 @@ const renderDashboard = () => {
                   <div>
                     <h3 className="font-semibold text-lg">{client.name}</h3>
                     <div className="flex items-center mt-1">
-                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                      <span className="text-sm ml-1 text-muted-foreground">4.8</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        client.status === 'completed' 
+                          ? 'bg-green-100 text-green-800' 
+                          : client.status === 'pending'
+                          ? 'bg-orange-100 text-orange-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {client.status === 'completed' ? 'Terminé' : 
+                         client.status === 'pending' ? 'En attente' : 'En cours'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -548,7 +557,7 @@ const renderDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredClients.map((client, index) => (
+              {filteredClients.slice(clientsIndexOfFirstItem, clientsIndexOfLastItem).map((client, index) => (
                 <motion.tr
                   key={`${client.id}-${client.status}`} 
                   variants={itemVariants}
@@ -557,82 +566,22 @@ const renderDashboard = () => {
                 >
                   <td className="p-4">
                     <div className="relative group">
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }}
-                        className="flex items-center space-x-2 px-3 py-1 rounded-full text-sm"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <span className={`w-2 h-2 rounded-full ${
-                            client.status === 'completed' ? 'bg-green-500' :
-                            client.status === 'pending' ? 'bg-orange-500' :
-                            'bg-blue-500'
-                          }`}></span>
-                          <span className="text-sm">{
-                            client.status === 'completed' ? 'Terminé' :
-                            client.status === 'pending' ? 'En attente' :
-                            'En cours'
-                          }</span>
-                        </div>
-                      </button>
-                      <div className={`absolute right w-48 bg-card rounded-lg shadow-lg border border-border/50 invisible group-hover:visible z-50 ${
-                        index === 0 ? 'top-full mt-2' : 'bottom-full mb-2'
-                      }`}>
-                        <div className="py-1">
-                          <button 
-                            className="flex items-center w-full px-4 py-2 text-sm hover:bg-accent"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setStatusChangeModal({
-                                isOpen: true,
-                                clientId: client.id,
-                                clientName: client.name,
-                                newStatus: 'completed'
-                              });
-                              // Supprimé: handleStatusUpdate(client.id, 'in-progress', client.name, client.status);
-                            }}
-                          >
-                            <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
-                            Terminé
-                          </button>
-                          <button 
-                            className="flex items-center w-full px-4 py-2 text-sm hover:bg-accent"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setStatusChangeModal({
-                                isOpen: true,
-                                clientId: client.id,
-                                clientName: client.name,
-                                newStatus: 'pending'
-                              });
-                              // Supprimé: handleStatusUpdate(client.id, 'pending', client.name, client.tag);
-                            }}
-                          >
-                            <span className="w-2 h-2 rounded-full bg-orange-500 mr-2"></span>
-                            En attente
-                          </button>
-                          <button 
-                            className="flex items-center w-full px-4 py-2 text-sm hover:bg-accent"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setStatusChangeModal({
-                                isOpen: true,
-                                clientId: client.id,
-                                clientName: client.name,
-                                newStatus: 'in-progress'
-                              });
-                              // Supprimé: handleStatusUpdate(client.id, 'in-progress', client.name, client.status);
-                            }}
-                          >
-                            <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
-                            En cours
-                          </button>
-                        </div>
+                      <div className="flex items-center space-x-2 px-3 py-1 rounded-full text-sm">
+                        <span className={`w-2 h-2 rounded-full ${
+                          client.status === 'completed' ? 'bg-green-500' :
+                          client.status === 'pending' ? 'bg-orange-500' :
+                          'bg-blue-500'
+                        }`}></span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          client.status === 'completed' 
+                            ? 'bg-green-100 text-green-800' 
+                            : client.status === 'pending'
+                            ? 'bg-orange-100 text-orange-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {client.status === 'completed' ? 'Terminé' : 
+                           client.status === 'pending' ? 'En attente' : 'En cours'}
+                        </span>
                       </div>
                     </div>
                   </td>
@@ -664,147 +613,247 @@ const renderDashboard = () => {
         </motion.div>
       )}
 
-      {/* Section Historique */}
-      <div className="mt-15">
-        <h2 className="text-xl font-bold mb-4 flex items-center">
-          <Clock className="w-5 h-5 mr-2 text-primary" />
-          Historique des modifications
-        </h2>
-        <div className="bg-card rounded-xl shadow-lg border border-border/50 overflow-hidden">
-        <div className="relative h-[600px] overflow-y-auto">          <table className="w-full">
-            <thead className="sticky top-0 z-10 bg-card">
-              <tr className="border-b border-border/50">
-                <th className="text-left p-4 font-medium text-muted-foreground">Action</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Utilisateur</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Client</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Détails</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Date</th>
-              </tr>
-            </thead>
-              <tbody>
-              {currentItems.map((entry) => (
-            <motion.tr
-              key={entry.id}
-              variants={itemVariants}
-              className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors"
-            >
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        entry.action === 'created' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {entry.action === 'created' ? 'Création' : 'Modification'}
-                      </span>
-                    </td>
-                    <td className="p-4 font-medium">{entry.user}</td>
-                    <td className="p-4">{entry.clientName}</td>
-                    <td className="p-4">
-                      {entry.details}
-                      {entry.previousValue && entry.newValue && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          De <span className="font-medium">{entry.previousValue}</span> à <span className="font-medium">{entry.newValue}</span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      {entry.timestamp.toLocaleString('fr-FR', {
-                        day: 'numeric',
-                        month: 'numeric',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Pagination for clients table */}
+      {filteredClients.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-border/50 gap-4">
+          <div className="flex items-center space-x-4">
+            <div className="text-sm text-muted-foreground">
+              Affichage de {clientsIndexOfFirstItem + 1} à {Math.min(clientsIndexOfLastItem, filteredClients.length)} sur {filteredClients.length} clients
+            </div>
+            <div className="flex items-center space-x-2">
+              <label htmlFor="clientsPerPage" className="text-sm text-muted-foreground">
+                Lignes par page:
+              </label>
+              <select
+                id="clientsPerPage"
+                value={clientsPerPage}
+                onChange={(e) => {
+                  setClientsPerPage(Number(e.target.value));
+                  setCurrentClientsPage(1);
+                }}
+                className="bg-card border border-border/50 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              >
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+              </select>
+            </div>
           </div>
-              {/*  la pagination ici */}
-              {history.length > 0 && (
-  <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-border/50 gap-4">
-    <div className="flex items-center space-x-4">
-      <div className="text-sm text-muted-foreground">
-        Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, history.length)} sur {history.length} entrées
-      </div>
-      <div className="flex items-center space-x-2">
-        <label htmlFor="itemsPerPage" className="text-sm text-muted-foreground">
-          Lignes par page:
-        </label>
-        <select
-          id="itemsPerPage"
-          value={itemsPerPage}
-          onChange={(e) => {
-            setItemsPerPage(Number(e.target.value));
-            setCurrentPage(1);
-          }}
-          className="bg-card border border-border/50 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary"
-        >
-          <option value="5">5</option>
-          <option value="10">10</option>
-          <option value="15">15</option>
-          <option value="20">20</option>
-          <option value="50">50</option>
-        </select>
-      </div>
-    </div>
-    
-    <div className="flex items-center space-x-2">
-      <button
-        onClick={() => paginate(Math.max(1, currentPage - 1))}
-        disabled={currentPage === 1}
-        className={`px-3 py-1 rounded-lg ${
-          currentPage === 1
-            ? 'bg-muted text-muted-foreground cursor-not-allowed'
-            : 'bg-accent hover:bg-accent/80'
-        }`}
-      >
-        Précédent
-      </button>
-      
-      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-        let pageNumber;
-        if (totalPages <= 5) {
-          pageNumber = i + 1;
-        } else if (currentPage <= 3) {
-          pageNumber = i + 1;
-        } else if (currentPage >= totalPages - 2) {
-          pageNumber = totalPages - 4 + i;
-        } else {
-          pageNumber = currentPage - 2 + i;
-        }
-        
-        return (
-          <button
-            key={pageNumber}
-            onClick={() => paginate(pageNumber)}
-            className={`px-3 py-1 rounded-lg ${
-              currentPage === pageNumber
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-accent hover:bg-accent/80'
-            }`}
-          >
-            {pageNumber}
-          </button>
-        );
-      })}
-      
-      <button
-        onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
-        disabled={currentPage === totalPages}
-        className={`px-3 py-1 rounded-lg ${
-          currentPage === totalPages
-            ? 'bg-muted text-muted-foreground cursor-not-allowed'
-            : 'bg-accent hover:bg-accent/80'
-        }`}
-      >
-        Suivant
-      </button>
-    </div>
-  </div>
-)}
+          
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => paginateClients(Math.max(1, currentClientsPage - 1))}
+              disabled={currentClientsPage === 1}
+              className={`px-3 py-1 rounded-lg ${
+                currentClientsPage === 1
+                  ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                  : 'bg-accent hover:bg-accent/80'
+              }`}
+            >
+              Précédent
+            </button>
+            
+            {Array.from({ length: Math.min(5, clientsTotalPages) }, (_, i) => {
+              let pageNumber;
+              if (clientsTotalPages <= 5) {
+                pageNumber = i + 1;
+              } else if (currentClientsPage <= 3) {
+                pageNumber = i + 1;
+              } else if (currentClientsPage >= clientsTotalPages - 2) {
+                pageNumber = clientsTotalPages - 4 + i;
+              } else {
+                pageNumber = currentClientsPage - 2 + i;
+              }
+              
+              return (
+                <button
+                  key={pageNumber}
+                  onClick={() => paginateClients(pageNumber)}
+                  className={`px-3 py-1 rounded-lg ${
+                    currentClientsPage === pageNumber
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-accent hover:bg-accent/80'
+                  }`}
+                >
+                  {pageNumber}
+                </button>
+              );
+            })}
+            
+            <button
+              onClick={() => paginateClients(Math.min(clientsTotalPages, currentClientsPage + 1))}
+              disabled={currentClientsPage === clientsTotalPages}
+              className={`px-3 py-1 rounded-lg ${
+                currentClientsPage === clientsTotalPages
+                  ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                  : 'bg-accent hover:bg-accent/80'
+              }`}
+            >
+              Suivant
+            </button>
+          </div>
         </div>
+      )}
+
+      {/* Historique section with accordion */}
+      <div className="mt-12">
+        <motion.button
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+          onClick={() => setExpandedHistory(!expandedHistory)}
+          className="flex items-center justify-between w-full p-4 bg-card rounded-xl shadow-lg border border-border/50 mb-4"
+        >
+          <h2 className="text-xl font-bold flex items-center">
+            <Clock className="w-5 h-5 mr-2 text-primary" />
+            Historique des modifications
+          </h2>
+          {expandedHistory ? (
+            <ChevronUp className="w-5 h-5 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-muted-foreground" />
+          )}
+        </motion.button>
+
+        {expandedHistory && (
+          <div className="bg-card rounded-xl shadow-lg border border-border/50 overflow-hidden">
+            <div className="relative h-[600px] overflow-y-auto">
+              <table className="w-full">
+                <thead className="sticky top-0 z-10 bg-card">
+                  <tr className="border-b border-border/50">
+                    <th className="text-left p-4 font-medium text-muted-foreground">Action</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Utilisateur</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Client</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Détails</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentHistoryItems.map((entry) => (
+                    <motion.tr
+                      key={entry.id}
+                      variants={itemVariants}
+                      className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors"
+                    >
+                      <td className="p-4">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          entry.action === 'created' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {entry.action === 'created' ? 'Création' : 'Modification'}
+                        </span>
+                      </td>
+                      <td className="p-4 font-medium">{entry.user}</td>
+                      <td className="p-4">{entry.clientName}</td>
+                      <td className="p-4">
+                        {entry.details}
+                        {entry.previousValue && entry.newValue && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            De <span className="font-medium">{entry.previousValue}</span> à <span className="font-medium">{entry.newValue}</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        {entry.timestamp.toLocaleString('fr-FR', {
+                          day: 'numeric',
+                          month: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination for history */}
+            {history.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-border/50 gap-4">
+                <div className="flex items-center space-x-4">
+                  <div className="text-sm text-muted-foreground">
+                    Affichage de {historyIndexOfFirstItem + 1} à {Math.min(historyIndexOfLastItem, history.length)} sur {history.length} entrées
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <label htmlFor="itemsPerPage" className="text-sm text-muted-foreground">
+                      Lignes par page:
+                    </label>
+                    <select
+                      id="itemsPerPage"
+                      value={itemsPerPage}
+                      onChange={(e) => {
+                        setItemsPerPage(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="bg-card border border-border/50 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    >
+                      <option value="5">5</option>
+                      <option value="10">10</option>
+                      <option value="15">15</option>
+                      <option value="20">20</option>
+                      <option value="50">50</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => paginate(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-1 rounded-lg ${
+                      currentPage === 1
+                        ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                        : 'bg-accent hover:bg-accent/80'
+                    }`}
+                  >
+                    Précédent
+                  </button>
+                  
+                  {Array.from({ length: Math.min(5, historyTotalPages) }, (_, i) => {
+                    let pageNumber;
+                    if (historyTotalPages <= 5) {
+                      pageNumber = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNumber = i + 1;
+                    } else if (currentPage >= historyTotalPages - 2) {
+                      pageNumber = historyTotalPages - 4 + i;
+                    } else {
+                      pageNumber = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNumber}
+                        onClick={() => paginate(pageNumber)}
+                        className={`px-3 py-1 rounded-lg ${
+                          currentPage === pageNumber
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-accent hover:bg-accent/80'
+                        }`}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  })}
+                  
+                  <button
+                    onClick={() => paginate(Math.min(historyTotalPages, currentPage + 1))}
+                    disabled={currentPage === historyTotalPages}
+                    className={`px-3 py-1 rounded-lg ${
+                      currentPage === historyTotalPages
+                        ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                        : 'bg-accent hover:bg-accent/80'
+                    }`}
+                  >
+                    Suivant
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <NewClientModal
@@ -817,21 +866,20 @@ const renderDashboard = () => {
         isVisible={showSuccessToast}
         onClose={() => setShowSuccessToast(false)}
       />
-<ChangeStatusModal
-  isOpen={statusChangeModal.isOpen}
-  onClose={() => setStatusChangeModal(prev => ({ ...prev, isOpen: false }))}
-  onConfirm={async (status) => {
-    // Récupérer le client actuel pour obtenir son statut précédent
-    const currentClient = clients.find(c => c.id === statusChangeModal.clientId);
-    if (currentClient) {
-      await handleStatusUpdate(
-        statusChangeModal.clientId, 
-        status, 
-        statusChangeModal.clientName,
-        currentClient.status
-      );
-    }
-    setStatusChangeModal(prev => ({ ...prev, isOpen: false }));
+      <ChangeStatusModal
+        isOpen={statusChangeModal.isOpen}
+        onClose={() => setStatusChangeModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={async (status) => {
+          const currentClient = clients.find(c => c.id === statusChangeModal.clientId);
+          if (currentClient) {
+            await handleStatusUpdate(
+              statusChangeModal.clientId, 
+              status, 
+              statusChangeModal.clientName,
+              currentClient.status
+            );
+          }
+          setStatusChangeModal(prev => ({ ...prev, isOpen: false }));
   }}
   clientName={statusChangeModal.clientName}
   newStatus={statusChangeModal.newStatus}
