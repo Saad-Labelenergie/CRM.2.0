@@ -183,10 +183,10 @@ const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
                   <option value="">Sélectionner un rôle</option>
                   <option value="Administrateur">Administrateur</option>
                   <option value="manager">Manager</option>
-                  <option value="technician">Technicien</option>
+                  <option value="Technicien">Technicien</option>
                 </select>
               </div>
-              {userData.role === 'technician' && (
+              {userData.role === 'Technicien' && (
                 <div>
                   <label className="block text-sm font-medium mb-1">Équipe</label>
                   <select
