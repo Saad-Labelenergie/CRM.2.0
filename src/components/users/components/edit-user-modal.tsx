@@ -1,8 +1,12 @@
+// Update imports to include useScheduling
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Shield, Building2, Edit2 } from 'lucide-react';
-import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { X,Edit2 } from 'lucide-react';
+import { useScheduling } from '../../../lib/scheduling/scheduling-context';
+import { Eye, EyeOff } from 'lucide-react';
+import { hashPassword } from '../../../lib/utils/password';
 
+// Update User interface
 interface User {
   id: string;
   name: string;
@@ -10,9 +14,9 @@ interface User {
   role: string;
   department: string;
   phone: string;
-  location: string;
   status: 'active' | 'inactive';
   avatar?: string;
+  team?: string; // Add team field
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,15 +29,16 @@ interface EditUserModalProps {
 }
 
 export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalProps) {
+  const { teams } = useScheduling(); // Add teams from context
   const [userData, setUserData] = useState<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>({
     name: '',
     email: '',
     role: '',
     department: '',
     phone: '',
-    location: '',
     status: 'active',
-    avatar: ''
+    avatar: '',
+    team: '' // Add team field
   });
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -46,67 +51,84 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
         role: user.role,
         department: user.department,
         phone: user.phone,
-        location: user.location,
         status: user.status,
-        avatar: user.avatar || ''
+        avatar: user.avatar || '',
+        team: user.team || '' // Add team field
       });
       setPreviewImage(user.avatar || null);
     }
   }, [user]);
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+
+  // Modifiez handleImageChange pour utiliser le bon chemin
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user?.id) return;
+    if (!file) return;
     
     const reader = new FileReader();
     reader.onload = async () => {
       const imageDataUrl = reader.result as string;
       
       try {
-        const storage = getStorage();
-        console.log('Storage initialized:', storage.app.options); // Add this line
+        // Compression de l'image
+        const compressedImage = await compressImage(imageDataUrl, 200); // Taille réduite à 200px
         
-        const storageRef = ref(storage, `avatars/${user.id}/${Date.now()}.jpg`);
-        
-        const snapshot = await uploadString(storageRef, imageDataUrl, 'data_url');
-        const downloadURL = await getDownloadURL(snapshot.ref);
-        
-        setPreviewImage(downloadURL);
+        // Mise à jour directe avec l'image en base64
+        setPreviewImage(compressedImage);
         setUserData(prev => ({
           ...prev,
-          avatar: downloadURL
+          avatar: compressedImage // Sauvegarde directe en base64
         }));
-        
-        console.log('Image téléchargée avec succès:', downloadURL);
       } catch (error) {
-        console.error('Erreur lors du téléchargement:', error);
+        console.error('Erreur lors du traitement de l\'image:', error);
+        alert('Erreur lors du traitement de l\'image. Veuillez réessayer.');
       }
     };
-    
     reader.readAsDataURL(file);
-};
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Ajouter la fonction de compression d'image
+  const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = dataUrl;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.7)); // Compression JPEG à 70%
+      };
+    });
+  };
+
+  // Modifiez handleSubmit pour inclure le nouveau mot de passe
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     
-    // Ensure we're using the most up-to-date data
     const finalUserData = {
       ...userData,
-      avatar: userData.avatar // Use userData.avatar directly as it's already synchronized
+      ...(newPassword && { password: await hashPassword(newPassword) })
     };
     
-    console.log('Submitting final data:', finalUserData);
     onSave(finalUserData);
-    handleClose();
+    setNewPassword('');
+    onClose(); // Changed handleClose to onClose
   };
 
-  const handleClose = () => {
-    setPreviewImage(null);
-    onClose();
-  };
-
-  // Remove the floating JSX element and keep it only in the return statement
+  // Ajoutez le champ de mot de passe dans le formulaire, après le champ email
   return (
     <AnimatePresence>
       {isOpen && (
@@ -174,6 +196,29 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium mb-1">Nouveau mot de passe (optionnel)</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-4 py-2 pr-10 rounded-lg border focus:ring-2 focus:ring-primary/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-accent rounded-lg"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Rôle</label>
@@ -182,9 +227,10 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
                     onChange={(e) => setUserData({ ...userData, role: e.target.value })}
                     className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-primary/20"
                   >
-                    <option>Technicien</option>
-                    <option>Manager</option>
-                    <option>Administrateur</option>
+                    <option value="">Sélectionner un rôle</option>
+                    <option value="technician">Technicien</option>
+                    <option value="manager">Manager</option>
+                    <option value="Administrateur">Administrateur</option>
                   </select>
                 </div>
                 <div>
@@ -199,27 +245,34 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {userData.role === 'technician' && (
                 <div>
-                  <label className="block text-sm font-medium mb-1">Téléphone</label>
-                  <input
-                    type="tel"
-                    value={userData.phone}
-                    onChange={(e) => setUserData({ ...userData, phone: e.target.value })}
+                  <label className="block text-sm font-medium mb-1">Équipe</label>
+                  <select
+                    value={userData.team}
+                    onChange={(e) => setUserData({ ...userData, team: e.target.value })}
                     className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-primary/20"
                     required
-                  />
+                  >
+                    <option value="">Sélectionner une équipe</option>
+                    {teams.filter(team => team.isActive).map(team => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Localisation</label>
-                  <input
-                    type="text"
-                    value={userData.location}
-                    onChange={(e) => setUserData({ ...userData, location: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-primary/20"
-                    required
-                  />
-                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Téléphone</label>
+                <input
+                  type="tel"
+                  value={userData.phone}
+                  onChange={(e) => setUserData({ ...userData, phone: e.target.value })}
+                  className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-primary/20"
+                  required
+                />
               </div>
 
               <div>

@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Shield, Building2, Edit2 } from 'lucide-react';
+import { useState } from 'react';
+import { X, Check,Edit2 } from 'lucide-react';
+import { useScheduling } from '../../../lib/scheduling/scheduling-context';
+import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
+// Remove bcryptjs import and keep the local import
+import { hashPassword } from '../../../lib/utils/password';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface NewUserModalProps {
   isOpen: boolean;
@@ -9,93 +13,123 @@ interface NewUserModalProps {
 }
 
 export function NewUserModal({ isOpen, onClose, onSave }: NewUserModalProps) {
-  const defaultAvatar = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80';
-  
+  const { teams } = useScheduling();
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [userData, setUserData] = useState({
     name: '',
     email: '',
-    role: 'Technicien',
+    password: '',
+    role: '',
     department: '',
     phone: '',
-    location: '',
-    avatar: defaultAvatar
+    status: 'active',
+    team: '',
+    avatar: ''
   });
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const imageDataUrl = reader.result as string;
-        setPreviewImage(imageDataUrl);
-        setUserData(prev => ({ ...prev, avatar: imageDataUrl }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const finalUserData = {
-      ...userData,
-      status: 'active',
-      createdAt: new Date(),
-      updatedAt: new Date()
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const imageDataUrl = reader.result as string;
+      
+      try {
+        // Compression de l'image
+        const compressedImage = await compressImage(imageDataUrl, 200); // Taille réduite à 200px
+        
+        // Mise à jour directe avec l'image en base64
+        setPreviewImage(compressedImage);
+        setUserData(prev => ({
+          ...prev,
+          avatar: compressedImage // Sauvegarde directe en base64
+        }));
+      } catch (error) {
+        console.error('Erreur lors du traitement de l\'image:', error);
+        alert('Erreur lors du traitement de l\'image. Veuillez réessayer.');
+      }
     };
-    onSave(finalUserData);
-    handleClose();
+    reader.readAsDataURL(file);
   };
 
-  const handleClose = () => {
-    setPreviewImage(null);
+// Ajouter cette fonction utilitaire
+const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = dataUrl;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+      
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', 0.7)); // Compression JPEG à 70%
+    };
+  });
+};
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const hashedPassword = await hashPassword(userData.password);
+    onSave({
+      ...userData,
+      password: hashedPassword
+    });
+    // Reset form
     setUserData({
       name: '',
       email: '',
-      role: 'Technicien',
+      password: '',
+      role: '',
       department: '',
       phone: '',
-      location: '',
-      avatar: defaultAvatar
+      status: 'active',
+      team: '',
+      avatar: ''
     });
-    onClose();
+    setPreviewImage(null);
   };
 
   return (
-    <AnimatePresence>
+    <>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-card w-full max-w-lg rounded-xl p-6 shadow-xl"
-          >
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+          <div className="relative bg-card p-6 rounded-xl shadow-xl max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold">Nouvel Utilisateur</h2>
-              <button onClick={handleClose} className="p-2 hover:bg-accent rounded-lg">
+              <button onClick={onClose} className="p-2 hover:bg-accent rounded-lg">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Image upload section */}
+              {/* Add image upload section at the top */}
               <div className="flex flex-col items-center space-y-4">
                 <div className="relative">
                   <img
-                    src={previewImage || userData.avatar}
-                    alt="Avatar"
+                    src={previewImage || '/default-avatar.png'}
+                    alt="Profile preview"
                     className="w-32 h-32 rounded-full object-cover border-4 border-primary/20"
                   />
                   <label 
-                    htmlFor="avatar-upload-new" 
+                    htmlFor="avatar-upload" 
                     className="absolute bottom-0 right-0 bg-primary text-primary-foreground p-2 rounded-full cursor-pointer hover:bg-primary/90 transition-colors"
                   >
                     <Edit2 className="w-4 h-4" />
                   </label>
                   <input
-                    id="avatar-upload-new"
+                    id="avatar-upload"
                     type="file"
                     accept="image/*"
                     onChange={handleImageChange}
@@ -103,17 +137,17 @@ export function NewUserModal({ isOpen, onClose, onSave }: NewUserModalProps) {
                   />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Click the edit icon to upload a photo
+                  Click the edit icon to upload a profile photo
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Nom complet</label>
+                <label className="block text-sm font-medium mb-1">Nom</label>
                 <input
                   type="text"
                   value={userData.name}
                   onChange={(e) => setUserData({ ...userData, name: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-primary/20"
+                  className="w-full p-2 rounded-lg border bg-background"
                   required
                 />
               </div>
@@ -124,57 +158,89 @@ export function NewUserModal({ isOpen, onClose, onSave }: NewUserModalProps) {
                   type="email"
                   value={userData.email}
                   onChange={(e) => setUserData({ ...userData, email: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-primary/20"
+                  className="w-full p-2 rounded-lg border bg-background"
                   required
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Rôle</label>
-                  <select
-                    value={userData.role}
-                    onChange={(e) => setUserData({ ...userData, role: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-primary/20"
-                  >
-                    <option>Technicien</option>
-                    <option>Manager</option>
-                    <option>Administrateur</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Département</label>
+              <div>
+                <label className="block text-sm font-medium mb-1">Mot de passe</label>
+                <div className="relative">
                   <input
-                    type="text"
-                    value={userData.department}
-                    onChange={(e) => setUserData({ ...userData, department: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-primary/20"
+                    type={showPassword ? "text" : "password"}
+                    value={userData.password}
+                    onChange={(e) => setUserData({ ...userData, password: e.target.value })}
+                    className="w-full p-2 pr-10 rounded-lg border bg-background"
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-accent rounded-lg"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Rôle</label>
+                <select
+                  value={userData.role}
+                  onChange={(e) => setUserData({ ...userData, role: e.target.value })}
+                  className="w-full p-2 rounded-lg border bg-background"
+                  required
+                >
+                  <option value="">Sélectionner un rôle</option>
+                  <option value="Administrateur">Administrateur</option>
+                  <option value="manager">Manager</option>
+                  <option value="technician">Technicien</option>
+                </select>
+              </div>
+
+              {userData.role === 'technician' && (
                 <div>
-                  <label className="block text-sm font-medium mb-1">Téléphone</label>
-                  <input
-                    type="tel"
-                    value={userData.phone}
-                    onChange={(e) => setUserData({ ...userData, phone: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-primary/20"
+                  <label className="block text-sm font-medium mb-1">Équipe</label>
+                  <select
+                    value={userData.team}
+                    onChange={(e) => setUserData({ ...userData, team: e.target.value })}
+                    className="w-full p-2 rounded-lg border bg-background"
                     required
-                  />
+                  >
+                    <option value="">Sélectionner une équipe</option>
+                    {teams.filter(team => team.isActive).map(team => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Localisation</label>
-                  <input
-                    type="text"
-                    value={userData.location}
-                    onChange={(e) => setUserData({ ...userData, location: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-primary/20"
-                    required
-                  />
-                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Département</label>
+                <input
+                  type="text"
+                  value={userData.department}
+                  onChange={(e) => setUserData({ ...userData, department: e.target.value })}
+                  className="w-full p-2 rounded-lg border bg-background"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Téléphone</label>
+                <input
+                  type="tel"
+                  value={userData.phone}
+                  onChange={(e) => setUserData({ ...userData, phone: e.target.value })}
+                  className="w-full p-2 rounded-lg border bg-background"
+                  required
+                />
               </div>
 
               <div className="flex justify-end space-x-2 mt-6">
@@ -187,15 +253,16 @@ export function NewUserModal({ isOpen, onClose, onSave }: NewUserModalProps) {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center"
                 >
-                  Créer l'utilisateur
+                  <Check className="w-4 h-4 mr-2" />
+                  Créer
                 </button>
               </div>
             </form>
-          </motion.div>
+          </div>
         </div>
       )}
-    </AnimatePresence>
+    </>
   );
 }

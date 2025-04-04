@@ -9,11 +9,13 @@ interface User {
   role: string;
   department: string;
   phone: string;
-  location: string;
   status: 'active' | 'inactive';
   avatar?: string;
+  team?: string;
+  password?: string;
   createdAt: Date;
   updatedAt: Date;
+  lastLogin?: Date;
 }
 
 interface UserDetailsModalProps {
@@ -80,10 +82,10 @@ export function UserDetailsModal({ isOpen, onClose, user }: UserDetailsModalProp
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  <MapPin className="w-5 h-5 text-muted-foreground" />
+                  <Building2 className="w-5 h-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Localisation</p>
-                    <p className="font-medium">{user.location}</p>
+                    <p className="text-sm text-muted-foreground">Équipe</p>
+                    <p className="font-medium">{user.team || 'Non assigné'}</p>
                   </div>
                 </div>
               </div>
