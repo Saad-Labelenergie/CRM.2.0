@@ -15,16 +15,35 @@
 | ⏳ Historique | Tracking complet des modifications |
 | 🏷️ Gestion des statuts | Workflow en 3 états (En cours/En attente/Terminé) |
 
-## 🛠️ Stack Technologique
-```mermaid
-pie
-    title Technologies Utilisées
-    "React" : 35
-    "TypeScript" : 25
-    "Firebase" : 20
-    "Tailwind CSS" : 15
-    "Framer Motion" : 5
 
+💻 Technologies
+---------------
+
+**Frontend:**
+
+*   React 18 + TypeScript
+    
+*   Tailwind CSS
+    
+*   Framer Motion (animations)
+    
+*   Lucide Icons
+    
+
+**Backend:**
+
+*   Firebase Firestore
+    
+*   Firebase Authentication
+    
+
+**Outils:**
+
+*   Vite (build tool)
+    
+*   ESLint + Prettier
+    
+*   Husky (git hooks)
 
 ## 🛠️ Installation
 
@@ -79,6 +98,7 @@ src/
 *   Vercel
 *   Firebase Hosting
 *   Netlify
+
 
 ## 📜 Licence
 
