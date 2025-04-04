@@ -47,22 +47,36 @@
 
 ## 🛠️ Installation
 
-1. 1.  Cloner le dépôt :
-1.     
+### Clonage du dépôt
+\`\`\`bash
 git clone https://github.com/votre-repo/gestion-clients.git
 cd gestion-clients
 
-1. 2.  Installer les dépendances :
- 
+### Installation des dépendances
+
+bash
+
+Copy
+
 npm install
 
 ## 🔧 Configuration
 
-1. 1.  Créer un fichier `.env` :
+1. 1.  Copier le fichier d'environnement :
+1.     
+
+bash
+
+Copy
 
 cp .env.example .env
 
-1. 2.  Configurer Firebase :
+1. 2.  Configurer les variables Firebase dans `.env` :
+1.     
+
+env
+
+Copy
 
 VITE\_FIREBASE\_API\_KEY=votre\_cle\_api
 VITE\_FIREBASE\_AUTH\_DOMAIN=votre\_domaine
@@ -71,24 +85,29 @@ VITE\_FIREBASE\_STORAGE\_BUCKET=votre\_bucket
 VITE\_FIREBASE\_MESSAGING\_SENDER\_ID=votre\_sender
 VITE\_FIREBASE\_APP\_ID=votre\_app\_id
 
-1. 3.  Lancer l'application :
+## 🚀 Lancement
+
+Pour démarrer l'application en mode développement :
+
+bash
+
 
 npm run dev
 
-## 📂 Structure
+## 📂 Structure du projet
+
 
 src/
-├── components/
-│   ├── clients/
-│   ├── modals/
-│   └── ui/
-├── lib/
-│   ├── firebase.ts
-│   └── hooks/
-├── pages/
-│   └── Clients.tsx
-└── types/
-
+├── components/          # Composants React
+│   ├── clients/        # Composants spécifiques aux clients
+│   ├── modals/         # Modales
+│   └── ui/             # Composants d'interface génériques
+├── lib/                # Bibliothèques et helpers
+│   ├── firebase.ts     # Configuration Firebase
+│   └── hooks/          # Hooks personnalisés
+├── pages/              # Pages de l'application
+│   └── Clients.tsx     # Page principale
+└── types/              # Définitions TypeScript
 ## 🚀 Déploiement
 
 [![Déployer sur Vercel](https://vercel.com/button)](https://vercel.com/new)
