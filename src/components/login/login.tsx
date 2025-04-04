@@ -1,49 +1,59 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, Hash } from "lucide-react";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { Mail, Lock } from "lucide-react";
 import { auth, db } from '../../lib/firebase';
 import { useNavigate } from "react-router-dom";
 import logo from '/images/Logo Label Energie.jpg';
-import { collection,query,getDocs,where } from "firebase/firestore";
+import { collection, query, getDocs, where } from "firebase/firestore";
+import { hashPassword } from '../../lib/utils/password';
 
 export function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(null);
+  // Update the error state type
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-  
+
     try {
-      const res = await fetch("http://localhost:8000/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-  
-      const data = await res.json();
-  
-      if (!res.ok) {
-        throw new Error(data.message || "Erreur lors de la connexion");
+      // Hash the password
+      const hashedPassword = await hashPassword(password);
+
+      // Query Firestore for user with matching email and hashed password
+      const usersRef = collection(db, "users");
+      const q = query(
+        usersRef, 
+        where("email", "==", email),
+        where("password", "==", hashedPassword)
+      );
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        throw new Error("Email ou mot de passe incorrect");
       }
-  
-      localStorage.setItem("currentUser", JSON.stringify(data.user));
+
+      const userDoc = querySnapshot.docs[0];
+      const userData = userDoc.data();
+
+      if (userData.status !== "active") {
+        throw new Error("Compte désactivé");
+      }
+
+      localStorage.setItem("currentUser", JSON.stringify(userData));
       navigate("/");
-    } catch (err) {
-      setError(err.message);
-      console.error("Erreur de connexion :", err);
+
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Une erreur est survenue");
+      console.error("Erreur de connexion:", err);
     } finally {
       setLoading(false);
     }
   };
-  
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
@@ -60,7 +70,7 @@ export function Login() {
         >
           <h2 className="text-2xl font-bold text-center text-primary">Connexion</h2>
           <p className="text-muted-foreground text-center mt-1">
-            Entrez votre email et votre mot de passe utilisateur
+            Entrez votre email et mot de passe
           </p>
 
           {error && (
@@ -83,13 +93,12 @@ export function Login() {
             </div>
 
             <div className="relative">
-              <Hash className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+              <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
               <input
-  type="password"
-  placeholder="Mot de passe"
-  value={password}
-  onChange={(e) => setPassword(e.target.value)}
-
+                type="password"
+                placeholder="Mot de passe"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 bg-background border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
                 required
               />
