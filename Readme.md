@@ -1,4 +1,4 @@
-# 📋 Application de Gestion des Clients
+# 📋 CRM - LabelEnergie
 
 ![Banner](https://labelenergie.fr/logo.jpg) <!-- Ajoutez une bannière réelle ici -->
 
