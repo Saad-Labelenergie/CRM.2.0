@@ -1,6 +1,19 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { UserPlus, Search, Mail, Phone, MapPin, Building2, Shield, MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import { 
+  UserPlus, 
+  Search, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  Building2, 
+  Shield, 
+  MoreVertical, 
+  Edit2, 
+  Trash2,
+  Users as UsersIcon,
+  TrendingUp 
+} from 'lucide-react';
 import { NewUserModal } from './components/new-user-modal';
 import { useFirebase } from '../../lib/hooks/useFirebase';
 import { EditUserModal } from './components/edit-user-modal';
@@ -18,43 +31,8 @@ interface User {
   avatar?: string;
   createdAt: Date;
   updatedAt: Date;
+  lastLogin?: Date;  // Added lastLogin as optional property
 }
-
-// const users = [
-//   {
-//     id: 1,
-//     name: "Jean Dupont",
-//     email: "jean.dupont@example.com",
-//     role: "Administrateur",
-//     department: "Direction",
-//     phone: "+33 6 12 34 56 78",
-//     location: "Paris",
-//     status: "active",
-//     avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-//   },
-//   {
-//     id: 2,
-//     name: "Marie Martin",
-//     email: "marie.martin@example.com",
-//     role: "Manager",
-//     department: "Ressources Humaines",
-//     phone: "+33 6 23 45 67 89",
-//     location: "Lyon",
-//     status: "active",
-//     avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-//   },
-//   {
-//     id: 3,
-//     name: "Pierre Bernard",
-//     email: "pierre.bernard@example.com",
-//     role: "Technicien",
-//     department: "Maintenance",
-//     phone: "+33 6 34 56 78 90",
-//     location: "Marseille",
-//     status: "inactive",
-//     avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-//   }
-// ];
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -74,12 +52,31 @@ const itemVariants = {
   }
 };
 
+const userStats = {
+  monthlyGrowth: [
+    { month: 'Jan', count: 12 },
+    { month: 'Fév', count: 15 },
+    { month: 'Mar', count: 18 },
+    { month: 'Avr', count: 22 },
+    { month: 'Mai', count: 25 }
+  ]
+};
+
 export function Users() {
   const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const { data: users, loading, add: addUser, remove: removeUser, update: updateUser } = useFirebase<User>('users', { orderByField: 'name' });
+  const { data: users = [], loading, add: addUser, remove: removeUser, update: updateUser } = useFirebase<User>('users', { orderByField: 'name' });
+
+  const calculateGrowth = () => {
+    const currentMonth = new Date().getMonth();
+    const previousMonth = currentMonth > 0 ? currentMonth - 1 : 11;
+    const currentCount = users.length;
+    const previousCount = userStats.monthlyGrowth[previousMonth]?.count || currentCount;
+    
+    return ((currentCount / previousCount - 1) * 100).toFixed(1);
+  };
 
   const handleSaveUser = async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
@@ -88,7 +85,6 @@ export function Users() {
         createdAt: new Date(),
         updatedAt: new Date()
       });
-      
       setIsNewUserModalOpen(false);
     } catch (error) {
       console.error('Error adding new user:', error);
@@ -163,6 +159,179 @@ export function Users() {
         </motion.button>
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <motion.div
+          whileHover={{ y: -5 }}
+          className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Total Utilisateurs</p>
+              <h3 className="text-3xl font-bold mt-2">{users.length}</h3>
+            </div>
+            <div className="p-3 rounded-xl bg-blue-500/10 text-blue-500">
+              <UsersIcon className="w-6 h-6" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <div className="flex items-end justify-between h-12 gap-1">
+              {userStats.monthlyGrowth.slice(-5).map((stat) => (
+                <div
+                  key={stat.month}
+                  className="w-full bg-blue-500/20 rounded-t"
+                  style={{
+                    height: `${(stat.count / Math.max(...userStats.monthlyGrowth.map(s => s.count))) * 100}%`,
+                    transition: 'height 0.3s ease'
+                  }}
+                />
+              ))}
+            </div>
+            <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+              {userStats.monthlyGrowth.slice(-5).map(stat => (
+                <span key={stat.month}>{stat.month}</span>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          whileHover={{ y: -5 }}
+          className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Utilisateurs Actifs</p>
+              <h3 className="text-3xl font-bold mt-2">
+                {users.filter(user => user.status === 'active').length}
+              </h3>
+            </div>
+            <div className="p-3 rounded-xl bg-green-500/10 text-green-500">
+              <UsersIcon className="w-6 h-6" />
+            </div>
+          </div>
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <div className={`h-2 rounded-full ${users.filter(user => user.status === 'active').length > 0 ? 'bg-green-500' : 'bg-red-500'} flex-1`}>
+                <div 
+                  className={`h-full rounded-full ${users.filter(user => user.status === 'active').length > 0 ? 'bg-green-300' : 'bg-red-300'}`}
+                  style={{ 
+                    width: `${(users.filter(user => user.status === 'active').length / users.length) * 100}%` 
+                  }}
+                />
+              </div>
+              <span className={`text-sm ${users.filter(user => user.status === 'active').length > 0 ? 'text-muted-foreground' : 'text-red-500'}`}>
+                {users.filter(user => user.status === 'active').length} actifs
+              </span>
+            </div>
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Dernière activité:</span>
+              <span className="font-medium">
+                {users.some(u => u.updatedAt) 
+                  ? new Date(Math.max(...users.map(u => u.updatedAt.getTime()))).toLocaleDateString()
+                  : 'Aucune activité'
+                }
+              </span>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          whileHover={{ y: -5 }}
+          className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Répartition par Rôle</p>
+              <h3 className="text-3xl font-bold mt-2">
+                {users.length}
+              </h3>
+            </div>
+            <div className="p-3 rounded-xl bg-orange-500/10 text-orange-500">
+              <Shield className="w-6 h-6" />
+            </div>
+          </div>
+          <div className="mt-4 space-y-2 text-sm text-muted-foreground">
+            <div className="flex justify-between">
+              <span>Administrateurs:</span>
+              <span className="font-medium">{users.filter(user => user.role === "Administrateur").length}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Managers:</span>
+              <span className="font-medium">{users.filter(user => user.role === "Manager").length}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Techniciens:</span>
+              <span className="font-medium">{users.filter(user => user.role === "Technicien").length}</span>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          whileHover={{ y: -5 }}
+          className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Évolution Mensuelle</p>
+              <h3 className="text-3xl font-bold mt-2">
+                +{calculateGrowth()}%
+              </h3>
+            </div>
+            <div className="p-3 rounded-xl bg-purple-500/10 text-purple-500">
+              <TrendingUp className="w-6 h-6" />
+            </div>
+          </div>
+        </motion.div>
+        <motion.div
+          whileHover={{ y: -5 }}
+          className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Nouveaux ce mois</p>
+              <h3 className="text-3xl font-bold mt-2">
+                {users.filter(user => {
+                  const now = new Date();
+                  const userDate = new Date(user.createdAt);
+                  return userDate.getMonth() === now.getMonth() && 
+                         userDate.getFullYear() === now.getFullYear();
+                }).length}
+              </h3>
+            </div>
+            <div className="p-3 rounded-xl bg-cyan-500/10 text-cyan-500">
+              <UserPlus className="w-6 h-6" />
+            </div>
+          </div>
+        </motion.div>
+        <motion.div
+          whileHover={{ y: -5 }}
+          className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Départements</p>
+              <h3 className="text-3xl font-bold mt-2">
+                {new Set(users.map(user => user.department)).size}
+              </h3>
+            </div>
+            <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-500">
+              <Building2 className="w-6 h-6" />
+            </div>
+          </div>
+          <div className="mt-4 text-sm text-muted-foreground">
+            Le plus grand: {
+              Object.entries(
+                users.reduce((acc, user) => ({
+                  ...acc,
+                  [user.department]: (acc[user.department] || 0) + 1
+                }), {} as Record<string, number>)
+              ).sort(([,a], [,b]) => b - a)[0]?.[0]
+            }
+          </div>
+        </motion.div>
+      </div>
+
       <div className="relative">
         <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
         <input
@@ -178,7 +347,6 @@ export function Users() {
       >
         {users.map((user) => (
           <motion.div
-            // Use a composite key with timestamp to ensure uniqueness
             key={`${user.id}-${user.updatedAt?.getTime()}`}
             variants={itemVariants}
             className="bg-card rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-border/50"
@@ -228,17 +396,6 @@ export function Users() {
                   <MoreVertical className="w-4 h-4 text-muted-foreground" />
                 </motion.button>
               </div>
-              <EditUserModal
-                isOpen={isEditModalOpen}
-                onClose={() => setIsEditModalOpen(false)}
-                onSave={handleUpdateUser}
-                user={selectedUser}
-              />
-              <UserDetailsModal
-                isOpen={isDetailsModalOpen}
-                onClose={() => setIsDetailsModalOpen(false)}
-                user={selectedUser}
-              />
             </div>
 
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -277,6 +434,19 @@ export function Users() {
         isOpen={isNewUserModalOpen}
         onClose={() => setIsNewUserModalOpen(false)}
         onSave={handleSaveUser}
+      />
+
+      <EditUserModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleUpdateUser}
+        user={selectedUser}
+      />
+
+      <UserDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        user={selectedUser}
       />
     </motion.div>
   );
