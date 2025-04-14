@@ -1,47 +1,21 @@
 import React from 'react';
 import { Package, AlertCircle } from 'lucide-react';
-import { useProducts } from '../../../../lib/hooks/useProducts';
+import { Product } from '../../../../lib/hooks/useProducts';
 
-interface Product {
-  id: string;
-  name: string;
-  type: string;
-  installationTime: number;
-  price: number;
-}
 
 interface ProductsStepProps {
-  products: {
-    id: string;
-    name: string;
-    type: string;
-    installationTime: number;
-    price: number;
-  }[];
-  selectedProducts: {
-    id: string;
-    name: string;
-    type: string;
-    installationTime: number;
-    price: number;
-  }[];
+  products: Product[];
+  selectedProducts: Product[];
   errors: Record<string, string>;
-  onProductSelect: (product: {
-    id: string;
-    name: string;
-    type: string;
-    installationTime: number;
-    price: number;
-  }) => void;
+  onProductSelect: (product: Product) => void;
 }
 
-
 export function ProductsStep({
+  products,
   selectedProducts,
   errors,
   onProductSelect
 }: ProductsStepProps) {
-  const { data: products = [], loading } = useProducts();
 
   // Calculate total installation time
   const totalInstallationTime = selectedProducts.reduce(
@@ -52,21 +26,11 @@ export function ProductsStep({
   // Calculate number of days needed (8 hours per day)
   const daysNeeded = Math.ceil(totalInstallationTime / (8 * 60));
 
-  // Calculate total price - ensure we're working with numbers
+  // Calculate total price
   const totalPrice = selectedProducts.reduce(
-    (total, product) => total + (Number(product.price) || 0),
+    (total, product) => total + (Number(product.price?.ttc) || 0),
     0
   );
-
-  if (loading) {
-    return (
-      <div className="bg-accent/50 rounded-lg p-4">
-        <div className="flex items-center justify-center py-8">
-          <Package className="w-8 h-8 text-muted-foreground animate-pulse" />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -81,38 +45,37 @@ export function ProductsStep({
               Aucun produit disponible
             </div>
           ) : (
-            products.map((product) => (
-              <div
-                key={product.id}
-                onClick={() => onProductSelect({
-                  id: product.id,
-                  name: product.name,
-                  type: product.category,
-                  installationTime: product.specifications?.installationTime || 240,
-                  price: product.purchasePrice || 0
-                })}
-                className={`p-4 rounded-lg cursor-pointer transition-colors ${
-                  selectedProducts.some(p => p.id === product.id)
-                    ? 'bg-primary/10 border-primary'
-                    : 'bg-background hover:bg-accent'
-                } border`}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">{product.name}</h4>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Temps d'installation : {product.specifications?.installationTime || 240} minutes
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-medium">{product.purchasePrice?.toFixed(2) || '0.00'} €</div>
+            products.map((product) => {
+              const isSelected = selectedProducts.some(p => p.id === product.id);
+              return (
+                <div
+                  key={product.id}
+                  onClick={() => onProductSelect(product)}
+                  className={`p-4 rounded-lg cursor-pointer transition-colors border ${
+                    isSelected
+                      ? 'bg-primary/10 border-primary'
+                      : 'bg-background hover:bg-accent'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium">{product.name}</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Temps d'installation : {} minutes
+                      </p>
+                    </div>
+                    <div className="text-right">
                     <div className="text-sm text-muted-foreground">
-                      Type : {product.category}
+                        TVA : {product.price?.tva || '20'}% - TTC : {Number(product.price?.ttc || 0).toFixed(2)} € 
+                         </div>
+                         <div className="text-sm text-muted-foreground">
+                        Type : {product.category}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
@@ -122,11 +85,11 @@ export function ProductsStep({
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Temps total d'installation</span>
-                <span className="font-medium">{totalInstallationTime / 60} heures ({daysNeeded} jour{daysNeeded > 1 ? 's' : ''})</span>
+                <span className="font-medium">{(totalInstallationTime / 60).toFixed(1)} heures ({daysNeeded} jour{daysNeeded > 1 ? 's' : ''})</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Prix total</span>
-                <span className="font-medium">{totalPrice.toFixed(2)} €</span>
+                <span className="font-medium">{totalPrice.toFixed (2)} €</span>
               </div>
             </div>
           </div>

@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  X, 
-  Check, 
-  Plus, 
-  Building2, 
-  ArrowRight, 
-  AlertCircle 
+import {
+  X,
+  Check,
+  Plus,
+  Building2,
+  ArrowRight,
+  AlertCircle
 } from 'lucide-react';
 import { ContactStep } from './steps/contact-step';
 import { AddressStep } from './steps/address-step';
@@ -15,6 +15,8 @@ import { PlanningStep } from './steps/planning-step';
 import { StepIndicator } from './steps/step-indicator';
 import { Toast } from '../../ui/toast';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
+import { getDocs, collection } from 'firebase/firestore';
+import { db } from '../../../lib/firebase'; // adapte le chemin selon ta structure
 
 interface NewClientModalProps {
   isOpen: boolean;
@@ -22,36 +24,12 @@ interface NewClientModalProps {
   onSave: (client: any) => void;
 }
 
-// Mock data for products
-const products = [
-  {
-    id: "1",
-    name: "Climatiseur Mural 9000 BTU",
-    type: "climatisation",
-    installationTime: 240,
-    price: 599.99
-  },
-  {
-    id: "2",
-    name: "Unité Extérieure Multi-Split",
-    type: "climatisation",
-    installationTime: 480,
-    price: 1299.99
-  },
-  {
-    id: "3",
-    name: "Pompe à Chaleur Air/Eau",
-    type: "chauffage",
-    installationTime: 960,
-    price: 3499.99
-  }
-];
-
 type Step = 'contact' | 'address' | 'products' | 'planning';
 
 export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps) {
   const [step, setStep] = useState<Step>('contact');
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     contact: {
       firstName: '',
@@ -68,13 +46,33 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
       country: 'France',
     },
     tag: null as 'MPR' | 'Financement' | null,
-    selectedProducts: [] as typeof products,
+    selectedProducts: [] as any[],
     installationDate: '',
     selectedTeam: null as any
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { addProject, addAppointment } = useScheduling();
+
+  // 🔄 Charger les produits depuis Firebase
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'products'));
+        const fetchedProducts = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setProducts(fetchedProducts);
+      } catch (error) {
+        console.error('Erreur lors du chargement des produits :', error);
+      }
+    };
+
+    if (isOpen) {
+      fetchProducts();
+    }
+  }, [isOpen]);
 
   const handleFieldUpdate = (field: string, value: any) => {
     const fields = field.split('.');
@@ -174,7 +172,6 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
   const handleSubmit = async () => {
     if (validateStep()) {
       try {
-        // Créer le client
         const clientData = {
           id: Math.random().toString(36).substr(2, 9),
           name: `${formData.contact.firstName} ${formData.contact.lastName}`,
@@ -184,11 +181,9 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
         };
         onSave(clientData);
 
-        // Créer le projet
         const projectId = Math.random().toString(36).substr(2, 9);
         const projectName = formData.selectedProducts.map(p => p.name).join(", ");
-        
-        // Créer le rendez-vous
+
         const appointmentId = Math.random().toString(36).substr(2, 9);
         const appointment = {
           id: appointmentId,
@@ -207,7 +202,6 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
           status: formData.selectedTeam ? 'attribue' : 'non_attribue'
         };
 
-        // Créer le projet avec le rendez-vous
         const project = {
           id: projectId,
           name: projectName,
@@ -222,7 +216,6 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
           appointments: [appointment]
         };
 
-        // Sauvegarder le projet et le rendez-vous
         await addProject(project);
         await addAppointment(appointment);
 
