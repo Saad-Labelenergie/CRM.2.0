@@ -4,7 +4,8 @@ import { useFirebase } from './useFirebase';
 interface Client {
   id: string;
   name: string;
-  status?: 'completed' | 'pending' | 'in-progress';  // Add status field
+  status?: 'completed' | 'pending' | 'in-progress';
+    // Add status field
   contact: {
     firstName: string;
     lastName: string;
@@ -13,7 +14,8 @@ interface Client {
     secondaryEmail?: string;
     secondaryPhone?: string;
   };
-  products?: Product[];
+  Product?:String;
+  productsIds?: String[];
   address: {
     street: string;
     city: string;
@@ -65,6 +67,12 @@ export function useClients() {
     };
     return firebase.add(clientWithTimestamps);
   };
+
+
+const getClientProducts = (productIds: string[], allProducts: Product[]): Product[] => {
+  return allProducts.filter(product => productIds.includes(product.id));
+};
+  
 
   return {
     ...firebase,

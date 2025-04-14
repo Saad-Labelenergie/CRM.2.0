@@ -23,6 +23,11 @@ export interface Product {
     installationTime?: number;
     [key: string]: any;
   };
+  price:{
+    ht: number;
+    tva: '20';
+    ttc: number;
+  }
   createdAt: Date;
   updatedAt: Date;
 }
