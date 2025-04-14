@@ -1,4 +1,5 @@
 import React from 'react';
+import logo from '../../../public/images/Logo Label Energie.jpg';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -124,9 +125,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
               transition={{ duration: 0.2 }}
               className="flex items-center"
             >
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                Label Energie
-              </h1>
+              <div>
+              <img src={logo} alt="Logo" className=" h-10" />
+              </div>
             </motion.div>
           </div>
 
