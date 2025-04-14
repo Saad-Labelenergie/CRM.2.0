@@ -21,6 +21,7 @@ import {
   PenTool as Tool,
   LogOut // Icône de déconnexion ajoutée
 } from 'lucide-react';
+import { X, Mail, Phone, Calendar, Shield } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { auth } from '../../lib/firebase'; 
 
@@ -40,13 +41,14 @@ const navigation = [
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
- 
   const [isDark, setIsDark] = React.useState(() => {
     const saved = localStorage.getItem('theme');
     return saved === 'dark';
   });
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [isSearchOpen, setIsSearchOpen] = React.useState(false);
+  // Ajout du state ici, au début du composant
+  const [isUserDetailsOpen, setIsUserDetailsOpen] = React.useState(false);
 
   const handleLogout = async () => {
     try {
@@ -84,12 +86,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
       }
     }
   };
-     // Récupérer l'utilisateur connecté depuis le localStorage
      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
      const userName = currentUser?.name || 'Utilisateur';
      const userRole = currentUser?.role.toLowerCase() || 'Administrateur';
 
-    // Filtrer la navigation en fonction du rôle
     const filteredNavigation = navigation.filter(item => 
     item.roles.includes(userRole.toLowerCase())
   );
@@ -287,20 +287,128 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={() => navigate('/history')}
                 className="p-2 rounded-lg hover:bg-accent transition-colors relative"
-              >
+                >
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
-              </motion.button>
+                </motion.button>
               <motion.div
                 whileHover={{ scale: 1.05 }}
+                onClick={() => setIsUserDetailsOpen(true)}
                 className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center cursor-pointer"
               >
-                <span className="text-sm font-medium">JD</span>
+                <span className="text-sm font-medium">
+                  {userName ? userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}
+                </span>
               </motion.div>
             </div>
           </header>
 
+          {/* Modal des détails utilisateur */}
+          <AnimatePresence>
+            {isUserDetailsOpen && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+              >
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="bg-card w-full max-w-2xl rounded-xl p-6 shadow-xl m-4"
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-semibold">Mon Profil</h2>
+                    <button 
+                      onClick={() => setIsUserDetailsOpen(false)} 
+                      className="p-2 hover:bg-accent rounded-lg"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center space-x-4 mb-6">
+                    <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-2xl font-bold">
+                        {userName ? userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold">{currentUser.name}</h3>
+                      <div className="flex items-center mt-1">
+                        <Shield className={`w-5 h-5 ${
+                          currentUser.role === "Administrateur" ? "text-blue-500" :
+                          currentUser.role === "Manager" ? "text-green-500" :
+                          "text-orange-500"
+                        }`} />
+                        <span className="text-lg ml-2">{currentUser.role}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-3">
+                        <Mail className="w-5 h-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Email</p>
+                          <p className="font-medium">{currentUser.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Phone className="w-5 h-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Téléphone</p>
+                          <p className="font-medium">{currentUser.phone}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Building2 className="w-5 h-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Équipe</p>
+                          <p className="font-medium">{currentUser.team || 'Non assigné'}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-3">
+                        <Building2 className="w-5 h-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Département</p>
+                          <p className="font-medium">{currentUser.department}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Calendar className="w-5 h-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Date de création</p>
+                          <p className="font-medium">
+                            {new Date(currentUser.createdAt).toLocaleDateString('fr-FR', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      <div>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          currentUser.status === 'active' 
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                        }`}>
+                          {currentUser.status === 'active' ? 'Actif' : 'Inactif'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           {/* Page content */}
           <main className="flex-1 overflow-auto p-6">
             {/* Ajout du message de bienvenue */}
