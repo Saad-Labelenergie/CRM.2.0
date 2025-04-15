@@ -1,5 +1,5 @@
 import React from 'react';
-import logo from '../../../public/images/Logo Label Energie.jpg';
+import logo from '/public/images/Logo Label Energie.jpg';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -20,11 +20,12 @@ import {
   Search,
   FolderOpen,
   PenTool as Tool,
-  LogOut // Icône de déconnexion ajoutée
+  LogOut 
 } from 'lucide-react';
 import { X, Mail, Phone, Calendar, Shield } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { auth } from '../../lib/firebase'; 
+import { NotificationPopup } from '../Notification/NotificationPopup';
 
 const navigation = [
   { name: 'Tableau de bord', href: '/', icon: LayoutDashboard, roles: ['administrateur', 'technicien', 'manager'] },
@@ -39,7 +40,23 @@ const navigation = [
   { name: 'Utilisateurs', href: '/users', icon: UserCog, roles: ['administrateur','technicien'] },
 ];
 
+
+
 export function Layout({ children }: { children: React.ReactNode }) {
+  const [isNotificationOpen, setIsNotificationOpen] = React.useState(false);
+const notificationRef = React.useRef(null);
+
+// Fermer le popup si on clique ailleurs
+React.useEffect(() => {
+  function handleClickOutside(event: MouseEvent) {
+    if (notificationRef.current && !(notificationRef.current as any).contains(event.target)) {
+      setIsNotificationOpen(false);
+    }
+  }
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => document.removeEventListener('mousedown', handleClickOutside);
+}, []);
+
   const location = useLocation();
   const navigate = useNavigate();
   const [isDark, setIsDark] = React.useState(() => {
@@ -294,15 +311,31 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   {isDark ? 'Mode clair' : 'Mode sombre'}
                 </span>
               </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate('/history')}
-                className="p-2 rounded-lg hover:bg-accent transition-colors relative"
-                >
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
-                </motion.button>
+              <div className="relative" ref={notificationRef}>
+  <motion.button
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+    className="p-2 rounded-lg hover:bg-accent transition-colors relative"
+  >
+    <Bell className="w-5 h-5" />
+    <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
+  </motion.button>
+
+  <AnimatePresence>
+    {isNotificationOpen && (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        className="absolute right-0 mt-2 w-[36rem] max-h-[600px] overflow-y-auto bg-popover border border-border rounded-xl shadow-lg z-50"
+      >
+        <NotificationPopup />
+      </motion.div>
+    )}
+  </AnimatePresence>
+</div>
+
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 onClick={() => setIsUserDetailsOpen(true)}
