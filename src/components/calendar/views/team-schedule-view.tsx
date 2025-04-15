@@ -30,7 +30,8 @@ export function TeamScheduleView() {
   // Calculer les jours de la semaine
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  .filter(day => day.getDay() !== 0 && day.getDay() !== 6); // Exclut dimanche (0) et samedi (6)
 
   // Filtrer uniquement les rendez-vous attribués et les équipes actives
   const activeTeams = teams.filter(team => team.isActive);
@@ -84,8 +85,8 @@ export function TeamScheduleView() {
     <>
       <div className="min-w-[1200px]">
         {/* En-tête des jours */}
-        <div className="grid grid-cols-[200px_repeat(7,1fr)] border-b border-border/50">
-          <div className="p-4 font-medium text-muted-foreground">Équipes</div>
+        <div className="grid grid-cols-[200px_repeat(5,1fr)] border-b border-border/50">
+        <div className="p-4 font-medium text-muted-foreground">Équipes</div>
           {weekDays.map(day => (
             <div
               key={day.toString()}
