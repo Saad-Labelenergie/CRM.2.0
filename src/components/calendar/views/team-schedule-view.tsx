@@ -115,7 +115,7 @@ export function TeamScheduleView() {
             {activeTeams.map(team => (
               <div
                 key={team.id}
-                className="grid grid-cols-[200px_repeat(7,1fr)]"
+                className="grid grid-cols-[200px_repeat(5,1fr)] border-b border-border/50"
               >
                 {/* Nom de l'équipe */}
                 <div 
