@@ -1,5 +1,5 @@
 import React from 'react';
-import logo from '/public/images/Logo Label Energie.jpg';
+import logo from '/images/Logo Label Energie.jpg';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
