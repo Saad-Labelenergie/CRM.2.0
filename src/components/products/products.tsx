@@ -224,7 +224,7 @@ export function Products() {
                 <motion.tr
                   key={product.id}
                   variants={itemVariants}
-                  onClick={() => navigate(`/products/${product.name}`)}
+                  onClick={() => navigate(`/products/${product.id}`)}
                   className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors cursor-pointer group"
                 >
                   <td className="p-4">
