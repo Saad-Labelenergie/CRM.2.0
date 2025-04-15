@@ -19,7 +19,7 @@ export function ProductsStep({
 
   // Calculate total installation time
   const totalInstallationTime = selectedProducts.reduce(
-    (total, product) => total + (product.installationTime || 0),
+    (total, product) => total + (product.specifications?.installationTime || 0),
     0
   );
 
@@ -61,7 +61,7 @@ export function ProductsStep({
                     <div>
                       <h4 className="font-medium">{product.name}</h4>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Temps d'installation : {} minutes
+                        Temps d'installation : {product.specifications?.installationTime} minutes
                       </p>
                     </div>
                     <div className="text-right">
