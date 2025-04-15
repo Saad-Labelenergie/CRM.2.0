@@ -101,9 +101,21 @@ export function ProductDetail() {
     }
   };
 
+  // const handleDeleteProduct = async () => {
+  //   try {
+  //     await removeProduct(product!.name);
+  //     setToastMessage('Le produit a été supprimé avec succès');
+  //     setShowSuccessToast(true);
+  //     setTimeout(() => {
+  //       navigate('/products');
+  //     }, 1500);
+  //   } catch (error) {
+  //     console.error('Erreur lors de la suppression du produit:', error);
+  //   }
+  // };
   const handleDeleteProduct = async () => {
     try {
-      await removeProduct(product!.id);
+      await removeProduct("products", product!.name); // "products" = nom de ta collection
       setToastMessage('Le produit a été supprimé avec succès');
       setShowSuccessToast(true);
       setTimeout(() => {
@@ -113,6 +125,7 @@ export function ProductDetail() {
       console.error('Erreur lors de la suppression du produit:', error);
     }
   };
+  
 
   if (loading) {
     return (

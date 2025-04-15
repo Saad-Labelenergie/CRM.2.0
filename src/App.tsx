@@ -53,7 +53,7 @@ function App() {
                   <Route path="/calendar" element={<Calendar />} />
                   <Route path="/loading" element={<Loading />} />
                   <Route path="/products" element={<Products />} />
-                  <Route path="/products/:id" element={<ProductDetail />} />
+                  <Route path="/products/:name" element={<ProductDetail />} />
                   <Route path="/sav" element={<SAV />} />
                   <Route path="/clients" element={<Clients />} />
                   <Route path="/clients/:id" element={<ClientDetail />} />
