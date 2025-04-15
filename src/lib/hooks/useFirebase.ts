@@ -134,48 +134,28 @@ export function useFirebase<T>(collectionName: string, options: FirebaseOptions 
     }
   };
 
-  // const remove = async (id: string | number) => {
-  //   try {
-  //     // Find the document in the current data using the numeric ID
-  //     const existingDoc = data.find(doc => (doc as any).id.toString() === id.toString());
-  //     if (!existingDoc) {
-  //       throw new Error(`Document with ID ${id} not found in collection ${collectionName}`);
-  //     }
+   const remove = async (id: string | number) => {
+     try {
+       // Find the document in the current data using the numeric ID
+       const existingDoc = data.find(doc => (doc as any).id.toString() === id.toString());
+       if (!existingDoc) {
+         throw new Error(`Document with ID ${id} not found in collection ${collectionName}`);
+       }
   
-  //     // Get the Firestore document ID from the document data
-  //     const firestoreId = (existingDoc as any)._id || (existingDoc as any).firestoreId;
-  //     if (!firestoreId) {
-  //       throw new Error(`Firestore ID not found for document ${id}`);
-  //     }
+       // Get the Firestore document ID from the document data
+       const firestoreId = (existingDoc as any)._id || (existingDoc as any).firestoreId;
+       if (!firestoreId) {
+         throw new Error(`Firestore ID not found for document ${id}`);
+       }
   
-  //     const docRef = doc(db, collectionName, firestoreId);
-  //     await deleteDoc(docRef);
-  //   } catch (err: any) {
-  //     setError(err.message);
-  //     throw err;
-  //   }
-  // };
+       const docRef = doc(db, collectionName, firestoreId);
+       await deleteDoc(docRef);
+     } catch (err: any) {
+       setError(err.message);
+       throw err;
+     }
+   };
 
-   const remove = async (collectionName: string, name: string) => {
-    try {
-      const q = query(collection(db, collectionName), where("name", "==", name));
-      const snapshot = await getDocs(q);
-  
-      if (snapshot.empty) {
-        throw new Error(`Aucun document trouvé avec le nom "${name}"`);
-      }
-  
-      // Si plusieurs documents ont le même nom, on les supprime tous
-      for (const docSnap of snapshot.docs) {
-        await deleteDoc(doc(db, collectionName, docSnap.id));
-      }
-  
-      console.log(`Produit "${name}" supprimé avec succès.`);
-    } catch (error) {
-      console.error("Erreur lors de la suppression par nom :", error);
-      throw error;
-    }
-  };
 
   return {
     data,
