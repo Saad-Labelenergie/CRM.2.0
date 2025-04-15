@@ -150,14 +150,16 @@ React.useEffect(() => {
 
           <nav className="mt-6 flex-1 px-3">
                         {/* Ajout du message de bienvenue */}
-                        <div className="mb-6">
-              <h1 className="text-2xl font-semibold text-foreground">
-                Bonjour, <span className="text-primary">{userName}</span>
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Bienvenue sur votre tableau de bord
-              </p>
-            </div>
+                        {!isCollapsed && (
+  <div className="mb-6">
+    <h1 className="text-2xl font-semibold text-foreground">
+      Bonjour, <span className="text-primary">{userName}</span>
+    </h1>
+    <p className="text-sm text-muted-foreground">
+      Bienvenue sur votre tableau de bord
+    </p>
+  </div>
+)}
             {filteredNavigation.map((item) => { // Utilisez filteredNavigation au lieu de navigation
               const isActive = location.pathname === item.href;
               return (
