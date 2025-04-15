@@ -58,10 +58,13 @@ export function PlanningStep({
     const days = [];
 
     for (let date = weekStart; date <= weekEnd; date = addDays(date, 1)) {
+      const dayOfWeek = date.getDay();
+      if (dayOfWeek === 0 || dayOfWeek === 6) continue; // Ignore dimanche (0) et samedi (6)
+    
       const isToday = isSameDay(date, today);
       const isSelected = installationDate && isSameDay(date, parseISO(installationDate));
       const isPast = date < today;
-
+    
       days.push(
         <div
           key={date.toISOString()}
@@ -84,6 +87,7 @@ export function PlanningStep({
         </div>
       );
     }
+    
 
     return (
       <div className="mt-4">
@@ -104,7 +108,7 @@ export function PlanningStep({
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-5 gap-4 justify-center">
           {days}
         </div>
       </div>
