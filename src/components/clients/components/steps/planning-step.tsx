@@ -76,7 +76,7 @@ export function PlanningStep({
   const [currentWeek, setCurrentWeek] = useState(new Date());
 
   const totalInstallationTime = selectedProducts.reduce(
-    (total: number, product: Product) => total + product.installationTime,
+    (total, selectedProducts) => total + selectedProducts.installationTime,
     0
   );
   const daysNeeded = Math.ceil(totalInstallationTime / (8 * 60));
@@ -88,10 +88,13 @@ export function PlanningStep({
     const days = [];
 
     for (let date = weekStart; date <= weekEnd; date = addDays(date, 1)) {
+      const dayOfWeek = date.getDay();
+      if (dayOfWeek === 0 || dayOfWeek === 6) continue; // Ignore dimanche (0) et samedi (6)
+    
       const isToday = isSameDay(date, today);
       const isSelected = installationDate && isSameDay(date, parseISO(installationDate));
       const isPast = date < today;
-
+    
       days.push(
         <div
           key={date.toISOString()}
@@ -114,6 +117,7 @@ export function PlanningStep({
         </div>
       );
     }
+    
 
     return (
       <div className="mt-4">
@@ -134,7 +138,7 @@ export function PlanningStep({
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-5 gap-4 justify-center">
           {days}
         </div>
       </div>
@@ -144,27 +148,32 @@ export function PlanningStep({
   return (
     <div className="space-y-6">
       <div className="bg-accent/50 rounded-lg p-4 space-y-4">
-        <h3 className="font-medium flex items-center">
-          <Calendar className="w-4 h-4 mr-2" />
-          Planification de l'installation
-        </h3>
+      <div className="p-4 bg-background rounded-lg border space-y-2">
+  <h4 className="font-medium mb-2 flex items-center text-primary">
+    <Info className="w-4 h-4 mr-2" />
+    Résumé de la planification
+  </h4>
 
-        <div className="p-4 bg-background rounded-lg border">
-          <h4 className="font-medium mb-2 flex items-center">
-            <Info className="w-4 h-4 mr-2 text-blue-500" />
-            Informations importantes
-          </h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center text-muted-foreground">
-              <Clock className="w-4 h-4 mr-2" />
-              Durée totale : {totalInstallationTime / 60} heures ({daysNeeded} jour{daysNeeded > 1 ? 's' : ''})
-            </div>
-            <div className="flex items-center text-muted-foreground">
-              <Package className="w-4 h-4 mr-2" />
-              Produits : {selectedProducts.map((p: Product) => p.type).join(', ')}
-            </div>
-          </div>
-        </div>
+  <div className="text-sm text-muted-foreground">
+    <strong>Produits sélectionnés :</strong>{' '}
+    {selectedProducts.length > 0
+      ? selectedProducts.map(p => p.name).join(', ')
+      : 'Aucun'}
+  </div>
+
+  <div className="text-sm text-muted-foreground">
+    <strong>Équipe choisie :</strong>{' '}
+    {selectedTeam ? selectedTeam.name : 'Aucune'}
+  </div>
+
+  <div className="text-sm text-muted-foreground">
+  <strong>Date d’installation :</strong>{' '}
+  {Math.floor(totalInstallationTime / 60)}h
+  {totalInstallationTime % 60 > 0 ? ` ${totalInstallationTime % 60}min` : ''}
+
+  </div>
+</div>
+
 
         {/* Règlement à récupérer */}
         <div className="p-4 bg-background rounded-lg border">
