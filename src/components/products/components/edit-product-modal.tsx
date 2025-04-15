@@ -79,25 +79,28 @@ export function EditProductModal({ isOpen, onClose, onSave, product }: EditProdu
   });
 
   useEffect(() => {
-    setFormData({
-      ...product,
-      supplier: {
-        name: product.supplier?.name || '',
-        contact: product.supplier?.contact || '',
-        email: product.supplier?.email || ''
-      },
-      stock: {
-        current: product.stock?.current || 0,
-        minimum: product.stock?.minimum || 0,
-        optimal: product.stock?.optimal || 0
-      },
-      certifications: product.certifications || [],
-      specifications: {
-        ...product.specifications,
-        installationTime: product.specifications?.installationTime || 240
-      }
-    });
-  }, [product]);
+    if (isOpen) {
+      setFormData({
+        ...product,
+        supplier: {
+          name: product.supplier?.name || '',
+          contact: product.supplier?.contact || '',
+          email: product.supplier?.email || ''
+        },
+        stock: {
+          current: product.stock?.current || 0,
+          minimum: product.stock?.minimum || 0,
+          optimal: product.stock?.optimal || 0
+        },
+        certifications: product.certifications || [],
+        specifications: {
+          ...product.specifications,
+          installationTime: product.specifications?.installationTime || 240
+        }
+      });
+    }
+  }, [isOpen]);
+  
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [newCertification, setNewCertification] = useState('');
