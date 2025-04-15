@@ -51,7 +51,7 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData }: Upda
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { updateProject, updateAppointment } = useScheduling();
+  const { updateProject } = useScheduling();
 
   // 🔄 Charger les produits
   useEffect(() => {
@@ -159,23 +159,36 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData }: Upda
   };
 
   const handleNext = () => {
-    if (validateStep()) {
-      setStep(prev => ({
-        contact: 'address',
-        address: 'products',
-        products: 'planning',
-        planning: 'planning'
-      }[prev]));
+    if (!validateStep()) return;
+    
+    switch (step) {
+      case 'contact':
+        setStep('address');
+        break;
+      case 'address':
+        setStep('products');
+        break;
+      case 'products':
+        setStep('planning');
+        break;
+      case 'planning':
+        handleSubmit();
+        break;
     }
   };
 
   const handleBack = () => {
-    setStep(prev => ({
-      planning: 'products',
-      products: 'address',
-      address: 'contact',
-      contact: 'contact'
-    }[prev]));
+    switch (step) {
+      case 'planning':
+        setStep('products');
+        break;
+      case 'products':
+        setStep('address');
+        break;
+      case 'address':
+        setStep('contact');
+        break;
+    }
   };
 
   const handleSubmit = async () => {
@@ -189,12 +202,23 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData }: Upda
         address: formData.address,
         tag: formData.tag,
         productsIds: formData.selectedProducts.map(p => p.id),
+        // Add team information
+        team: formData.selectedTeam ? {
+          id: formData.selectedTeam._id,
+          name: formData.selectedTeam.name,
+          color: formData.selectedTeam.color
+        } : null,
+        updatedAt: new Date()
       };
 
       onSave(clientData);
 
       if (initialData.projectId) {
         const projectName = formData.selectedProducts.map(p => p.name).join(', ');
+        const totalInstallationTime = formData.selectedProducts.reduce(
+          (acc, p) => acc + (parseInt(p.installationTime) || 0),
+          0
+        );
 
         const appointment = {
           id: initialData.appointmentId,
@@ -209,8 +233,9 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData }: Upda
           team: formData.selectedTeam?.name || null,
           teamColor: formData.selectedTeam?.color || null,
           type: "installation",
-          duration: `${Math.ceil(formData.selectedProducts.reduce((acc, p) => acc + p.installationTime, 0) / 60)}h`,
-          status: formData.selectedTeam ? 'attribue' : 'non_attribue'
+          duration: `${Math.ceil(totalInstallationTime / 60)}h`,
+          status: formData.selectedTeam ? 'attribue' : 'non_attribue',
+          updatedAt: new Date()
         };
 
         const project = {
@@ -222,18 +247,37 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData }: Upda
           },
           status: formData.selectedTeam ? 'attribue' : 'en_attente',
           startDate: formData.installationDate,
-          type: formData.selectedProducts[0]?.type?.toUpperCase() || '',
-          team: formData.selectedTeam?.name || null,
+          type: formData.selectedProducts[0]?.type?.toUpperCase() || 'STANDARD',
+          team: formData.selectedTeam ? {
+            id: formData.selectedTeam._id,
+            name: formData.selectedTeam.name,
+            color: formData.selectedTeam.color
+          } : null,
           appointments: [appointment],
-          products: formData.selectedProducts
+          products: formData.selectedProducts,
+          updatedAt: new Date()
         };
 
-        await updateProject(project);
-        await updateAppointment(appointment);
-      }
+        // Update the function calls with the correct parameters
+        // In handleSubmit, remove the updateAppointment call
+        await updateProject(project.id, {
+          name: project.name,
+          client: project.client,
+          status: project.status as "en_attente" | "charger" | "en_cours" | "terminer",
+          startDate: project.startDate,
+          type: project.type,
+          team: formData.selectedTeam?.name || null,
+          appointments: project.appointments.map(apt => ({
+            ...apt,
+            type: apt.type as "installation" | "maintenance" | "urgence",
+            status: apt.status as "attribue" | "non_attribue",
+          }))
+        });
+        
 
-      setShowSuccessToast(true);
-      onClose();
+        setShowSuccessToast(true);
+        onClose();
+      }
     } catch (error) {
       console.error('Erreur update client :', error);
     }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Search, PenTool as Tool, Calendar, Clock, Building2, Users, CheckCircle, AlertTriangle, TrendingUp, BarChart3, Filter } from 'lucide-react';
+import { Plus, Search, PenTool as Tool, Calendar, Building2, Users, CheckCircle, AlertTriangle} from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { NewMaintenanceModal } from './components/new-maintenance-modal';

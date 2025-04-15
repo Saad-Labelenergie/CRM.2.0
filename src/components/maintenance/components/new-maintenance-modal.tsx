@@ -5,18 +5,14 @@ import {
   Check, 
   PenTool as Tool, 
   Building2, 
-  Calendar, 
   Users, 
   Search, 
   AlertCircle,
   Plus,
   ArrowRight,
-  Package,
-  Clock,
-  ChevronRight
+  Package
 } from 'lucide-react';
 import { format, addMonths } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { useClients } from '../../../lib/hooks/useClients';
 import { useProducts } from '../../../lib/hooks/useProducts';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
@@ -81,14 +77,10 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
         createdAt: new Date(),
         updatedAt: new Date()
       });
-      
-      // Find the newly created client
       const newClient = clients.find(c => c.id === clientId) || {
         id: clientId,
         ...clientData
       };
-      
-      // Select the new client
       handleClientSelect(newClient);
       setIsNewClientModalOpen(false);
     } catch (error) {

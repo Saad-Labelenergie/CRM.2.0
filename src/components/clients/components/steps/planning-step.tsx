@@ -4,19 +4,50 @@ import { useScheduling } from '../../../../lib/scheduling/scheduling-context';
 import { format, addDays, startOfWeek, endOfWeek, isSameDay, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
+// Update the TeamAvailability interface to match the Team type from context
 interface TeamAvailability {
-  id: string;
+  id?: string;
+  _id: string;
   name: string;
   expertise: string[];
   isActive: boolean;
+  color: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  schedule: Array<{
+    date: string;
+    slots: Array<{
+      start: string;
+      end: string;
+      isAvailable: boolean;
+    }>;
+  }>;
 }
-
 interface Product {
   id: number;
   name: string;
   type: string;
   installationTime: number;
   price: number;
+}
+
+interface TeamAvailability {
+  id?: string;
+  _id: string;
+  name: string;
+  expertise: string[];
+  isActive: boolean;
+  color: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  schedule: Array<{
+    date: string;
+    slots: Array<{
+      start: string;
+      end: string;
+      isAvailable: boolean;
+    }>;
+  }>;
 }
 
 interface PlanningStepProps {
@@ -37,20 +68,20 @@ export function PlanningStep({
   onDateChange
 }: PlanningStepProps) {
   const { teams } = useScheduling();
+  
+  const availableTeams = (teams?.filter(team => team.isActive) || []) as TeamAvailability[];
+
   const [hasPaymentToCollect, setHasPaymentToCollect] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [comment, setComment] = useState('');
   const [currentWeek, setCurrentWeek] = useState(new Date());
 
   const totalInstallationTime = selectedProducts.reduce(
-    (total, product) => total + product.installationTime,
+    (total: number, product: Product) => total + product.installationTime,
     0
   );
   const daysNeeded = Math.ceil(totalInstallationTime / (8 * 60));
   const today = new Date();
-
-  // Filtrer uniquement les équipes actives
-  const availableTeams = teams.filter(team => team.isActive);
 
   const renderWeekCalendar = () => {
     const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -131,7 +162,7 @@ export function PlanningStep({
             </div>
             <div className="flex items-center text-muted-foreground">
               <Package className="w-4 h-4 mr-2" />
-              Produits : {selectedProducts.map(p => p.type).join(', ')}
+              Produits : {selectedProducts.map((p: Product) => p.type).join(', ')}
             </div>
           </div>
         </div>
@@ -198,18 +229,18 @@ export function PlanningStep({
           <label className="block text-sm font-medium text-muted-foreground mb-2">
             Équipe d'installation
           </label>
-          {availableTeams.length === 0 ? (
+          {!teams || availableTeams.length === 0 ? (
             <div className="text-center py-4 text-muted-foreground">
-              Aucune équipe active disponible
+              {!teams ? 'Chargement des équipes...' : 'Aucune équipe active disponible'}
             </div>
           ) : (
             <div className="space-y-2">
               {availableTeams.map((team) => (
                 <button
-                  key={team.id}
+                  key={team._id}  // Utiliser _id au lieu de id
                   onClick={() => onTeamSelect(team)}
                   className={`w-full p-3 rounded-lg text-left transition-colors flex items-center justify-between ${
-                    selectedTeam?.id === team.id
+                    selectedTeam?._id === team._id
                       ? 'bg-primary/10 border-primary'
                       : 'bg-background hover:bg-accent'
                   } border`}
@@ -217,8 +248,12 @@ export function PlanningStep({
                   <div className="flex items-center">
                     <Users className="w-4 h-4 mr-2" />
                     {team.name}
+                    <div 
+                      className="w-3 h-3 rounded-full ml-2" 
+                      style={{ backgroundColor: team.color || '#3B82F6' }}
+                    />
                   </div>
-                  {selectedTeam?.id === team.id && (
+                  {selectedTeam?._id === team._id && (
                     <div className="w-2 h-2 rounded-full bg-primary" />
                   )}
                 </button>

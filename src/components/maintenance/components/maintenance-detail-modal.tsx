@@ -5,12 +5,9 @@ import {
   Building2, 
   Package, 
   Calendar, 
-  Users, 
-  Clock, 
-  CheckCircle, 
+  Users,
   PenTool as Tool,
   FileText,
-  ArrowRight
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';

@@ -59,10 +59,15 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
     const fetchProducts = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, 'products'));
-        const fetchedProducts = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        const fetchedProducts = querySnapshot.docs.map(doc => {
+          console.log('Product data:', doc.data()); // Ajoutez ce log pour déboguer
+          return {
+            id: doc.id,
+            ...doc.data(),
+            installationTime: parseInt(doc.data().installationTime) || 0
+          };
+        });
+        console.log('Fetched products:', fetchedProducts); // Et celui-ci
         setProducts(fetchedProducts);
       } catch (error) {
         console.error('Erreur lors du chargement des produits :', error);
@@ -177,12 +182,28 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
           name: `${formData.contact.firstName} ${formData.contact.lastName}`,
           contact: formData.contact,
           address: formData.address,
-          tag: formData.tag
+          tag: formData.tag,
+          status: 'pending',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          // Add team information
+          team: formData.selectedTeam ? {
+            id: formData.selectedTeam._id,
+            name: formData.selectedTeam.name,
+            color: formData.selectedTeam.color
+          } : null,
+          // Add selected products IDs
+          productsIds: formData.selectedProducts.map(p => p.id)
         };
         onSave(clientData);
 
         const projectId = Math.random().toString(36).substr(2, 9);
         const projectName = formData.selectedProducts.map(p => p.name).join(", ");
+
+        const totalInstallationTime = formData.selectedProducts.reduce(
+          (acc, p) => acc + (parseInt(p.installationTime) || 0),
+          0
+        );
 
         const appointmentId = Math.random().toString(36).substr(2, 9);
         const appointment = {
@@ -197,9 +218,11 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
           time: "09:00",
           team: formData.selectedTeam?.name || null,
           teamColor: formData.selectedTeam?.color || null,
-          type: "installation",
-          duration: `${Math.ceil(formData.selectedProducts.reduce((acc, p) => acc + p.installationTime, 0) / 60)}h`,
-          status: formData.selectedTeam ? 'attribue' : 'non_attribue'
+          type: "installation" as "installation" | "maintenance" | "urgence",
+          duration: `${Math.ceil(totalInstallationTime / 60)}h`,
+          status: formData.selectedTeam ? 'attribue' as const : 'non_attribue' as const,
+          createdAt: new Date(),
+          updatedAt: new Date()
         };
 
         const project = {
@@ -209,9 +232,9 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
             id: parseInt(clientData.id),
             name: clientData.name
           },
-          status: formData.selectedTeam ? 'attribue' : 'en_attente',
+          status: (formData.selectedTeam ? 'attribue' : 'en_attente') as 'en_attente' | 'charger' | 'en_cours' | 'terminer',
           startDate: formData.installationDate,
-          type: formData.selectedProducts[0].type.toUpperCase(),
+          type: formData.selectedProducts[0]?.type?.toUpperCase() || 'STANDARD',
           team: formData.selectedTeam?.name || null,
           appointments: [appointment]
         };
