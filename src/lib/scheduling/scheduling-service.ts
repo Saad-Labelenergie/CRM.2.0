@@ -78,11 +78,32 @@ function getSlotScore(slot: TimeSlot, installation: Installation): number {
 }
 
 export class SchedulingService {
-  private teams: Team[] = [];
+  private appointments: Appointment[];
+  private teams: Team[];
 
-  constructor(teams: Team[]) {
-    this.teams = teams;
-    this.optimizeWeeklySchedule();
+  constructor(initialAppointments: Appointment[] = [], initialTeams: Team[] = []) {
+    this.appointments = initialAppointments || [];
+    this.teams = initialTeams || [];
+    
+    // Only optimize if we have data
+    if (this.appointments.length > 0 && this.teams.length > 0) {
+      this.optimizeWeeklySchedule(this.appointments, this.teams);
+    }
+  }
+
+  optimizeWeeklySchedule(appointments: Appointment[], teams: Team[]) {
+    if (!appointments?.length || !teams?.length) {
+      return [];
+    }
+
+    return appointments.map(appointment => {
+      const team = teams.find(t => t.name === appointment.team);
+      return {
+        ...appointment,
+        team: team?.name || null,
+        teamColor: team?.color || null
+      };
+    });
   }
 
   findOptimalSlot(installation: Installation) {
@@ -205,34 +226,5 @@ export class SchedulingService {
     }
 
     return availableSlots;
-  }
-
-  optimizeWeeklySchedule(): void {
-    // Initialisation des créneaux pour toutes les équipes
-    const today = new Date();
-    const startOfWeek = addDays(today, 1 - today.getDay()); // Lundi
-
-    for (const team of this.teams) {
-      for (let i = 0; i < 5; i++) { // Du lundi au vendredi
-        const date = addDays(startOfWeek, i);
-        if (!team.schedule.find(s => isSameDay(new Date(s.date), date))) {
-          team.schedule.push({
-            date: date.toISOString().split('T')[0],
-            slots: [
-              {
-                start: '08:00',
-                end: '12:00',
-                isAvailable: true
-              },
-              {
-                start: '13:00',
-                end: '18:00',
-                isAvailable: true
-              }
-            ]
-          });
-        }
-      }
-    }
   }
 }

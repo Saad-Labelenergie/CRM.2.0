@@ -88,7 +88,10 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
     update: updateProject
   } = useFirebase<Project>('projects', { orderByField: 'startDate' });
 
-  const schedulingService = useMemo(() => new SchedulingService(teams), [teams]);
+  // Around line 91
+  const schedulingService = useMemo(() => {
+    return new SchedulingService(appointments || [], teams || []);
+  }, [appointments, teams]);
 
   const findOptimalSlot = (installation: Installation) => {
     return schedulingService.findOptimalSlot(installation);

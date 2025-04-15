@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -51,6 +51,16 @@ export function History() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  useEffect(() => {
+    if (currentUser.role !== "Administrateur") {
+      navigate('/');
+    }
+  }, [currentUser, navigate]);
+  if (currentUser.role !== "Administrateur") {
+    return null;
+  }
+
   useEffect(() => {
     const historyQuery = query(
       collection(db, 'historique_dossier'),
@@ -74,8 +84,6 @@ export function History() {
       entry.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       entry.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
       entry.details.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Fix the action filter condition
     const matchesAction = !actionFilter || (
       (actionFilter === 'created' && entry.action === 'created') ||
       (actionFilter === 'modified' && (entry.action === 'modified' || entry.action === 'status_changed')) ||
