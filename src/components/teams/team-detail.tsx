@@ -30,14 +30,24 @@ const defaultVehicleData = {
   monthlyCost: 0
 };
 
+
+
 export function TeamDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [teamName, setTeamName] = useState("Équipe Installation");
-  const [teamColor, setTeamColor] = useState("#3B82F6");
   const { teams, toggleTeamActive } = useScheduling();
 
   const team = teams.find(t => t.id === id);
+
+  const [localTeam, setLocalTeam] = useState<any>(team);
+
+  const handleNameChange = (newName: string) => {
+    setLocalTeam((prev: any) => ({ ...prev, name: newName }));
+  };
+
+  const handleColorChange = (newColor: string) => {
+    setLocalTeam((prev: any) => ({ ...prev, color: newColor }));
+  };
 
   if (!team) {
     return (
@@ -56,11 +66,7 @@ export function TeamDetail() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="space-y-8"
-    >
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <motion.button
@@ -71,11 +77,12 @@ export function TeamDetail() {
           >
             <ArrowLeft className="w-6 h-6" />
           </motion.button>
-          <TeamHeader 
-            teamName={team.name} 
-            teamColor={team.color}
-            onNameChange={setTeamName}
-            onColorChange={setTeamColor}
+          <TeamHeader
+            teamId={team.id}
+            teamName={localTeam?.name || team.name}
+            teamColor={localTeam?.color || team.color}
+            onNameChange={handleNameChange}
+            onColorChange={handleColorChange}
           />
         </div>
         <motion.button
@@ -83,7 +90,7 @@ export function TeamDetail() {
           whileTap={{ scale: 0.95 }}
           onClick={() => id && toggleTeamActive(id)}
           className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
-            team.isActive 
+            team.isActive
               ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50'
               : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50'
           }`}
@@ -95,7 +102,7 @@ export function TeamDetail() {
 
       <TeamStats />
       <TeamPerformance />
-      <TeamMembers />
+      <TeamMembers teamId={team.id} />
       <CompletedProjects />
       <SAVDetails />
       <VehicleTracking vehicleData={defaultVehicleData} />
