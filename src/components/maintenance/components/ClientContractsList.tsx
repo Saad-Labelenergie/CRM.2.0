@@ -4,7 +4,9 @@ import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore
 import { db } from '../../../lib/firebase';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { FileText, Package, Calendar } from 'lucide-react'; 
+import { FileText, Package, Calendar, Download } from 'lucide-react'; // Ajout de l'icône Download
+import { downloadContractPdf } from '../../../utils/contract-pdf-generator'; // Importer la fonction
+
 interface ContractData {
   id: string; // Firestore document ID
   clientId: string;
@@ -82,6 +84,25 @@ export function ClientContractsList({ clientId }: ClientContractsListProps) {
     return <div className="p-4 text-muted-foreground">Aucun contrat trouvé pour ce client.</div>;
   }
 
+  // Ajouter cette fonction pour télécharger le contrat
+  const handleDownloadContract = async (e: React.MouseEvent, contract: ContractData) => {
+    e.preventDefault(); // Empêcher la navigation vers la page de détails
+    e.stopPropagation(); // Empêcher la propagation de l'événement
+    
+    try {
+      await downloadContractPdf({
+        contractNumber: contract.contractNumber,
+        clientName: contract.clientName,
+        equipmentName: contract.equipmentName,
+        createdAt: contract.contractStartDate,
+        contractEndDate: contract.contractEndDate
+      });
+    } catch (error) {
+      console.error('Erreur lors du téléchargement du PDF:', error);
+      alert('Erreur lors de la génération du contrat. Veuillez réessayer.');
+    }
+  };
+
   return (
     <div className="space-y-3">
       <h3 className="text-lg font-semibold mb-2">Contrats Associés</h3>
@@ -96,8 +117,14 @@ export function ClientContractsList({ clientId }: ClientContractsListProps) {
               <FileText className="w-4 h-4 mr-2" />
               Contrat #{contract.contractNumber}
             </span>
-            {/* Vous pouvez ajouter un badge de statut ici si pertinent */}
-            {/* <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">{contract.paymentStatus}</span> */}
+            {/* Ajouter le bouton de téléchargement */}
+            <button 
+              onClick={(e) => handleDownloadContract(e, contract)}
+              className="p-1 hover:bg-primary/10 rounded-full transition-colors"
+              title="Télécharger le contrat"
+            >
+              <Download className="w-4 h-4 text-primary" />
+            </button>
           </div>
           <div className="text-sm text-muted-foreground space-y-1">
             <div className="flex items-center">

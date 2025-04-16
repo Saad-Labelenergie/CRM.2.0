@@ -9,6 +9,7 @@ import { NewMaintenanceModal } from './components/new-maintenance-modal';
 import { Toast } from '../ui/toast';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+import { downloadContractPdf } from '../../utils/contract-pdf-generator'; // Import the function
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -105,6 +106,30 @@ export function Maintenance() {
     pending: 0,
     nextDue: null as string | null
   });
+
+  // Add the handleDownloadContract function here
+  const handleDownloadContract = async (e: React.MouseEvent, maintenance: MaintenanceRecord) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    if (!maintenance.contractNumber) {
+      alert('Aucun contrat associé à cette maintenance.');
+      return;
+    }
+    
+    try {
+      await downloadContractPdf({
+        contractNumber: maintenance.contractNumber,
+        clientName: maintenance.clientName,
+        equipmentName: maintenance.equipmentName,
+        createdAt: new Date(maintenance.createdAt),
+        contractEndDate: new Date(maintenance.nextMaintenance)
+      });
+    } catch (error) {
+      console.error('Erreur lors du téléchargement du PDF:', error);
+      alert('Erreur lors de la génération du contrat. Veuillez réessayer.');
+    }
+  };
 
   useEffect(() => {
     const maintenanceRef = collection(db, 'maintenances');
@@ -354,11 +379,7 @@ export function Maintenance() {
                       <button
                         title="Télécharger contrat"
                         className="inline-flex items-center justify-center p-2 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Placeholder for download functionality
-                          alert('Fonctionnalité de téléchargement en cours de développement.');
-                        }}
+                        onClick={(e) => handleDownloadContract(e, record)}
                       >
                         <Download className="w-4 h-4" />
                       </button>
