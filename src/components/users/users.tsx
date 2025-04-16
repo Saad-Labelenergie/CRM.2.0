@@ -18,7 +18,8 @@ import { useFirebase } from '../../lib/hooks/useFirebase';
 import { EditUserModal } from './components/edit-user-modal';
 import { UserDetailsModal } from './components/user-details-modal';
 import { AlertTriangle } from 'lucide-react';
-interface User {
+
+export interface User {
   id: string;
   name: string;
   email: string;
