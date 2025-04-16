@@ -1,28 +1,46 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from '../../../lib/firebase';
+import { id } from 'date-fns/locale';
 
 interface EditNameModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentName: string;
+  teamId: string; // ✅ Assure-toi que c’est bien là
   onSave: (newName: string) => void;
 }
 
-export function EditNameModal({ isOpen, onClose, currentName, onSave }: EditNameModalProps) {
+
+
+export function EditNameModal({ teamId,isOpen, onClose, currentName, onSave }: EditNameModalProps) {
   const [name, setName] = React.useState(currentName);
 
   React.useEffect(() => {
     setName(currentName);
   }, [currentName]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim()) {
-      onSave(name);
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+  
+    try {
+      const teamRef = doc(db, "teams", teamId); // ✅ ici teamId (et pas id)
+      await updateDoc(teamRef, {
+        name: trimmedName,
+        updatedAt: new Date()
+      });
+  
+      onSave(trimmedName);
       onClose();
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du nom de l'équipe :", error);
     }
   };
+    
 
   return (
     <AnimatePresence>
@@ -92,4 +110,4 @@ export function EditNameModal({ isOpen, onClose, currentName, onSave }: EditName
       )}
     </AnimatePresence>
   );
-}
+  }
