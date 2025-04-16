@@ -4,7 +4,6 @@ import { useScheduling } from '../../../../lib/scheduling/scheduling-context';
 import { format, addDays, startOfWeek, endOfWeek, isSameDay, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
-// Update the TeamAvailability interface to match the Team type from context
 interface TeamAvailability {
   id?: string;
   _id: string;

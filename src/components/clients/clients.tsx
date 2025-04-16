@@ -974,13 +974,13 @@ export function Clients() {
               statusChangeModal.clientId, 
               status, 
               statusChangeModal.clientName,
-              currentClient.status
+              currentClient.status || 'pending'  
             );
           }
           setStatusChangeModal(prev => ({ ...prev, isOpen: false }));
-  }}
+        }}
   clientName={statusChangeModal.clientName}
   newStatus={statusChangeModal.newStatus}
 />
     </motion.div>
-  );} 
+  );}

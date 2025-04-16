@@ -10,9 +10,27 @@ export interface Installation {
   };
 }
 
+export interface Appointment {
+  id: string;
+  title: string;
+  client: {
+    id: number;
+    name: string;
+    postalCode: string;
+  };
+  date: string;
+  time: string;
+  team: string | null;
+  teamColor?: string;
+  type: 'installation' | 'maintenance' | 'urgence';
+  duration: string;
+  status: 'non_attribue' | 'attribue' | 'termine';
+}
+
 export interface Team {
   id: string;
   name: string;
+  color: string;  // Add this line
   expertise: string[];
   schedule: {
     date: string;

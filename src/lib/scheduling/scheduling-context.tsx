@@ -135,35 +135,32 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
 
   const updateAppointmentTeam = async (appointmentId: string, newTeamName: string) => {
     try {
-      // Find the team to get its color
       const team = teams.find(t => t.name === newTeamName);
       if (!team) {
         console.warn(`Team ${newTeamName} not found`);
         return;
       }
-
-      // Update the appointment
-      await updateAppointment(appointmentId, {
+  
+      const appointmentUpdate = {
         team: newTeamName,
         teamColor: team.color,
-        status: 'attribue'
-      });
-
-      // Update the project if it exists
+        status: 'attribue' as const
+      };
+  
+      await updateAppointment(appointmentId, appointmentUpdate);
+  
       const project = projects.find(p => p.appointments?.some(a => a.id === appointmentId));
       if (project) {
         const updatedAppointments = project.appointments.map(a => {
           if (a.id === appointmentId) {
             return {
               ...a,
-              team: newTeamName,
-              teamColor: team.color,
-              status: 'attribue'
+              ...appointmentUpdate
             };
           }
           return a;
         });
-
+  
         await updateProject(project.id, {
           team: newTeamName,
           appointments: updatedAppointments

@@ -10,13 +10,19 @@ import {
   AlertCircle,
   Plus,
   ArrowRight,
-  Package
+  Package,
+  FileText as ContractIcon, // Added for contract section
+  Calendar 
 } from 'lucide-react';
+// Import addDays and Timestamp
 import { format, addMonths } from 'date-fns';
 import { useClients } from '../../../lib/hooks/useClients';
 import { useProducts } from '../../../lib/hooks/useProducts';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
 import { NewClientModal } from '../../clients/components/new-client-modal';
+
+import { addDoc, collection } from 'firebase/firestore';
+import { db } from '../../../lib/firebase';
 
 interface NewMaintenanceModalProps {
   isOpen: boolean;
@@ -36,15 +42,21 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
   const [searchTerm, setSearchTerm] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   
+  // Add contract details to formData state
   const [formData, setFormData] = useState({
     client: null as any,
     equipment: null as any,
     maintenanceType: 'preventif',
-    frequency: 6, // months
-    lastMaintenance: format(new Date(), 'yyyy-MM-dd'),
-    nextMaintenance: format(addMonths(new Date(), 6), 'yyyy-MM-dd'),
+    frequency: 12, // Default to annual for contract
+    lastMaintenance: format(new Date(), 'yyyy-MM-dd'), // This might become contract start date
+    nextMaintenance: format(addMonths(new Date(), 12), 'yyyy-MM-dd'), // Calculated based on frequency
     team: null as any,
-    notes: ''
+    notes: '',
+    contractNumber: '',
+    // --- New Contract Fields ---
+    isContract: true, // Flag to indicate contract creation
+    contractStartDate: format(new Date(), 'yyyy-MM-dd'),
+    paymentSchedule: 'Annuel', // Default payment schedule
   });
 
   const activeTeams = teams.filter(team => team.isActive);
@@ -131,10 +143,47 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
     else if (step === 'schedule') setStep('equipment');
   };
 
-  const handleSubmit = () => {
+  // Update handleSubmit to create both contract and maintenance docs
+  const handleSubmit = async () => {
     if (validateStep()) {
-      onSave(formData);
-      onClose();
+      try {
+        // Add validation check for required data
+        if (!formData.client || !formData.equipment) {
+          setErrors({
+            ...errors,
+            client: !formData.client ? 'Client is required' : '',
+            equipment: !formData.equipment ? 'Equipment is required' : ''
+          });
+          return;
+        }
+
+        const maintenanceData = {
+          clientId: formData.client?.id || '',
+          clientName: formData.client?.name || '',
+          equipmentId: formData.equipment?.id || '',
+          equipmentName: formData.equipment?.name || '',
+          type: formData.maintenanceType,
+          frequency: formData.frequency,
+          lastMaintenance: formData.lastMaintenance,
+          nextMaintenance: formData.nextMaintenance,
+          teamId: formData.team?.id || null,
+          teamName: formData.team?.name || null,
+          notes: formData.notes,
+          status: 'upcoming',
+          createdAt: new Date().toISOString(),
+          contractNumber: formData.contractNumber || '' // Include contractNumber
+        };
+
+        // Only proceed if we have the required data
+        if (maintenanceData.clientId && maintenanceData.equipmentId) {
+          const maintenanceRef = collection(db, 'maintenances');
+          await addDoc(maintenanceRef, maintenanceData);
+          onSave(maintenanceData);
+          onClose();
+        }
+      } catch (error) {
+        console.error('Error creating maintenance:', error);
+      }
     }
   };
 
@@ -394,6 +443,18 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
             )}
           </div>
         </div>
+      </div>
+
+      {/* Add Contract Number Input Section */}
+      <div className="bg-accent/50 rounded-lg p-4">
+        <h3 className="font-medium mb-4">Numéro de contrat</h3>
+        <input
+          type="text"
+          value={formData.contractNumber}
+          onChange={(e) => setFormData({ ...formData, contractNumber: e.target.value })}
+          placeholder="Entrez le numéro de contrat (optionnel)..."
+          className="w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+        />
       </div>
 
       <div className="bg-accent/50 rounded-lg p-4">
