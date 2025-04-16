@@ -48,7 +48,8 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
     lastMaintenance: format(new Date(), 'yyyy-MM-dd'),
     nextMaintenance: format(addMonths(new Date(), 6), 'yyyy-MM-dd'),
     team: null as any,
-    notes: ''
+    notes: '',
+    contractNumber: '' // Add contractNumber field
   });
 
   const activeTeams = teams.filter(team => team.isActive);
@@ -138,11 +139,21 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
   const handleSubmit = async () => {
     if (validateStep()) {
       try {
+        // Add validation check for required data
+        if (!formData.client || !formData.equipment) {
+          setErrors({
+            ...errors,
+            client: !formData.client ? 'Client is required' : '',
+            equipment: !formData.equipment ? 'Equipment is required' : ''
+          });
+          return;
+        }
+
         const maintenanceData = {
-          clientId: formData.client.id,
-          clientName: formData.client.name,
-          equipmentId: formData.equipment.id,
-          equipmentName: formData.equipment.name,
+          clientId: formData.client?.id || '',
+          clientName: formData.client?.name || '',
+          equipmentId: formData.equipment?.id || '',
+          equipmentName: formData.equipment?.name || '',
           type: formData.maintenanceType,
           frequency: formData.frequency,
           lastMaintenance: formData.lastMaintenance,
@@ -151,17 +162,19 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
           teamName: formData.team?.name || null,
           notes: formData.notes,
           status: 'upcoming',
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          contractNumber: formData.contractNumber || '' // Include contractNumber
         };
-  
-        const maintenanceRef = collection(db, 'maintenances');
-        await addDoc(maintenanceRef, maintenanceData);
-        
-        onSave(maintenanceData);
-        onClose();
+
+        // Only proceed if we have the required data
+        if (maintenanceData.clientId && maintenanceData.equipmentId) {
+          const maintenanceRef = collection(db, 'maintenances');
+          await addDoc(maintenanceRef, maintenanceData);
+          onSave(maintenanceData);
+          onClose();
+        }
       } catch (error) {
-        console.error('Erreur lors de la création de la maintenance:', error);
-        // Vous pouvez ajouter ici une gestion d'erreur plus élaborée
+        console.error('Error creating maintenance:', error);
       }
     }
   };
@@ -422,6 +435,18 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
             )}
           </div>
         </div>
+      </div>
+
+      {/* Add Contract Number Input Section */}
+      <div className="bg-accent/50 rounded-lg p-4">
+        <h3 className="font-medium mb-4">Numéro de contrat</h3>
+        <input
+          type="text"
+          value={formData.contractNumber}
+          onChange={(e) => setFormData({ ...formData, contractNumber: e.target.value })}
+          placeholder="Entrez le numéro de contrat (optionnel)..."
+          className="w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+        />
       </div>
 
       <div className="bg-accent/50 rounded-lg p-4">
