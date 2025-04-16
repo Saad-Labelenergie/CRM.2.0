@@ -5,11 +5,13 @@ import { EditNameModal } from './edit-name-modal';
 import * as Popover from '@radix-ui/react-popover';
 
 interface TeamHeaderProps {
+  teamId: string; // 👈 ajoute ceci
   teamName: string;
   teamColor: string;
   onNameChange: (name: string) => void;
   onColorChange: (color: string) => void;
 }
+
 
 const predefinedColors = [
   '#3B82F6', // Blue
@@ -22,7 +24,7 @@ const predefinedColors = [
   '#F97316', // Orange
 ];
 
-export function TeamHeader({ teamName, teamColor, onNameChange, onColorChange }: TeamHeaderProps) {
+export function TeamHeader({ teamId,teamName, teamColor, onNameChange, onColorChange }: TeamHeaderProps) {
   const [isNameModalOpen, setIsNameModalOpen] = useState(false);
   const [colorInput, setColorInput] = useState(teamColor);
   const [isEyeDropperSupported, setIsEyeDropperSupported] = useState(
@@ -185,11 +187,14 @@ export function TeamHeader({ teamName, teamColor, onNameChange, onColorChange }:
       </div>
 
       <EditNameModal
-        isOpen={isNameModalOpen}
-        onClose={() => setIsNameModalOpen(false)}
-        currentName={teamName}
-        onSave={onNameChange}
-      />
+  isOpen={isNameModalOpen}
+  onClose={() => setIsNameModalOpen(false)}
+  currentName={teamName}
+  teamId={teamId}
+  onSave={(updated) => {
+    onNameChange(updated.name);
+  }}
+/>
     </div>
   );
 }
