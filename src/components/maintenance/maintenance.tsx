@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Search, PenTool as Tool, Calendar, Building2, Users, CheckCircle, AlertTriangle} from 'lucide-react';
+import { Link } from 'react-router-dom';
+// Add Download to the imports
+import { Plus, Search, PenTool as Tool, Calendar, Building2, Users, CheckCircle, AlertTriangle, FileText, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { NewMaintenanceModal } from './components/new-maintenance-modal';
@@ -70,7 +72,8 @@ const maintenanceRecords = [
     team: null
   }
 ];
-interface MaintenanceRecord {
+// Add the export keyword here
+export interface MaintenanceRecord {
   id: string;
   clientId: string;
   clientName: string;
@@ -85,6 +88,8 @@ interface MaintenanceRecord {
   teamName: string;
   type: string;
   createdAt: string;
+  contractId?: string; // Ensure contractId is optional if not always present
+  contractNumber?: string; // Ensure contractNumber is optional
 }
 
 export function Maintenance() {
@@ -276,12 +281,15 @@ export function Maintenance() {
               <th className="text-left p-4 font-medium text-muted-foreground">Prochaine</th>
               <th className="text-left p-4 font-medium text-muted-foreground">Équipe</th>
               <th className="text-center p-4 font-medium text-muted-foreground">Statut</th>
+              {/* Add new header for Contract */}
+              <th className="text-center p-4 font-medium text-muted-foreground">Contrat</th>
             </tr>
           </thead>
           <tbody>
             {filteredRecords.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                {/* Adjust colspan to include the new column */}
+                <td colSpan={8} className="text-center py-8 text-muted-foreground">
                   Aucune maintenance ne correspond à votre recherche
                 </td>
               </tr>
@@ -290,8 +298,9 @@ export function Maintenance() {
                 <motion.tr
                   key={record.id}
                   variants={itemVariants}
-                  className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors cursor-pointer group"
+                  className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors group"
                 >
+                  {/* ... existing cells for Client, Equipment, Type, Dates, Team, Status ... */}
                   <td className="p-4">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -303,10 +312,11 @@ export function Maintenance() {
                   <td className="p-4">{record.equipmentName}</td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      record.type === 'preventif'
+                      record.type === 'preventif' // Use lowercase 'preventif' as stored in DB
                         ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                         : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
                     }`}>
+                      {/* Capitalize type for display */}
                       {record.type.charAt(0).toUpperCase() + record.type.slice(1)}
                     </span>
                   </td>
@@ -328,6 +338,31 @@ export function Maintenance() {
                         {getStatusLabel(record.status)}
                       </span>
                     </div>
+                  </td>
+                  {/* Add new cell for Contract link/button */}
+                  <td className="p-4 text-center">
+                    {record.contractId ? (
+                      <Link
+                        to={`/contracts/${record.contractId}`}
+                        title={`Voir contrat ${record.contractNumber || ''}`}
+                        className="inline-flex items-center justify-center p-2 rounded-md text-primary hover:bg-primary/10 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <FileText className="w-4 h-4" />
+                      </Link>
+                    ) : (
+                      <button
+                        title="Télécharger contrat"
+                        className="inline-flex items-center justify-center p-2 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Placeholder for download functionality
+                          alert('Fonctionnalité de téléchargement en cours de développement.');
+                        }}
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                    )}
                   </td>
                 </motion.tr>
               ))

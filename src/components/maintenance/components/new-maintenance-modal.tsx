@@ -10,15 +10,17 @@ import {
   AlertCircle,
   Plus,
   ArrowRight,
-  Package
+  Package,
+  FileText as ContractIcon, // Added for contract section
+  Calendar 
 } from 'lucide-react';
+// Import addDays and Timestamp
 import { format, addMonths } from 'date-fns';
 import { useClients } from '../../../lib/hooks/useClients';
 import { useProducts } from '../../../lib/hooks/useProducts';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
 import { NewClientModal } from '../../clients/components/new-client-modal';
 
-// Ajouter l'import pour Firestore
 import { addDoc, collection } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 
@@ -40,16 +42,21 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
   const [searchTerm, setSearchTerm] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   
+  // Add contract details to formData state
   const [formData, setFormData] = useState({
     client: null as any,
     equipment: null as any,
     maintenanceType: 'preventif',
-    frequency: 6, // months
-    lastMaintenance: format(new Date(), 'yyyy-MM-dd'),
-    nextMaintenance: format(addMonths(new Date(), 6), 'yyyy-MM-dd'),
+    frequency: 12, // Default to annual for contract
+    lastMaintenance: format(new Date(), 'yyyy-MM-dd'), // This might become contract start date
+    nextMaintenance: format(addMonths(new Date(), 12), 'yyyy-MM-dd'), // Calculated based on frequency
     team: null as any,
     notes: '',
-    contractNumber: '' // Add contractNumber field
+    contractNumber: '',
+    // --- New Contract Fields ---
+    isContract: true, // Flag to indicate contract creation
+    contractStartDate: format(new Date(), 'yyyy-MM-dd'),
+    paymentSchedule: 'Annuel', // Default payment schedule
   });
 
   const activeTeams = teams.filter(team => team.isActive);
@@ -136,6 +143,7 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
     else if (step === 'schedule') setStep('equipment');
   };
 
+  // Update handleSubmit to create both contract and maintenance docs
   const handleSubmit = async () => {
     if (validateStep()) {
       try {

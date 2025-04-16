@@ -18,6 +18,7 @@ import { ProductDetail } from './components/products/product-detail';
 import { Maintenance } from './components/maintenance/maintenance';
 import { Login } from './components/login/login';
 import { History } from './components/history/history';
+import { ContractDetailPage } from './components/maintenance/components/ContractDetailPage';
 
 // Composant de protection de route
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -60,6 +61,7 @@ function App() {
                   <Route path="/users" element={<Users />} />
                   <Route path="/maintenance" element={<Maintenance />} />
                   <Route path="/history" element={<History />} />
+                  <Route path="/ContractDetailPage" element={<ContractDetailPage />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>
