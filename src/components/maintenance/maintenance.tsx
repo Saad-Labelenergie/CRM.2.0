@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Search, PenTool as Tool, Calendar, Building2, Users, CheckCircle, AlertTriangle} from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { NewMaintenanceModal } from './components/new-maintenance-modal';
 import { Toast } from '../ui/toast';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -68,18 +70,67 @@ const maintenanceRecords = [
     team: null
   }
 ];
+interface MaintenanceRecord {
+  id: string;
+  clientId: string;
+  clientName: string;
+  equipmentId: string;
+  equipmentName: string;
+  frequency: number;
+  lastMaintenance: string;
+  nextMaintenance: string;
+  notes: string;
+  status: string;
+  teamId: string;
+  teamName: string;
+  type: string;
+  createdAt: string;
+}
 
 export function Maintenance() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [isNewMaintenanceModalOpen, setIsNewMaintenanceModalOpen] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  // Update the state type
+  const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
+  const [maintenanceStats, setMaintenanceStats] = useState({
+    total: 0,
+    completed: 0,
+    pending: 0,
+    nextDue: null as string | null
+  });
+
+  useEffect(() => {
+    const maintenanceRef = collection(db, 'maintenances');
+    const unsubscribe = onSnapshot(maintenanceRef, (snapshot) => {
+      const maintenances = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as MaintenanceRecord[]; 
+      setMaintenanceRecords(maintenances);
+      const stats = maintenances.reduce((acc, maintenance: MaintenanceRecord) => {
+        acc.total++;
+        if (maintenance.status === 'completed') acc.completed++;
+        if (maintenance.status === 'upcoming' || maintenance.status === 'pending') acc.pending++;
+        
+        if (!acc.nextDue || new Date(maintenance.nextMaintenance) < new Date(acc.nextDue)) {
+          acc.nextDue = maintenance.nextMaintenance;
+        }
+        return acc;
+      }, { total: 0, completed: 0, pending: 0, nextDue: null as string | null });
+  
+      setMaintenanceStats(stats);
+    });
+  
+    return () => unsubscribe();
+  }, []);
 
   const filteredRecords = maintenanceRecords.filter(record => {
     const matchesSearch = 
-      record.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.equipment.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = !selectedType || record.type === selectedType;
+      record.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      record.equipmentName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = !selectedType || record.type.toLowerCase() === selectedType.toLowerCase();
     return matchesSearch && matchesType;
   });
 
@@ -111,7 +162,6 @@ export function Maintenance() {
 
   const handleSaveMaintenance = (maintenanceData: any) => {
     console.log('Nouvelle maintenance:', maintenanceData);
-    // Ici, vous ajouteriez la logique pour sauvegarder la maintenance
     setShowSuccessToast(true);
   };
 
@@ -139,14 +189,11 @@ export function Maintenance() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <motion.div
-          variants={itemVariants}
-          className="bg-card rounded-xl p-6 shadow-lg border border-border/50"
-        >
+        <motion.div variants={itemVariants} className="bg-card rounded-xl p-6 shadow-lg border border-border/50">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-medium text-muted-foreground">Total</div>
-              <div className="text-3xl font-bold mt-2">{maintenanceData.total}</div>
+              <div className="text-3xl font-bold mt-2">{maintenanceStats.total}</div>
             </div>
             <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
               <Tool className="w-6 h-6 text-primary" />
@@ -154,14 +201,11 @@ export function Maintenance() {
           </div>
         </motion.div>
 
-        <motion.div
-          variants={itemVariants}
-          className="bg-card rounded-xl p-6 shadow-lg border border-border/50"
-        >
+        <motion.div variants={itemVariants} className="bg-card rounded-xl p-6 shadow-lg border border-border/50">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-medium text-muted-foreground">Effectuées</div>
-              <div className="text-3xl font-bold mt-2">{maintenanceData.completed}</div>
+              <div className="text-3xl font-bold mt-2">{maintenanceStats.completed}</div>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
               <CheckCircle className="w-6 h-6 text-green-500" />
@@ -169,14 +213,11 @@ export function Maintenance() {
           </div>
         </motion.div>
 
-        <motion.div
-          variants={itemVariants}
-          className="bg-card rounded-xl p-6 shadow-lg border border-border/50"
-        >
+        <motion.div variants={itemVariants} className="bg-card rounded-xl p-6 shadow-lg border border-border/50">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-medium text-muted-foreground">En attente</div>
-              <div className="text-3xl font-bold mt-2">{maintenanceData.pending}</div>
+              <div className="text-3xl font-bold mt-2">{maintenanceStats.pending}</div>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
               <AlertTriangle className="w-6 h-6 text-orange-500" />
@@ -184,15 +225,12 @@ export function Maintenance() {
           </div>
         </motion.div>
 
-        <motion.div
-          variants={itemVariants}
-          className="bg-card rounded-xl p-6 shadow-lg border border-border/50"
-        >
+        <motion.div variants={itemVariants} className="bg-card rounded-xl p-6 shadow-lg border border-border/50">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-medium text-muted-foreground">Prochaine échéance</div>
               <div className="text-3xl font-bold mt-2">
-                {format(new Date(maintenanceData.nextDue), 'dd MMM', { locale: fr })}
+                {maintenanceStats.nextDue ? format(new Date(maintenanceStats.nextDue), 'dd MMM', { locale: fr }) : '-'}
               </div>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
@@ -259,26 +297,26 @@ export function Maintenance() {
                       <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
                         <Building2 className="w-5 h-5 text-primary" />
                       </div>
-                      <span className="font-medium">{record.client}</span>
+                      <span className="font-medium">{record.clientName}</span>
                     </div>
                   </td>
-                  <td className="p-4">{record.equipment}</td>
+                  <td className="p-4">{record.equipmentName}</td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      record.type === 'Préventif'
+                      record.type === 'preventif'
                         ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                         : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
                     }`}>
-                      {record.type}
+                      {record.type.charAt(0).toUpperCase() + record.type.slice(1)}
                     </span>
                   </td>
                   <td className="p-4">{format(new Date(record.lastMaintenance), 'dd/MM/yyyy')}</td>
                   <td className="p-4">{format(new Date(record.nextMaintenance), 'dd/MM/yyyy')}</td>
                   <td className="p-4">
-                    {record.team ? (
+                    {record.teamName ? (
                       <div className="flex items-center">
                         <Users className="w-4 h-4 text-muted-foreground mr-2" />
-                        <span>{record.team}</span>
+                        <span>{record.teamName}</span>
                       </div>
                     ) : (
                       <span className="text-muted-foreground">Non assigné</span>

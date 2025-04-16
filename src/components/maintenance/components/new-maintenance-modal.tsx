@@ -18,6 +18,10 @@ import { useProducts } from '../../../lib/hooks/useProducts';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
 import { NewClientModal } from '../../clients/components/new-client-modal';
 
+// Ajouter l'import pour Firestore
+import { addDoc, collection } from 'firebase/firestore';
+import { db } from '../../../lib/firebase';
+
 interface NewMaintenanceModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -131,10 +135,34 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
     else if (step === 'schedule') setStep('equipment');
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validateStep()) {
-      onSave(formData);
-      onClose();
+      try {
+        const maintenanceData = {
+          clientId: formData.client.id,
+          clientName: formData.client.name,
+          equipmentId: formData.equipment.id,
+          equipmentName: formData.equipment.name,
+          type: formData.maintenanceType,
+          frequency: formData.frequency,
+          lastMaintenance: formData.lastMaintenance,
+          nextMaintenance: formData.nextMaintenance,
+          teamId: formData.team?.id || null,
+          teamName: formData.team?.name || null,
+          notes: formData.notes,
+          status: 'upcoming',
+          createdAt: new Date().toISOString()
+        };
+  
+        const maintenanceRef = collection(db, 'maintenances');
+        await addDoc(maintenanceRef, maintenanceData);
+        
+        onSave(maintenanceData);
+        onClose();
+      } catch (error) {
+        console.error('Erreur lors de la création de la maintenance:', error);
+        // Vous pouvez ajouter ici une gestion d'erreur plus élaborée
+      }
     }
   };
 

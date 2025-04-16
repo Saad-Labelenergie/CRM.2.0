@@ -974,7 +974,7 @@ export function Clients() {
               statusChangeModal.clientId, 
               status, 
               statusChangeModal.clientName,
-              currentClient.status || 'pending'  // Valeur par défaut si status est undefined
+              currentClient.status || 'pending'  
             );
           }
           setStatusChangeModal(prev => ({ ...prev, isOpen: false }));
