@@ -4,8 +4,9 @@ import { doc, getDoc, collection, query, where, getDocs, Timestamp } from 'fireb
 import { db } from '../../../lib/firebase';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Building2, Package, Calendar, Users, FileText, DollarSign, Clock, CheckCircle, AlertTriangle, PenTool as Tool } from 'lucide-react';
+import { Building2, Package, Calendar, Users, FileText, DollarSign, Clock, CheckCircle, AlertTriangle, PenTool as Tool, Download } from 'lucide-react'; // Ajout de Download
 import { MaintenanceRecord } from '../maintenance'; // Reuse interface if applicable
+import { downloadContractPdf } from '../../../utils/contract-pdf-generator'; // Importer la fonction
 
 interface ContractData {
   id: string;
@@ -107,9 +108,42 @@ export function ContractDetailPage() {
     return <div className="p-6 text-center">Contrat non trouvé.</div>;
   }
 
+  // Ajouter cette fonction pour télécharger le contrat
+  const handleDownloadContract = async () => {
+    if (!contract) return;
+    
+    try {
+      console.log('Téléchargement du contrat:', contract);
+      
+      await downloadContractPdf({
+        contractNumber: contract.contractNumber,
+        clientName: contract.clientName,
+        equipmentName: contract.equipmentName,
+        createdAt: contract.createdAt,
+        contractEndDate: contract.contractEndDate,
+        paymentSchedule: contract.paymentSchedule,
+        paymentStatus: contract.paymentStatus
+      });
+      
+    } catch (error) {
+      console.error('Erreur lors du téléchargement du PDF:', error);
+      alert('Erreur lors de la génération du contrat. Veuillez réessayer.');
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-3xl font-bold text-primary">Détails du Contrat #{contract.contractNumber}</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-primary">Détails du Contrat #{contract.contractNumber}</h1>
+        {/* Ajouter le bouton de téléchargement */}
+        <button
+          onClick={handleDownloadContract}
+          className="flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+        >
+          <Download className="w-4 h-4 mr-2" />
+          Télécharger le contrat
+        </button>
+      </div>
 
       {/* Contract Info */}
       <div className="bg-card rounded-xl p-6 shadow-lg border border-border/50 space-y-4">
