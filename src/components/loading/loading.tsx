@@ -1,39 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Scale, Users, HardHat, AlertTriangle, Calendar, Search, Filter, MoreVertical } from 'lucide-react';
+import { Scale, Users, HardHat, AlertTriangle, Calendar, Search, Filter, MoreVertical, Plus } from 'lucide-react';
+import { useScheduling } from '../../lib/scheduling/scheduling-context';
+import { format } from 'date-fns';
+import { Link } from 'react-router-dom';
+import { AssignProjectModal } from './components/assign-project-modal';
 
-const teams = [
-  {
-    id: 1,
-    name: "Équipe Installation A",
-    capacity: 100,
-    currentLoad: 80,
-    projects: [
-      { name: "Installation Climatisation Bureau A", hours: 24, date: "15/02/2024" },
-      { name: "Maintenance Système Ventilation", hours: 16, date: "16/02/2024" }
-    ]
-  },
-  {
-    id: 2,
-    name: "Équipe Installation B",
-    capacity: 100,
-    currentLoad: 60,
-    projects: [
-      { name: "Installation Multi-Split Résidence", hours: 32, date: "15/02/2024" }
-    ]
-  },
-  {
-    id: 3,
-    name: "Équipe Maintenance",
-    capacity: 100,
-    currentLoad: 90,
-    projects: [
-      { name: "Maintenance Préventive Centre Commercial", hours: 24, date: "15/02/2024" },
-      { name: "Dépannage Urgent Climatisation", hours: 8, date: "16/02/2024" },
-      { name: "Entretien Système Ventilation", hours: 16, date: "17/02/2024" }
-    ]
-  }
-];
+// Types pour les projets et équipes
+interface Project {
+  id: string;
+  name: string;
+  hours: number;
+  date: string;
+  teamId?: string;
+}
+
+interface TeamWithLoad {
+  id: string;
+  name: string;
+  capacity: number;
+  currentLoad: number;
+  projects: Project[];
+  color: string;
+  expertise: string[];
+  isActive: boolean;
+}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -54,6 +45,112 @@ const itemVariants = {
 };
 
 export function Loading() {
+  const { teams, appointments } = useScheduling();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [teamsWithLoad, setTeamsWithLoad] = useState<TeamWithLoad[]>([]);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<TeamWithLoad | null>(null);
+
+  // Calculer la charge des équipes en fonction des rendez-vous
+  useEffect(() => {
+    if (teams.length > 0 && appointments.length > 0) {
+      const activeTeams = teams.filter(team => team.isActive);
+      
+      const teamsWithProjects = activeTeams.map(team => {
+        // Trouver tous les rendez-vous assignés à cette équipe
+        const teamAppointments = appointments.filter(
+          app => app.team === team.name && app.status === 'attribue'
+        );
+        
+        // Convertir les rendez-vous en projets
+        const projects = teamAppointments.map(app => ({
+          id: app.id,
+          name: app.title,
+          hours: app.duration === '1h' ? 1 : 
+                 app.duration === '2h' ? 2 : 
+                 app.duration === '4h' ? 4 : 8, // Estimation basée sur la durée
+          date: format(new Date(app.date), 'dd/MM/yyyy'),
+          teamId: team.id
+        }));
+        
+        // Calculer la charge actuelle
+        const totalHours = projects.reduce((sum, project) => sum + project.hours, 0);
+        const currentLoad = Math.min(Math.round((totalHours / 40) * 100), 100); // 40h = capacité hebdomadaire
+        
+        return {
+          ...team,
+          projects,
+          capacity: 40, // Capacité hebdomadaire en heures
+          currentLoad
+        };
+      });
+      
+      setTeamsWithLoad(teamsWithProjects);
+    } else {
+      // Utiliser les données statiques si aucune donnée n'est disponible
+      setTeamsWithLoad([
+        {
+          id: "1",
+          name: "Équipe Installation A",
+          capacity: 100,
+          currentLoad: 80,
+          color: "#3B82F6",
+          expertise: ["Installation", "Maintenance"],
+          isActive: true,
+          projects: [
+            { id: "p1", name: "Installation Climatisation Bureau A", hours: 24, date: "15/02/2024" },
+            { id: "p2", name: "Maintenance Système Ventilation", hours: 16, date: "16/02/2024" }
+          ]
+        },
+        {
+          id: "2",
+          name: "Équipe Installation B",
+          capacity: 100,
+          currentLoad: 60,
+          color: "#10B981",
+          expertise: ["Installation"],
+          isActive: true,
+          projects: [
+            { id: "p3", name: "Installation Multi-Split Résidence", hours: 32, date: "15/02/2024" }
+          ]
+        },
+        {
+          id: "3",
+          name: "Équipe Maintenance",
+          capacity: 100,
+          currentLoad: 90,
+          color: "#F59E0B",
+          expertise: ["Maintenance", "Dépannage"],
+          isActive: true,
+          projects: [
+            { id: "p4", name: "Maintenance Préventive Centre Commercial", hours: 24, date: "15/02/2024" },
+            { id: "p5", name: "Dépannage Urgent Climatisation", hours: 8, date: "16/02/2024" },
+            { id: "p6", name: "Entretien Système Ventilation", hours: 16, date: "17/02/2024" }
+          ]
+        }
+      ]);
+    }
+  }, [teams, appointments]);
+
+  // Filtrer les équipes en fonction de la recherche
+  const filteredTeams = teamsWithLoad.filter(team => 
+    team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    team.projects.some(project => 
+      project.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  );
+
+  const handleOpenAssignModal = (team: TeamWithLoad) => {
+    setSelectedTeam(team);
+    setIsAssignModalOpen(true);
+  };
+
+  const handleAssignProject = (teamId: string, projectData: any) => {
+    // Ici, vous implémenteriez la logique pour assigner un projet à une équipe
+    console.log('Assigning project to team:', teamId, projectData);
+    setIsAssignModalOpen(false);
+  };
+
   return (
     <motion.div
       variants={containerVariants}
@@ -66,6 +163,15 @@ export function Loading() {
           <h1 className="text-3xl font-bold text-primary">Chargement des Équipes</h1>
           <p className="text-muted-foreground mt-1">Gérez la répartition des chantiers par équipe</p>
         </div>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setIsAssignModalOpen(true)}
+          className="flex items-center px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors shadow-lg"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Assigner un Projet
+        </motion.button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4">
@@ -74,6 +180,8 @@ export function Loading() {
           <input
             type="text"
             placeholder="Rechercher une équipe ou un chantier..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-12 pr-4 py-3 bg-background border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
           />
         </div>
@@ -91,7 +199,7 @@ export function Loading() {
         variants={containerVariants}
         className="grid gap-6"
       >
-        {teams.map((team) => (
+        {filteredTeams.map((team) => (
           <motion.div
             key={team.id}
             variants={itemVariants}
@@ -124,40 +232,60 @@ export function Loading() {
                     }`}
                   />
                 </div>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="p-2 hover:bg-accent rounded-lg transition-colors"
-                >
-                  <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                </motion.button>
+                <div className="flex space-x-2">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleOpenAssignModal(team)}
+                    className="p-2 hover:bg-primary/10 rounded-lg transition-colors text-primary"
+                    title="Assigner un projet"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </motion.button>
+                  <Link to={`/teams/${team.id}`}>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="p-2 hover:bg-accent rounded-lg transition-colors"
+                      title="Voir détails"
+                    >
+                      <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                    </motion.button>
+                  </Link>
+                </div>
               </div>
             </div>
 
             <div className="mt-6 space-y-4">
-              {team.projects.map((project, index) => (
-                <div
-                  key={index}
-                  className="bg-accent/50 rounded-lg p-4 space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <HardHat className="w-4 h-4 text-primary" />
-                      <span className="font-medium">{project.name}</span>
-                    </div>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      project.hours >= 24 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                      'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                    }`}>
-                      {project.hours}h
-                    </span>
-                  </div>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    <span>{project.date}</span>
-                  </div>
+              {team.projects.length === 0 ? (
+                <div className="bg-accent/30 rounded-lg p-4 text-center text-muted-foreground">
+                  Aucun projet assigné à cette équipe
                 </div>
-              ))}
+              ) : (
+                team.projects.map((project, index) => (
+                  <div
+                    key={project.id || index}
+                    className="bg-accent/50 rounded-lg p-4 space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <HardHat className="w-4 h-4 text-primary" />
+                        <span className="font-medium">{project.name}</span>
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        project.hours >= 24 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                        'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                      }`}>
+                        {project.hours}h
+                      </span>
+                    </div>
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Calendar className="w-4 h-4 mr-2" />
+                      <span>{project.date}</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
             {team.currentLoad >= 90 && (
@@ -169,6 +297,17 @@ export function Loading() {
           </motion.div>
         ))}
       </motion.div>
+
+      {/* Modal pour assigner un projet */}
+      {isAssignModalOpen && (
+        <AssignProjectModal
+          isOpen={isAssignModalOpen}
+          onClose={() => setIsAssignModalOpen(false)}
+          onAssign={handleAssignProject}
+          teams={teamsWithLoad}
+          selectedTeam={selectedTeam}
+        />
+      )}
     </motion.div>
   );
 }
