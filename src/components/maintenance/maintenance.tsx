@@ -13,7 +13,8 @@ import {
   FileText, 
   Download,
   LayoutGrid,
-  List
+  List,
+  Eye
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -89,6 +90,7 @@ export function Maintenance() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedMaintenance, setSelectedMaintenance] = useState<MaintenanceRecord | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  
   const handleDownloadContract = async (e: React.MouseEvent, maintenance: MaintenanceRecord) => {
     e.stopPropagation();
     e.preventDefault();
@@ -106,6 +108,33 @@ export function Maintenance() {
       });
     } catch (error) {
       console.error('Erreur lors du téléchargement du PDF:', error);
+      alert('Erreur lors de la génération du contrat. Veuillez réessayer.');
+    }
+  };
+  
+  // Ajouter cette fonction après handleDownloadContract
+  const handleViewContract = async (e: React.MouseEvent, maintenance: MaintenanceRecord) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    if (!maintenance.contractNumber) {
+      alert('Aucun contrat associé à cette maintenance.');
+      return;
+    }
+    
+    try {
+      // Générer le PDF et obtenir le blob
+      const pdfBlob = await downloadContractPdf({
+        contractNumber: maintenance.contractNumber,
+        clientName: maintenance.clientName,
+        equipmentName: maintenance.equipmentName,
+        createdAt: new Date(maintenance.createdAt),
+        contractEndDate: new Date(maintenance.nextMaintenance)
+      }, false); 
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      window.open(pdfUrl, '_blank');
+    } catch (error) {
+      console.error('Erreur lors de l\'affichage du PDF:', error);
       alert('Erreur lors de la génération du contrat. Veuillez réessayer.');
     }
   };
@@ -388,13 +417,22 @@ export function Maintenance() {
                           <FileText className="w-4 h-4" />
                         </Link>
                       ) : (
-                        <button
-                          title="Télécharger contrat"
-                          className="inline-flex items-center justify-center p-2 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                          onClick={(e) => handleDownloadContract(e, record)}
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
+                        <div className="flex justify-center space-x-1">
+                          <button
+                            title="Télécharger contrat"
+                            className="inline-flex items-center justify-center p-2 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                            onClick={(e) => handleDownloadContract(e, record)}
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                          <button
+                            title="Afficher contrat"
+                            className="inline-flex items-center justify-center p-2 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                            onClick={(e) => handleViewContract(e, record)}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
                       )}
                     </td>
                   </motion.tr>

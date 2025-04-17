@@ -15,7 +15,7 @@ export interface ContractPdfData {
   isActive?: boolean;
 }
 
-export const downloadContractPdf = async (data: ContractPdfData) => {
+export const downloadContractPdf = async (data: ContractPdfData, download: boolean = true) => {
   // Create a new PDF document
   const doc = new jsPDF();
   
@@ -260,6 +260,30 @@ export const downloadContractPdf = async (data: ContractPdfData) => {
   doc.text('Signature précédée de la mention', 150, 170);
   doc.text('"Lu et approuvé"', 150, 175);
   
-  // Save the PDF
-  doc.save(`Contrat_${data.contractNumber}_${data.clientName.replace(/\s+/g, '_')}.pdf`);
+  // Generate PDF blob
+  const pdfBlob = doc.output('blob');
+  
+  // If download is true, save the PDF, otherwise return the blob
+  if (download) {
+    // Create a URL for the blob
+    const url = URL.createObjectURL(pdfBlob);
+    
+    // Create a link element
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Contrat_${data.contractNumber}_${data.clientName.replace(/\s+/g, '_')}.pdf`;
+    
+    // Append to the document, click and remove
+    document.body.appendChild(link);
+    link.click();
+    
+    // Clean up
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
+  }
+  
+  // Return the blob for viewing in browser
+  return pdfBlob;
 };
