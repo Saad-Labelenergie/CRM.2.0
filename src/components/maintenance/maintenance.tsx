@@ -494,6 +494,7 @@ export function Maintenance() {
               variants={itemVariants}
               whileHover={{ y: -5 }}
               className="bg-card rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-border/50 cursor-pointer"
+              onClick={() => handleMaintenanceClick(record)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
