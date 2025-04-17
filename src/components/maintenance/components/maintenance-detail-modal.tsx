@@ -8,23 +8,33 @@ import {
   Users,
   PenTool as Tool,
   FileText,
+  Download, // Ajout de l'icône Download
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { downloadContractPdf } from '../../../utils/contract-pdf-generator'; // Import de la fonction
 
+// Mise à jour de l'interface pour correspondre à MaintenanceRecord
 interface MaintenanceDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   maintenance: {
-    id: number;
-    client: string;
-    equipment: string;
+    id: string;
+    clientId: string;
+    clientName: string;
+    equipmentId: string;
+    equipmentName: string;
     lastMaintenance: string;
     nextMaintenance: string;
     status: string;
     type: string;
-    team: string | null;
-    notes?: string;
+    teamId: string;
+    teamName: string | null;
+    notes: string;
+    createdAt: string;
+    contractId?: string;
+    contractNumber?: string;
+    frequency?: number;
   } | null;
 }
 
@@ -54,6 +64,27 @@ export function MaintenanceDetailModal({ isOpen, onClose, maintenance }: Mainten
         return 'En retard';
       default:
         return status;
+    }
+  };
+
+  // Fonction pour télécharger le contrat
+  const handleDownloadContract = async () => {
+    if (!maintenance.contractNumber) {
+      alert('Aucun contrat associé à cette maintenance.');
+      return;
+    }
+    
+    try {
+      await downloadContractPdf({
+        contractNumber: maintenance.contractNumber,
+        clientName: maintenance.clientName,
+        equipmentName: maintenance.equipmentName,
+        createdAt: new Date(maintenance.createdAt),
+        contractEndDate: new Date(maintenance.nextMaintenance)
+      });
+    } catch (error) {
+      console.error('Erreur lors du téléchargement du PDF:', error);
+      alert('Erreur lors de la génération du contrat. Veuillez réessayer.');
     }
   };
 
@@ -98,21 +129,21 @@ export function MaintenanceDetailModal({ isOpen, onClose, maintenance }: Mainten
                   <div className="space-y-2">
                     <div className="flex items-center text-sm">
                       <Building2 className="w-4 h-4 mr-2 text-muted-foreground" />
-                      <span className="font-medium">{maintenance.client}</span>
+                      <span className="font-medium">{maintenance.clientName}</span>
                     </div>
                     <div className="flex items-center text-sm">
                       <Package className="w-4 h-4 mr-2 text-muted-foreground" />
-                      <span>{maintenance.equipment}</span>
+                      <span>{maintenance.equipmentName}</span>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center text-sm">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        maintenance.type === 'Préventif'
+                        maintenance.type === 'preventif'
                           ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                           : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
                       }`}>
-                        {maintenance.type}
+                        {maintenance.type.charAt(0).toUpperCase() + maintenance.type.slice(1)}
                       </span>
                     </div>
                     <div className="flex items-center text-sm">
@@ -152,10 +183,10 @@ export function MaintenanceDetailModal({ isOpen, onClose, maintenance }: Mainten
                   <Users className="w-4 h-4 mr-2" />
                   Équipe assignée
                 </h3>
-                {maintenance.team ? (
+                {maintenance.teamName ? (
                   <div className="flex items-center">
                     <Users className="w-5 h-5 text-primary mr-2" />
-                    <span className="font-medium">{maintenance.team}</span>
+                    <span className="font-medium">{maintenance.teamName}</span>
                   </div>
                 ) : (
                   <div className="text-muted-foreground">
@@ -163,6 +194,29 @@ export function MaintenanceDetailModal({ isOpen, onClose, maintenance }: Mainten
                   </div>
                 )}
               </div>
+
+              {/* Contrat - Nouvelle section */}
+              {maintenance.contractNumber && (
+                <div className="bg-accent/50 rounded-lg p-4">
+                  <h3 className="font-medium mb-4 flex items-center">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Contrat associé
+                  </h3>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <FileText className="w-5 h-5 text-primary mr-2" />
+                      <span className="font-medium">Contrat #{maintenance.contractNumber}</span>
+                    </div>
+                    <button
+                      onClick={handleDownloadContract}
+                      className="px-3 py-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors flex items-center"
+                    >
+                      <Download className="w-4 h-4 mr-1" />
+                      Télécharger
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Notes */}
               {maintenance.notes && (

@@ -1,15 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-// Add Download to the imports
-import { Plus, Search, PenTool as Tool, Calendar, Building2, Users, CheckCircle, AlertTriangle, FileText, Download } from 'lucide-react';
+import { 
+  Plus, 
+  Search, 
+  PenTool as Tool, 
+  Calendar, 
+  Building2, 
+  Users, 
+  CheckCircle, 
+  AlertTriangle, 
+  FileText, 
+  Download,
+  LayoutGrid,
+  List
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { NewMaintenanceModal } from './components/new-maintenance-modal';
+import { MaintenanceDetailModal } from './components/maintenance-detail-modal'; 
 import { Toast } from '../ui/toast';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { downloadContractPdf } from '../../utils/contract-pdf-generator'; // Import the function
+import { downloadContractPdf } from '../../utils/contract-pdf-generator'; 
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -40,40 +53,6 @@ const maintenanceData = {
     { month: 'Mar', count: 56 }
   ]
 };
-
-const maintenanceRecords = [
-  {
-    id: 1,
-    client: "Entreprise ABC",
-    equipment: "Climatiseur Mural 9000 BTU",
-    lastMaintenance: "2024-02-15",
-    nextMaintenance: "2024-08-15",
-    status: "completed",
-    type: "Préventif",
-    team: "Équipe A"
-  },
-  {
-    id: 2,
-    client: "Centre Commercial XYZ",
-    equipment: "Système de Ventilation",
-    lastMaintenance: "2024-01-20",
-    nextMaintenance: "2024-07-20",
-    status: "upcoming",
-    type: "Préventif",
-    team: "Équipe B"
-  },
-  {
-    id: 3,
-    client: "Restaurant Le Gourmet",
-    equipment: "Climatisation Industrielle",
-    lastMaintenance: "2024-02-01",
-    nextMaintenance: "2024-08-01",
-    status: "overdue",
-    type: "Correctif",
-    team: null
-  }
-];
-// Add the export keyword here
 export interface MaintenanceRecord {
   id: string;
   clientId: string;
@@ -89,8 +68,8 @@ export interface MaintenanceRecord {
   teamName: string;
   type: string;
   createdAt: string;
-  contractId?: string; // Ensure contractId is optional if not always present
-  contractNumber?: string; // Ensure contractNumber is optional
+  contractId?: string; 
+  contractNumber?: string; 
 }
 
 export function Maintenance() {
@@ -98,7 +77,6 @@ export function Maintenance() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [isNewMaintenanceModalOpen, setIsNewMaintenanceModalOpen] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
-  // Update the state type
   const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
   const [maintenanceStats, setMaintenanceStats] = useState({
     total: 0,
@@ -106,17 +84,18 @@ export function Maintenance() {
     pending: 0,
     nextDue: null as string | null
   });
-
-  // Add the handleDownloadContract function here
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [selectedMaintenance, setSelectedMaintenance] = useState<MaintenanceRecord | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const handleDownloadContract = async (e: React.MouseEvent, maintenance: MaintenanceRecord) => {
     e.stopPropagation();
     e.preventDefault();
-    
     if (!maintenance.contractNumber) {
       alert('Aucun contrat associé à cette maintenance.');
       return;
     }
-    
     try {
       await downloadContractPdf({
         contractNumber: maintenance.contractNumber,
@@ -130,7 +109,6 @@ export function Maintenance() {
       alert('Erreur lors de la génération du contrat. Veuillez réessayer.');
     }
   };
-
   useEffect(() => {
     const maintenanceRef = collection(db, 'maintenances');
     const unsubscribe = onSnapshot(maintenanceRef, (snapshot) => {
@@ -143,7 +121,6 @@ export function Maintenance() {
         acc.total++;
         if (maintenance.status === 'completed') acc.completed++;
         if (maintenance.status === 'upcoming' || maintenance.status === 'pending') acc.pending++;
-        
         if (!acc.nextDue || new Date(maintenance.nextMaintenance) < new Date(acc.nextDue)) {
           acc.nextDue = maintenance.nextMaintenance;
         }
@@ -152,10 +129,8 @@ export function Maintenance() {
   
       setMaintenanceStats(stats);
     });
-  
     return () => unsubscribe();
   }, []);
-
   const filteredRecords = maintenanceRecords.filter(record => {
     const matchesSearch = 
       record.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -163,7 +138,6 @@ export function Maintenance() {
     const matchesType = !selectedType || record.type.toLowerCase() === selectedType.toLowerCase();
     return matchesSearch && matchesType;
   });
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
@@ -176,7 +150,6 @@ export function Maintenance() {
         return 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400';
     }
   };
-
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'completed':
@@ -189,12 +162,19 @@ export function Maintenance() {
         return status;
     }
   };
-
   const handleSaveMaintenance = (maintenanceData: any) => {
     console.log('Nouvelle maintenance:', maintenanceData);
     setShowSuccessToast(true);
   };
-
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredRecords.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  const handleMaintenanceClick = (maintenance: MaintenanceRecord) => {
+    setSelectedMaintenance(maintenance);
+    setIsDetailModalOpen(true);
+  };
   return (
     <motion.div
       variants={containerVariants}
@@ -207,15 +187,46 @@ export function Maintenance() {
           <h1 className="text-3xl font-bold text-primary">Entretien</h1>
           <p className="text-muted-foreground mt-1">Gérez les maintenances préventives et correctives</p>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setIsNewMaintenanceModalOpen(true)}
-          className="flex items-center px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors shadow-lg"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Nouvelle Maintenance
-        </motion.button>
+        <div className="flex items-center space-x-3">
+          {/* Add view mode toggle */}
+          <div className="flex items-center bg-card rounded-xl border border-border/50 p-1">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-lg transition-colors ${
+                viewMode === 'grid' 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'hover:bg-accent'
+              }`}
+              title="Vue en grille"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setViewMode('list')}
+              className={`p-2 rounded-lg transition-colors ${
+                viewMode === 'list' 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'hover:bg-accent'
+              }`}
+              title="Vue en liste"
+            >
+              <List className="w-4 h-4" />
+            </motion.button>
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setIsNewMaintenanceModalOpen(true)}
+            className="flex items-center px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors shadow-lg"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Nouvelle Maintenance
+          </motion.button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -287,115 +298,226 @@ export function Maintenance() {
           className="px-4 py-3 bg-background border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
         >
           <option value="">Tous les types</option>
-          <option value="Préventif">Préventif</option>
-          <option value="Correctif">Correctif</option>
+          <option value="preventif">Préventif</option>
+          <option value="correctif">Correctif</option>
         </select>
       </div>
 
-      <motion.div
-        variants={containerVariants}
-        className="bg-card rounded-xl shadow-lg border border-border/50 overflow-hidden"
-      >
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border/50">
-              <th className="text-left p-4 font-medium text-muted-foreground">Client</th>
-              <th className="text-left p-4 font-medium text-muted-foreground">Équipement</th>
-              <th className="text-left p-4 font-medium text-muted-foreground">Type</th>
-              <th className="text-left p-4 font-medium text-muted-foreground">Dernière</th>
-              <th className="text-left p-4 font-medium text-muted-foreground">Prochaine</th>
-              <th className="text-left p-4 font-medium text-muted-foreground">Équipe</th>
-              <th className="text-center p-4 font-medium text-muted-foreground">Statut</th>
-              {/* Add new header for Contract */}
-              <th className="text-center p-4 font-medium text-muted-foreground">Contrat</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredRecords.length === 0 ? (
-              <tr>
-                {/* Adjust colspan to include the new column */}
-                <td colSpan={8} className="text-center py-8 text-muted-foreground">
-                  Aucune maintenance ne correspond à votre recherche
-                </td>
+      {/* Conditional rendering based on view mode */}
+      {viewMode === 'list' ? (
+        <motion.div
+          variants={containerVariants}
+          className="bg-card rounded-xl shadow-lg border border-border/50 overflow-hidden"
+        >
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border/50">
+                <th className="text-left p-4 font-medium text-muted-foreground">Client</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Équipement</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Type</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Dernière</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Prochaine</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Équipe</th>
+                <th className="text-center p-4 font-medium text-muted-foreground">Statut</th>
+                <th className="text-center p-4 font-medium text-muted-foreground">Contrat</th>
               </tr>
-            ) : (
-              filteredRecords.map((record) => (
-                <motion.tr
-                  key={record.id}
-                  variants={itemVariants}
-                  className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors group"
-                >
-                  {/* ... existing cells for Client, Equipment, Type, Dates, Team, Status ... */}
-                  <td className="p-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <Building2 className="w-5 h-5 text-primary" />
+            </thead>
+            <tbody>
+              {filteredRecords.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-8 text-muted-foreground">
+                    Aucune maintenance ne correspond à votre recherche
+                  </td>
+                </tr>
+              ) : (
+                currentItems.map((record) => (
+                  <motion.tr
+                    key={record.id}
+                    variants={itemVariants}
+                    className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors group cursor-pointer"
+                    onClick={() => handleMaintenanceClick(record)}
+                  >
+                    {/* ... existing cells for Client, Equipment, Type, Dates, Team, Status ... */}
+                    <td className="p-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                          <Building2 className="w-5 h-5 text-primary" />
+                        </div>
+                        <span className="font-medium">{record.clientName}</span>
                       </div>
-                      <span className="font-medium">{record.clientName}</span>
-                    </div>
-                  </td>
-                  <td className="p-4">{record.equipmentName}</td>
-                  <td className="p-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      record.type === 'preventif' // Use lowercase 'preventif' as stored in DB
-                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                        : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-                    }`}>
-                      {/* Capitalize type for display */}
-                      {record.type.charAt(0).toUpperCase() + record.type.slice(1)}
-                    </span>
-                  </td>
-                  <td className="p-4">{format(new Date(record.lastMaintenance), 'dd/MM/yyyy')}</td>
-                  <td className="p-4">{format(new Date(record.nextMaintenance), 'dd/MM/yyyy')}</td>
-                  <td className="p-4">
-                    {record.teamName ? (
-                      <div className="flex items-center">
-                        <Users className="w-4 h-4 text-muted-foreground mr-2" />
-                        <span>{record.teamName}</span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">Non assigné</span>
-                    )}
-                  </td>
-                  <td className="p-4">
-                    <div className="flex justify-center">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(record.status)}`}>
-                        {getStatusLabel(record.status)}
+                    </td>
+                    <td className="p-4">{record.equipmentName}</td>
+                    <td className="p-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        record.type === 'preventif' // Use lowercase 'preventif' as stored in DB
+                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                          : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                      }`}>
+                        {/* Capitalize type for display */}
+                        {record.type.charAt(0).toUpperCase() + record.type.slice(1)}
                       </span>
-                    </div>
-                  </td>
-                  {/* Add new cell for Contract link/button */}
-                  <td className="p-4 text-center">
-                    {record.contractId ? (
-                      <Link
-                        to={`/contracts/${record.contractId}`}
-                        title={`Voir contrat ${record.contractNumber || ''}`}
-                        className="inline-flex items-center justify-center p-2 rounded-md text-primary hover:bg-primary/10 transition-colors"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <FileText className="w-4 h-4" />
-                      </Link>
-                    ) : (
-                      <button
-                        title="Télécharger contrat"
-                        className="inline-flex items-center justify-center p-2 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                        onClick={(e) => handleDownloadContract(e, record)}
-                      >
-                        <Download className="w-4 h-4" />
-                      </button>
-                    )}
-                  </td>
-                </motion.tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </motion.div>
-
+                    </td>
+                    <td className="p-4">{format(new Date(record.lastMaintenance), 'dd/MM/yyyy')}</td>
+                    <td className="p-4">{format(new Date(record.nextMaintenance), 'dd/MM/yyyy')}</td>
+                    <td className="p-4">
+                      {record.teamName ? (
+                        <div className="flex items-center">
+                          <Users className="w-4 h-4 text-muted-foreground mr-2" />
+                          <span>{record.teamName}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Non assigné</span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      <div className="flex justify-center">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(record.status)}`}>
+                          {getStatusLabel(record.status)}
+                        </span>
+                      </div>
+                    </td>
+                    {/* Add new cell for Contract link/button */}
+                    <td className="p-4 text-center">
+                      {record.contractId ? (
+                        <Link
+                          to={`/contracts/${record.contractId}`}
+                          title={`Voir contrat ${record.contractNumber || ''}`}
+                          className="inline-flex items-center justify-center p-2 rounded-md text-primary hover:bg-primary/10 transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <FileText className="w-4 h-4" />
+                        </Link>
+                      ) : (
+                        <button
+                          title="Télécharger contrat"
+                          className="inline-flex items-center justify-center p-2 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                          onClick={(e) => handleDownloadContract(e, record)}
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                      )}
+                    </td>
+                  </motion.tr>
+                ))
+              )}
+            </tbody>
+          </table>
+          
+          {/* Déplacement de la pagination en bas du tableau */}
+          <div className="p-4 border-t border-border/50 flex justify-between items-center">
+            <div className="text-sm text-muted-foreground">
+              Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, filteredRecords.length)} sur {filteredRecords.length} maintenances
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="flex items-center mr-4">
+                <span className="text-sm mr-2">Lignes par page:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="bg-background border rounded-md px-2 py-1 text-sm"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+              <button
+                onClick={() => paginate(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="p-1 rounded-md hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Précédent
+              </button>
+              <span className="px-3 py-1 rounded-md bg-primary/10 text-primary">
+                {currentPage}
+              </span>
+              <button
+                onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+                className="p-1 rounded-md hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Suivant
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      ) : (
+        <motion.div
+          variants={containerVariants}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
+          {currentItems.map((record) => (
+            <motion.div
+              key={record.id}
+              variants={itemVariants}
+              whileHover={{ y: -5 }}
+              className="bg-card rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-border/50 cursor-pointer"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+                    <Tool className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">{record.clientName}</h3>
+                    <p className="text-sm text-muted-foreground">{record.equipmentName}</p>
+                  </div>
+                </div>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(record.status)}`}>
+                  {getStatusLabel(record.status)}
+                </span>
+              </div>
+              <div className="mt-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Type:</span>
+                  <span className="font-medium">{record.type.charAt(0).toUpperCase() + record.type.slice(1)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Dernière:</span>
+                  <span className="font-medium">{format(new Date(record.lastMaintenance), 'dd/MM/yyyy')}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Prochaine:</span>
+                  <span className="font-medium">{format(new Date(record.nextMaintenance), 'dd/MM/yyyy')}</span>
+                </div>
+                {record.teamName && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Équipe:</span>
+                    <span className="font-medium">{record.teamName}</span>
+                  </div>
+                )}
+              </div>
+              {record.contractId && (
+                <div className="mt-4 pt-4 border-t border-border/50">
+                  <Link
+                    to={`/contracts/${record.contractId}`}
+                    className="flex items-center text-primary hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Voir le contrat
+                  </Link>
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </motion.div>
+      )}
       <NewMaintenanceModal
         isOpen={isNewMaintenanceModalOpen}
         onClose={() => setIsNewMaintenanceModalOpen(false)}
         onSave={handleSaveMaintenance}
+      />
+
+      {/* Ajouter le modal de détails */}
+      <MaintenanceDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        maintenance={selectedMaintenance}
       />
 
       <Toast
