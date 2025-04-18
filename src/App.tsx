@@ -20,7 +20,6 @@ import { Login } from './components/login/login';
 import { History } from './components/history/history';
 import { ContractDetailPage } from './components/maintenance/components/ContractDetailPage';
 import { CreateProjectForm } from './components/projects/components/add-project';
-// Import the SAVProvider
 import { SAVProvider } from './contexts/sav-context';
 
 // Composant de protection de route
@@ -59,7 +58,6 @@ function App() {
                   <Route path="/products" element={<Products />} />
                   <Route path="/products/:id" element={<ProductDetail />} />
                   <Route path="/projects/create" element={<CreateProjectForm />} />
-                  <Route path="/sav" element={<SAV />} />
                   {/* Wrap the SAV component with SAVProvider */}
                   <Route path="/sav" element={
                     <SAVProvider>
