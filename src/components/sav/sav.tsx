@@ -15,9 +15,12 @@ import {
   List,
   Eye,
   Users,  
-  ArrowUpRight  
+  ArrowUpRight,
+  ChevronDown,
+  Check  
 } from 'lucide-react';
 import { NewTicketModal } from './components/new-ticket-modal';
+import { TicketDetailModal } from './components/ticket-detail-modal';
 import { useSAV } from '../../contexts/sav-context';
 import { format } from 'date-fns';
 
@@ -48,7 +51,7 @@ const tabs = [
 ];
 
 export function SAV() {
-  const { tickets, dashboardData, loading, error, addTicket } = useSAV();
+  const { tickets, dashboardData, loading, error, addTicket, updateTicket } = useSAV();
   const [isNewTicketModalOpen, setIsNewTicketModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -57,6 +60,7 @@ export function SAV() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [openStatusMenu, setOpenStatusMenu] = useState<string | null>(null);
 
   const handleSaveTicket = async (ticketData: any) => {
     try {
@@ -103,6 +107,21 @@ export function SAV() {
   const handleViewTicket = (ticket: any) => {
     setSelectedTicket(ticket);
     setIsDetailModalOpen(true);
+  };
+
+  // Update the handleStatusChange function to use the correct status type
+  const handleStatusChange = async (
+    ticketId: string | undefined, 
+    newStatus: "nouveau" | "en_cours" | "resolu" | "annule"
+  ) => {
+    if (!ticketId) return; // Ignorer si ticketId est undefined
+    
+    try {
+      await updateTicket(ticketId, { status: newStatus });
+      setOpenStatusMenu(null); // Fermer le menu après le changement
+    } catch (err) {
+      console.error('Erreur lors du changement de statut:', err);
+    }
   };
 
   if (loading) {
@@ -364,16 +383,59 @@ export function SAV() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        ticket.status === 'nouveau' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-500' :
-                        ticket.status === 'en_cours' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500' :
-                        ticket.status === 'resolu' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-500' :
-                        'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-500'
-                      }`}>
-                        {ticket.status === 'nouveau' ? 'Nouveau' :
-                         ticket.status === 'en_cours' ? 'En cours' :
-                         ticket.status === 'resolu' ? 'Résolu' : 'Annulé'}
-                      </span>
+                      <div className="relative">
+                        <button
+                          onClick={() => setOpenStatusMenu(openStatusMenu === ticket.id ? null : (ticket.id || ''))}
+                          className={`px-2 py-1 rounded-full text-xs flex items-center ${
+                            ticket.status === 'nouveau' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-500' :
+                            ticket.status === 'en_cours' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500' :
+                            ticket.status === 'resolu' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-500' :
+                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-500'
+                          }`}
+                        >
+                          {ticket.status === 'nouveau' ? 'Nouveau' :
+                           ticket.status === 'en_cours' ? 'En cours' :
+                           ticket.status === 'resolu' ? 'Résolu' : 'Annulé'}
+                          <ChevronDown className="w-3 h-3 ml-1" />
+                        </button>
+                        
+                        {openStatusMenu === ticket.id && (
+                          <div className="absolute left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-10 w-36 py-1">
+                            <button
+                              onClick={() => handleStatusChange(ticket.id, 'nouveau')}
+                              className="w-full px-3 py-2 text-left flex items-center hover:bg-muted"
+                            >
+                              <AlertCircle className="w-4 h-4 text-yellow-500 mr-2" />
+                              <span>Nouveau</span>
+                              {ticket.status === 'nouveau' && <Check className="w-4 h-4 ml-auto" />}
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(ticket.id, 'en_cours')}
+                              className="w-full px-3 py-2 text-left flex items-center hover:bg-muted"
+                            >
+                              <Timer className="w-4 h-4 text-blue-500 mr-2" />
+                              <span>En cours</span>
+                              {ticket.status === 'en_cours' && <Check className="w-4 h-4 ml-auto" />}
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(ticket.id, 'resolu')}
+                              className="w-full px-3 py-2 text-left flex items-center hover:bg-muted"
+                            >
+                              <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                              <span>Résolu</span>
+                              {ticket.status === 'resolu' && <Check className="w-4 h-4 ml-auto" />}
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(ticket.id, 'annule')}
+                              className="w-full px-3 py-2 text-left flex items-center hover:bg-muted"
+                            >
+                              <XCircle className="w-4 h-4 text-red-500 mr-2" />
+                              <span>Annulé</span>
+                              {ticket.status === 'annule' && <Check className="w-4 h-4 ml-auto" />}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="p-4">
                       <div className="text-sm">
@@ -405,16 +467,59 @@ export function SAV() {
               >
                 <div className="flex justify-between items-start mb-3">
                   <span className="font-mono text-sm bg-muted px-2 py-1 rounded">#{ticket.number}</span>
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    ticket.status === 'nouveau' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-500' :
-                    ticket.status === 'en_cours' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500' :
-                    ticket.status === 'resolu' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-500' :
-                    'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-500'
-                  }`}>
-                    {ticket.status === 'nouveau' ? 'Nouveau' :
-                     ticket.status === 'en_cours' ? 'En cours' :
-                     ticket.status === 'resolu' ? 'Résolu' : 'Annulé'}
-                  </span>
+                  <div className="relative">
+                    <button
+                      onClick={() => setOpenStatusMenu(openStatusMenu === ticket.id ? null : (ticket.id || ''))}
+                      className={`px-2 py-1 rounded-full text-xs flex items-center ${
+                        ticket.status === 'nouveau' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-500' :
+                        ticket.status === 'en_cours' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500' :
+                        ticket.status === 'resolu' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-500' :
+                        'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-500'
+                      }`}
+                    >
+                      {ticket.status === 'nouveau' ? 'Nouveau' :
+                       ticket.status === 'en_cours' ? 'En cours' :
+                       ticket.status === 'resolu' ? 'Résolu' : 'Annulé'}
+                      <ChevronDown className="w-3 h-3 ml-1" />
+                    </button>
+                    
+                    {openStatusMenu === ticket.id && (
+                      <div className="absolute right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-10 w-36 py-1">
+                        <button
+                          onClick={() => handleStatusChange(ticket.id, 'nouveau')}
+                          className="w-full px-3 py-2 text-left flex items-center hover:bg-muted"
+                        >
+                          <AlertCircle className="w-4 h-4 text-yellow-500 mr-2" />
+                          <span>Nouveau</span>
+                          {ticket.status === 'nouveau' && <Check className="w-4 h-4 ml-auto" />}
+                        </button>
+                        <button
+                          onClick={() => handleStatusChange(ticket.id, 'en_cours')}
+                          className="w-full px-3 py-2 text-left flex items-center hover:bg-muted"
+                        >
+                          <Timer className="w-4 h-4 text-blue-500 mr-2" />
+                          <span>En cours</span>
+                          {ticket.status === 'en_cours' && <Check className="w-4 h-4 ml-auto" />}
+                        </button>
+                        <button
+                          onClick={() => handleStatusChange(ticket.id, 'resolu')}
+                          className="w-full px-3 py-2 text-left flex items-center hover:bg-muted"
+                        >
+                          <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                          <span>Résolu</span>
+                          {ticket.status === 'resolu' && <Check className="w-4 h-4 ml-auto" />}
+                        </button>
+                        <button
+                          onClick={() => handleStatusChange(ticket.id, 'annule')}
+                          className="w-full px-3 py-2 text-left flex items-center hover:bg-muted"
+                        >
+                          <XCircle className="w-4 h-4 text-red-500 mr-2" />
+                          <span>Annulé</span>
+                          {ticket.status === 'annule' && <Check className="w-4 h-4 ml-auto" />}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <h3 className="font-medium mb-1">{ticket.client.name}</h3>
                 <p className="text-sm text-muted-foreground mb-3">{ticket.product.name}</p>
@@ -468,6 +573,13 @@ export function SAV() {
         isOpen={isNewTicketModalOpen}
         onClose={() => setIsNewTicketModalOpen(false)}
         onSave={handleSaveTicket}
+      />
+      
+      {/* Modal pour afficher les détails du ticket */}
+      <TicketDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        ticket={selectedTicket}
       />
     </motion.div>
   );
