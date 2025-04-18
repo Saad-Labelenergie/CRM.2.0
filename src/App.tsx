@@ -20,6 +20,10 @@ import { Login } from './components/login/login';
 import { History } from './components/history/history';
 import { ContractDetailPage } from './components/maintenance/components/ContractDetailPage';
 import { CreateProjectForm } from './components/projects/components/add-project';
+=======
+// Import the SAVProvider
+import { SAVProvider } from './contexts/sav-context';
+>>>>>>> 738e63ac98c47360802f9005e0ddc339c2f2a972
 
 // Composant de protection de route
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -58,6 +62,14 @@ function App() {
                   <Route path="/products/:id" element={<ProductDetail />} />
                   <Route path="/projects/create" element={<CreateProjectForm />} />
                   <Route path="/sav" element={<SAV />} />
+=======
+                  {/* Wrap the SAV component with SAVProvider */}
+                  <Route path="/sav" element={
+                    <SAVProvider>
+                      <SAV />
+                    </SAVProvider>
+                  } />
+>>>>>>> 738e63ac98c47360802f9005e0ddc339c2f2a972
                   <Route path="/clients" element={<Clients />} />
                   <Route path="/clients/:id" element={<ClientDetail />} />
                   <Route path="/users" element={<Users />} />
