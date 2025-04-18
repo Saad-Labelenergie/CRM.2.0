@@ -1,16 +1,13 @@
 import { useFirebase } from './useFirebase';
 
-interface Project {
+export interface Project {
   id: string;
   name: string;
-  client: {
-    id: number;
-    name: string;
-  };
+  client: { id: number; name: string };
   status: 'en_attente' | 'charger' | 'en_cours' | 'terminer';
   startDate: string;
   type: string;
-  team: string | null;
+  team: string | null; // 🔁 RELATION
   appointments: {
     id: string;
     title: string;
@@ -27,6 +24,7 @@ interface Project {
   createdAt: Date;
   updatedAt: Date;
 }
+
 
 export function useProjects() {
   return useFirebase<Project>('projects', { orderByField: 'startDate' });

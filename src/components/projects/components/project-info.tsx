@@ -5,7 +5,7 @@ import { FileText } from 'lucide-react';
 interface ProjectInfoProps {
   type: string;
   startDate: string;
-  team: string;
+  team: string | { name: string };
   status: string;
   progress: number;
 }
@@ -32,8 +32,9 @@ export function ProjectInfo({ type, startDate, team, status, progress }: Project
           </div>
           <div>
             <div className="text-sm text-muted-foreground">Équipe assignée</div>
-            <div className="font-medium mt-1">{team}</div>
-          </div>
+            <div className="font-medium mt-1">
+  {typeof team === 'object' ? team.name : team}
+</div>          </div>
         </div>
         <div className="space-y-4">
           <div>

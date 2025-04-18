@@ -70,6 +70,7 @@ export function Teams() {
     teamName: '',
     isActive: false
   });
+  
 
   const [skills, setSkills] = useState<string[]>([
     'Climatisation',
@@ -89,8 +90,10 @@ export function Teams() {
         name: newTeam.name,
         expertise: newTeam.expertise,
         isActive: true,
-        color: newTeam.color
+        color: newTeam.color,
+        projects: [] // ← Initialisation du champ
       });
+      
       setShowSuccessToast(true);
       setIsNewTeamModalOpen(false);
     } catch (error) {

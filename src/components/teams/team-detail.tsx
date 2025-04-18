@@ -103,7 +103,7 @@ export function TeamDetail() {
       <TeamStats />
       <TeamPerformance />
       <TeamMembers teamId={team.id} />
-      <CompletedProjects />
+      <CompletedProjects teamID={team.id} />
       <SAVDetails />
       <VehicleTracking vehicleData={defaultVehicleData} />
     </motion.div>

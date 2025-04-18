@@ -1,6 +1,6 @@
 import { useFirebase } from './useFirebase';
 
-interface Team {
+export interface Team {
   id: string;
   name: string;
   expertise: string[];
@@ -14,7 +14,9 @@ interface Team {
       isAvailable: boolean;
     }[];
   }[];
+  projects?: string[]; // 🔁 RELATION
 }
+
 
 export function useTeams() {
   return useFirebase<Team>('teams', { orderByField: 'name' });
