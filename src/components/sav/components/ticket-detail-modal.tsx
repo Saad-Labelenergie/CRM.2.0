@@ -10,7 +10,8 @@ import {
   Package,
   Calendar,
   MessageSquare,
-  Tag
+  Tag,
+  Users
 } from 'lucide-react';
 
 interface TicketDetailModalProps {
@@ -108,6 +109,18 @@ export function TicketDetailModal({ isOpen, onClose, ticket }: TicketDetailModal
                     <p className="font-medium">{ticket.product.name}</p>
                   </div>
                 </div>
+                
+                {ticket.team && (
+                  <div className="flex items-start">
+                    <div className="bg-primary/10 p-2 rounded-full mr-3">
+                      <Users className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Équipe d'installation</p>
+                      <p className="font-medium">{ticket.team.name}</p>
+                    </div>
+                  </div>
+                )}
                 
                 <div className="flex items-start">
                   <div className="bg-primary/10 p-2 rounded-full mr-3">

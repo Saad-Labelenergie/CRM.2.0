@@ -30,7 +30,11 @@ export interface Ticket {
   status: 'nouveau' | 'en_cours' | 'resolu' | 'annule';
   priority: 'haute' | 'moyenne' | 'basse';
   createdAt: string;
-  assignedTeam?: string;
+  team?: {
+    id: string;
+    name: string;
+    color?: string;
+  };
   installationDate: string;
   lastUpdate?: string;
 }
@@ -193,9 +197,9 @@ export function SAVProvider({ children }: SAVProviderProps) {
     // Calculer les statistiques par équipe
     const teamMap = new Map<string, number>();
     ticketsData.forEach(ticket => {
-      if (ticket.assignedTeam) {
-        const count = teamMap.get(ticket.assignedTeam) || 0;
-        teamMap.set(ticket.assignedTeam, count + 1);
+      if (ticket.team?.name) {
+        const count = teamMap.get(ticket.team.name) || 0;
+        teamMap.set(ticket.team.name, count + 1);
       }
     });
     
