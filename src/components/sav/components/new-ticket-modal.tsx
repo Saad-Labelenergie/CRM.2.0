@@ -102,13 +102,23 @@ export function NewTicketModal({ isOpen, onClose, onSave }: NewTicketModalProps)
     if (validateForm()) {
       const ticketData = {
         number: generateTicketNumber(),
-        client: selectedInstallation!.client,
-        product: selectedInstallation!.product,
+        client: {
+          name: selectedInstallation!.client.name,
+          address: selectedInstallation!.client.address
+        },
+        product: {
+          name: selectedInstallation!.product.name,
+          reference: selectedInstallation!.product.reference
+        },
         description,
         issueType,
-        createdAt: new Date().toISOString(),
         status: 'nouveau',
-        priority: 'moyenne', // Valeur par défaut, à ajuster selon vos besoins
+        priority: 'moyenne',
+        createdAt: new Date().toISOString(),
+        team: selectedInstallation!.team ? {
+          id: selectedInstallation!.team.id,
+          name: selectedInstallation!.team.name
+        } : undefined,
         installationDate: selectedInstallation!.installationDate
       };
       onSave(ticketData);

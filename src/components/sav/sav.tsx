@@ -352,94 +352,78 @@ export function SAV() {
         </div>
 
         {viewMode === 'list' ? (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto border rounded-lg">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-border/50">
-                  <th className="text-left p-4 font-medium text-muted-foreground">N° Ticket</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground">Client</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground">Problème</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground">Statut</th>
+                <tr className="bg-muted/50 border-b">
+                  <th className="text-left p-4 font-medium text-muted-foreground">Numéro</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Clients</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Produits</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Équipes</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">Date</th>
-                  <th className="text-center p-4 font-medium text-muted-foreground">Actions</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Statuts</th>
+                  <th className="text-center p-4 font-medium text-muted-foreground">Détails</th>
                 </tr>
               </thead>
               <tbody>
                 {currentTickets.map((ticket) => (
-                  <tr key={ticket.id} className="border-b border-border/50 hover:bg-muted/50">
-                    <td className="p-4">{ticket.number}</td>
+                  <tr key={ticket.id} className="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
+                    <td className="p-4 font-mono">#{ticket.number}</td>
+                    <td className="p-4">{ticket.client.name}</td>
+                    <td className="p-4">{ticket.product.name}</td>
+                    <td className="p-4">{ticket.team?.name || "Non assignée"}</td>
+                    <td className="p-4">{format(new Date(ticket.createdAt), 'dd/MM/yyyy')}</td>
                     <td className="p-4">
-                      <div>
-                        <div className="font-medium">{ticket.client.name}</div>
-                        <div className="text-sm text-muted-foreground">{ticket.product.name}</div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div>
-                        <div className="font-medium">{ticket.issueType}</div>
-                        <div className="text-sm text-muted-foreground truncate max-w-[200px]">
-                          {ticket.description}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="relative">
-                        <button
-                          onClick={() => setOpenStatusMenu(openStatusMenu === ticket.id ? null : (ticket.id || ''))}
-                          className={`px-2 py-1 rounded-full text-xs flex items-center ${
-                            ticket.status === 'nouveau' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-500' :
-                            ticket.status === 'en_cours' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500' :
-                            ticket.status === 'resolu' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-500' :
-                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-500'
-                          }`}
-                        >
+                      {/* Status display/change component */}
+                      <div className="flex flex-col gap-2">
+                        <div className={`px-2 py-1 rounded-full text-xs inline-flex items-center justify-center ${
+                          ticket.status === 'nouveau' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-500' :
+                          ticket.status === 'en_cours' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500' :
+                          ticket.status === 'resolu' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-500' :
+                          'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-500'
+                        }`}>
                           {ticket.status === 'nouveau' ? 'Nouveau' :
                            ticket.status === 'en_cours' ? 'En cours' :
                            ticket.status === 'resolu' ? 'Résolu' : 'Annulé'}
-                          <ChevronDown className="w-3 h-3 ml-1" />
-                        </button>
-                        
-                        {openStatusMenu === ticket.id && (
-                          <div className="absolute left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-10 w-36 py-1">
-                            <button
-                              onClick={() => handleStatusChange(ticket.id, 'nouveau')}
-                              className="w-full px-3 py-2 text-left flex items-center hover:bg-muted"
-                            >
-                              <AlertCircle className="w-4 h-4 text-yellow-500 mr-2" />
-                              <span>Nouveau</span>
-                              {ticket.status === 'nouveau' && <Check className="w-4 h-4 ml-auto" />}
-                            </button>
-                            <button
-                              onClick={() => handleStatusChange(ticket.id, 'en_cours')}
-                              className="w-full px-3 py-2 text-left flex items-center hover:bg-muted"
-                            >
-                              <Timer className="w-4 h-4 text-blue-500 mr-2" />
-                              <span>En cours</span>
-                              {ticket.status === 'en_cours' && <Check className="w-4 h-4 ml-auto" />}
-                            </button>
-                            <button
-                              onClick={() => handleStatusChange(ticket.id, 'resolu')}
-                              className="w-full px-3 py-2 text-left flex items-center hover:bg-muted"
-                            >
-                              <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                              <span>Résolu</span>
-                              {ticket.status === 'resolu' && <Check className="w-4 h-4 ml-auto" />}
-                            </button>
-                            <button
-                              onClick={() => handleStatusChange(ticket.id, 'annule')}
-                              className="w-full px-3 py-2 text-left flex items-center hover:bg-muted"
-                            >
-                              <XCircle className="w-4 h-4 text-red-500 mr-2" />
-                              <span>Annulé</span>
-                              {ticket.status === 'annule' && <Check className="w-4 h-4 ml-auto" />}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="text-sm">
-                        {format(new Date(ticket.createdAt), 'dd/MM/yyyy HH:mm')}
+                        </div>
+                        <div className="flex gap-1 mt-1">
+                          <button
+                            onClick={() => handleStatusChange(ticket.id, 'nouveau')}
+                            className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                              ticket.status === 'nouveau' ? 'bg-yellow-500 text-white' : 'bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:hover:bg-yellow-800/50'
+                            }`}
+                            title="Nouveau"
+                          >
+                            {ticket.status === 'nouveau' ? <Check className="w-3 h-3" /> : null}
+                          </button>
+                          <button
+                            onClick={() => handleStatusChange(ticket.id, 'en_cours')}
+                            className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                              ticket.status === 'en_cours' ? 'bg-blue-500 text-white' : 'bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/50'
+                            }`}
+                            title="En cours"
+                          >
+                            {ticket.status === 'en_cours' ? <Check className="w-3 h-3" /> : null}
+                          </button>
+                          <button
+                            onClick={() => handleStatusChange(ticket.id, 'resolu')}
+                            className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                              ticket.status === 'resolu' ? 'bg-green-500 text-white' : 'bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-800/50'
+                            }`}
+                            title="Résolu"
+                          >
+                            {ticket.status === 'resolu' ? <Check className="w-3 h-3" /> : null}
+                          </button>
+                          <button
+                            onClick={() => handleStatusChange(ticket.id, 'annule')}
+                            className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                              ticket.status === 'annule' ? 'bg-red-500 text-white' : 'bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-800/50'
+                            }`}
+                            title="Annulé"
+                          >
+                            {ticket.status === 'annule' ? <Check className="w-3 h-3" /> : null}
+                          </button>
+                        </div>
                       </div>
                     </td>
                     <td className="p-4">
@@ -468,72 +452,69 @@ export function SAV() {
                 <div className="flex justify-between items-start mb-3">
                   <span className="font-mono text-sm bg-muted px-2 py-1 rounded">#{ticket.number}</span>
                   <div className="relative">
-                    <button
-                      onClick={() => setOpenStatusMenu(openStatusMenu === ticket.id ? null : (ticket.id || ''))}
-                      className={`px-2 py-1 rounded-full text-xs flex items-center ${
+                    {/* Status display/change component */}
+                    <div className="flex flex-col gap-2">
+                      <div className={`px-2 py-1 rounded-full text-xs inline-flex items-center justify-center ${
                         ticket.status === 'nouveau' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-500' :
                         ticket.status === 'en_cours' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500' :
                         ticket.status === 'resolu' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-500' :
                         'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-500'
-                      }`}
-                    >
-                      {ticket.status === 'nouveau' ? 'Nouveau' :
-                       ticket.status === 'en_cours' ? 'En cours' :
-                       ticket.status === 'resolu' ? 'Résolu' : 'Annulé'}
-                      <ChevronDown className="w-3 h-3 ml-1" />
-                    </button>
-                    
-                    {openStatusMenu === ticket.id && (
-                      <div className="absolute right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-10 w-36 py-1">
+                      }`}>
+                        {ticket.status === 'nouveau' ? 'Nouveau' :
+                         ticket.status === 'en_cours' ? 'En cours' :
+                         ticket.status === 'resolu' ? 'Résolu' : 'Annulé'}
+                      </div>
+                      <div className="flex gap-1 mt-1 justify-end">
                         <button
                           onClick={() => handleStatusChange(ticket.id, 'nouveau')}
-                          className="w-full px-3 py-2 text-left flex items-center hover:bg-muted"
+                          className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                            ticket.status === 'nouveau' ? 'bg-yellow-500 text-white' : 'bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:hover:bg-yellow-800/50'
+                          }`}
+                          title="Nouveau"
                         >
-                          <AlertCircle className="w-4 h-4 text-yellow-500 mr-2" />
-                          <span>Nouveau</span>
-                          {ticket.status === 'nouveau' && <Check className="w-4 h-4 ml-auto" />}
+                          {ticket.status === 'nouveau' ? <Check className="w-3 h-3" /> : null}
                         </button>
                         <button
                           onClick={() => handleStatusChange(ticket.id, 'en_cours')}
-                          className="w-full px-3 py-2 text-left flex items-center hover:bg-muted"
+                          className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                            ticket.status === 'en_cours' ? 'bg-blue-500 text-white' : 'bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/50'
+                          }`}
+                          title="En cours"
                         >
-                          <Timer className="w-4 h-4 text-blue-500 mr-2" />
-                          <span>En cours</span>
-                          {ticket.status === 'en_cours' && <Check className="w-4 h-4 ml-auto" />}
+                          {ticket.status === 'en_cours' ? <Check className="w-3 h-3" /> : null}
                         </button>
                         <button
                           onClick={() => handleStatusChange(ticket.id, 'resolu')}
-                          className="w-full px-3 py-2 text-left flex items-center hover:bg-muted"
+                          className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                            ticket.status === 'resolu' ? 'bg-green-500 text-white' : 'bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-800/50'
+                          }`}
+                          title="Résolu"
                         >
-                          <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                          <span>Résolu</span>
-                          {ticket.status === 'resolu' && <Check className="w-4 h-4 ml-auto" />}
+                          {ticket.status === 'resolu' ? <Check className="w-3 h-3" /> : null}
                         </button>
                         <button
                           onClick={() => handleStatusChange(ticket.id, 'annule')}
-                          className="w-full px-3 py-2 text-left flex items-center hover:bg-muted"
+                          className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                            ticket.status === 'annule' ? 'bg-red-500 text-white' : 'bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-800/50'
+                          }`}
+                          title="Annulé"
                         >
-                          <XCircle className="w-4 h-4 text-red-500 mr-2" />
-                          <span>Annulé</span>
-                          {ticket.status === 'annule' && <Check className="w-4 h-4 ml-auto" />}
+                          {ticket.status === 'annule' ? <Check className="w-3 h-3" /> : null}
                         </button>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
-                <h3 className="font-medium mb-1">{ticket.client.name}</h3>
-                <p className="text-sm text-muted-foreground mb-3">{ticket.product.name}</p>
-                <div className="mb-3">
-                  <div className="text-sm font-medium">{ticket.issueType}</div>
-                  <p className="text-sm text-muted-foreground truncate">{ticket.description}</p>
-                </div>
-                <div className="flex justify-between items-center text-sm text-muted-foreground">
-                  <span>{format(new Date(ticket.createdAt), 'dd/MM/yyyy')}</span>
+                <h3 className="font-medium mb-2">{ticket.client.name}</h3>
+                <p className="text-sm text-muted-foreground mb-2">{ticket.product.name}</p>
+                <p className="text-sm text-muted-foreground mb-2">Équipe: {ticket.team?.name || "Non assignée"}</p>
+                <p className="text-sm text-muted-foreground">{format(new Date(ticket.createdAt), 'dd/MM/yyyy')}</p>
+                <div className="mt-4 flex justify-end">
                   <button
                     onClick={() => handleViewTicket(ticket)}
-                    className="flex items-center text-primary hover:underline"
+                    className="text-sm text-primary flex items-center hover:underline"
                   >
-                    <span>Détails</span>
+                    Détails
                     <ArrowUpRight className="w-3 h-3 ml-1" />
                   </button>
                 </div>
