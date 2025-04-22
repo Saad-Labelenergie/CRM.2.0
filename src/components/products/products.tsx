@@ -14,9 +14,11 @@ import {
   ChevronRight,
   Package,
   Settings,
-  Tag
+  Tag,
+  Factory
 } from 'lucide-react';
 import { NewProductModal } from './components/new-product-modal';
+import { ManageFournisseursModal } from './components/manage-fournisseur-modal';
 import { ManageCategoriesModal } from './components/manage-categories-modal';
 import { Toast } from '../ui/toast';
 import { useProducts } from '../../lib/hooks/useProducts';
@@ -46,6 +48,7 @@ export function Products() {
   const { data: products = [], loading, add: addProduct } = useProducts();
   const [isNewProductModalOpen, setIsNewProductModalOpen] = useState(false);
   const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
+  const [isFournisseurModalOpen, setIsFournisseurModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showSuccessToast, setShowSuccessToast] = useState(false);
@@ -101,6 +104,15 @@ export function Products() {
           >
             <Tag className="w-4 h-4 mr-2" />
             Catégories
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setIsFournisseurModalOpen(true)}
+            className="flex items-center px-4 py-2.5 bg-accent hover:bg-accent/80 rounded-xl transition-colors"
+          >
+            <Factory className="w-4 h-4 mr-2" />
+            Fournisseurs
           </motion.button>
           <motion.button
             whileHover={{ scale: 1.02 }}
@@ -267,6 +279,14 @@ export function Products() {
           setShowSuccessToast(true);
         }}
       />
+      <ManageFournisseursModal
+      isOpen={isFournisseurModalOpen}
+       onClose={() => setIsFournisseurModalOpen(false)}
+      onSave={(fournisseurs) => {
+    console.log('Fournisseurs saved:', fournisseurs);
+    setShowSuccessToast(true);
+  }}
+/>
 
       <Toast
         message="Les modifications ont été enregistrées avec succès !"

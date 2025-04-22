@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useFournisseurs } from '../../../lib/hooks/useFournisseurs';
 import { 
   X, 
   Check, 
@@ -59,6 +60,7 @@ interface EditProductModalProps {
 
 export function EditProductModal({ isOpen, onClose, onSave, product }: EditProductModalProps) {
   const { data: categories } = useCategories();
+  const { data: fournisseurs } = useFournisseurs();
   const [formData, setFormData] = useState({
     ...product,
     supplier: {
@@ -332,52 +334,36 @@ export function EditProductModal({ isOpen, onClose, onSave, product }: EditProdu
                 </div>
 
                 {/* Fournisseur */}
-                <div className="bg-accent/50 rounded-lg p-4 space-y-4">
-                  <h3 className="font-medium flex items-center">
-                    <Building2 className="w-4 h-4 mr-2" />
-                    Fournisseur
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-muted-foreground mb-1">
-                        Nom *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.supplier.name}
-                        onChange={(e) => handleSupplierChange('name', e.target.value)}
-                        className="w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                      {errors['supplier.name'] && (
-                        <p className="text-destructive text-sm mt-1">{errors['supplier.name']}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-muted-foreground mb-1">
-                        Contact
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.supplier.contact}
-                        onChange={(e) => handleSupplierChange('contact', e.target.value)}
-                        className="w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-muted-foreground mb-1">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        value={formData.supplier.email}
-                        onChange={(e) => handleSupplierChange('email', e.target.value)}
-                        className="w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                  </div>
-                </div>
+                <div>
+  <label className="block text-sm font-medium text-muted-foreground mb-1">
+    Fournisseur *
+  </label>
+  <select
+    value={formData.supplier.name}
+    onChange={(e) => {
+      const selected = fournisseurs?.find(f => f.name === e.target.value);
+      if (selected) {
+        setFormData({
+          ...formData,
+          supplier: {
+            name: selected.name,
+            contact: selected.contact || '',
+            email: selected.email || ''
+          }
+        });
+      }
+    }}
+    className="w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+  >
+    <option value="">Sélectionner un fournisseur</option>
+    {fournisseurs?.map((f) => (
+      <option key={f.id} value={f.name}>{f.name}</option>
+    ))}
+  </select>
+  {errors['supplier.name'] && (
+    <p className="text-destructive text-sm mt-1">{errors['supplier.name']}</p>
+  )}
+</div>
 
                 {/* Stock */}
                 <div className="bg-accent/50 rounded-lg p-4 space-y-4">

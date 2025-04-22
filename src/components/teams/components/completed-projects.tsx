@@ -93,7 +93,6 @@ export function CompletedProjects({ teamID }: CompletedProjectsProps) {
     }
   };
 
-  // … le reste du composant reste inchangé …
 
 
 

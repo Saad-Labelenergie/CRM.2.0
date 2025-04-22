@@ -20,7 +20,8 @@ import {
   Search,
   FolderOpen,
   PenTool as Tool,
-  LogOut 
+  LogOut ,
+  TruckIcon
 } from 'lucide-react';
 import { X, Mail, Phone, Calendar, Shield } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -38,6 +39,7 @@ const navigation = [
   { name: 'SAV', href: '/sav', icon: Wrench, roles: ['administrateur', 'manager'] },
   { name: 'Entretien', href: '/maintenance', icon: Tool, roles: ['administrateur'] },
   { name: 'Utilisateurs', href: '/users', icon: UserCog, roles: ['administrateur','technicien'] },
+  {name : 'Vehicules' , href:'/vehicule',icon:TruckIcon ,roles :['administrateur']}
 ];
 
 

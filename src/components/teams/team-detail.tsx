@@ -10,6 +10,7 @@ import { CompletedProjects } from './components/completed-projects';
 import { SAVDetails } from './components/sav-details';
 import { VehicleTracking } from './vehicle-tracking';
 import { useScheduling } from '../../lib/scheduling/scheduling-context';
+import { VehicleHistoryModal } from './components/vehicle-history-modal';
 
 const defaultVehicleData = {
   model: "Non assigné",
@@ -104,8 +105,9 @@ export function TeamDetail() {
       <TeamPerformance />
       <TeamMembers teamId={team.id} />
       <CompletedProjects teamID={team.id} />
-      <SAVDetails />
-      <VehicleTracking vehicleData={defaultVehicleData} />
-    </motion.div>
+      <SAVDetails teamId={team.id} teamName={team.name} />
+      <VehicleTracking teamId={team.id} />
+
+      </motion.div>
   );
 }
