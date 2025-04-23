@@ -45,6 +45,9 @@ export function ChangeTeamModal({ isOpen, onClose, appointment, onSave }: Change
 
   if (!appointment) return null;
 
+  // Ajouter un log pour déboguer les données du rendez-vous
+  console.log('Appointment data in modal:', appointment);
+
   return (
     <AnimatePresence>
       {isOpen && (

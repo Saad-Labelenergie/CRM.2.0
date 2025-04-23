@@ -163,13 +163,13 @@ export function MaintenanceDetailModal({ isOpen, onClose, maintenance }: Mainten
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <div className="text-sm text-muted-foreground">Dernière maintenance</div>
+                    <div className="text-sm text-muted-foreground">Début de contrat </div>
                     <div className="font-medium">
                       {format(new Date(maintenance.lastMaintenance), 'dd MMMM yyyy', { locale: fr })}
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <div className="text-sm text-muted-foreground">Prochaine maintenance</div>
+                    <div className="text-sm text-muted-foreground">Fin de contrat</div>
                     <div className="font-medium">
                       {format(new Date(maintenance.nextMaintenance), 'dd MMMM yyyy', { locale: fr })}
                     </div>

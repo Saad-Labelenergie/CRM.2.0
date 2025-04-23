@@ -60,14 +60,28 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
       try {
         const querySnapshot = await getDocs(collection(db, 'products'));
         const fetchedProducts = querySnapshot.docs.map(doc => {
-          console.log('Product data:', doc.data()); // Ajoutez ce log pour déboguer
+          const data = doc.data();
+          // Vérifier où se trouve le temps d'installation dans les données
+          let installTime = 0;
+          
+          // Vérifier si le temps est dans specifications.installationTime
+          if (data.specifications && data.specifications.installationTime !== undefined) {
+            installTime = parseInt(data.specifications.installationTime) || 0;
+            console.log(`Produit ${data.name}: Temps d'installation trouvé dans specifications: ${installTime}`);
+          } 
+          // Sinon vérifier s'il est directement dans installationTime
+          else if (data.installationTime !== undefined) {
+            installTime = parseInt(data.installationTime) || 0;
+            console.log(`Produit ${data.name}: Temps d'installation trouvé directement: ${installTime}`);
+          }
+          
           return {
             id: doc.id,
-            ...doc.data(),
-            installationTime: parseInt(doc.data().installationTime) || 0
+            ...data,
+            installationTime: installTime // Stocker le temps d'installation correctement extrait
           };
         });
-        console.log('Fetched products:', fetchedProducts); // Et celui-ci
+        console.log('Produits récupérés avec temps d\'installation:', fetchedProducts);
         setProducts(fetchedProducts);
       } catch (error) {
         console.error('Erreur lors du chargement des produits :', error);
@@ -177,6 +191,43 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
   const handleSubmit = async () => {
     if (validateStep()) {
       try {
+        // Calcul du temps d'installation total avec plus de vérifications
+        const totalInstallationTime = formData.selectedProducts.reduce(
+          (acc, p) => {
+            // Vérifier où se trouve le temps d'installation dans le produit
+            let installTime = 0;
+            
+            if (p.specifications && p.specifications.installationTime !== undefined) {
+              installTime = parseInt(p.specifications.installationTime) || 0;
+            } else if (p.installationTime !== undefined) {
+              installTime = parseInt(p.installationTime) || 0;
+            }
+            
+            console.log(`Produit: ${p.name}, Temps d'installation: ${installTime} minutes (source: ${p.specifications ? 'specifications' : 'direct'})`);
+            return acc + installTime;
+          },
+          0
+        );
+
+        console.log(`Temps total d'installation en minutes: ${totalInstallationTime}`);
+
+        // Calculer la durée en heures et jours
+        const durationInHours = Math.max(1, Math.ceil(totalInstallationTime / 60));
+        const durationInDays = durationInHours / 8; // 8 heures par jour de travail
+
+        console.log(`Durée en heures: ${durationInHours}h, Durée en jours: ${durationInDays.toFixed(1)} jours`);
+
+        let durationText;
+        if (durationInDays >= 1) {
+          // Si c'est plus d'un jour, afficher en jours
+          durationText = `${durationInDays.toFixed(1)} jours`;
+        } else {
+          // Sinon afficher en heures
+          durationText = `${durationInHours}h`;
+        }
+
+        console.log(`Texte de durée formaté: ${durationText}`);
+
         const clientData = {
           id: Math.random().toString(36).substr(2, 9),
           name: `${formData.contact.firstName} ${formData.contact.lastName}`,
@@ -193,17 +244,19 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
             color: formData.selectedTeam.color
           } : null,
           // Add selected products IDs
-          productsIds: formData.selectedProducts.map(p => p.id)
+          productsIds: formData.selectedProducts.map(p => p.id),
+          // Ajouter les informations d'installation
+          installation: {
+            totalTime: totalInstallationTime,
+            durationInHours,
+            durationInDays,
+            durationText
+          }
         };
         onSave(clientData);
 
         const projectId = Math.random().toString(36).substr(2, 9);
         const projectName = formData.selectedProducts.map(p => p.name).join(", ");
-
-        const totalInstallationTime = formData.selectedProducts.reduce(
-          (acc, p) => acc + (parseInt(p.installationTime) || 0),
-          0
-        );
 
         const appointmentId = Math.random().toString(36).substr(2, 9);
         const appointment = {
@@ -219,7 +272,8 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
           team: formData.selectedTeam?.name || null,
           teamColor: formData.selectedTeam?.color || null,
           type: "installation" as "installation" | "maintenance" | "urgence",
-          duration: `${Math.ceil(totalInstallationTime / 60)}h`,
+          duration: durationText, // S'assurer que cette valeur est correcte
+          installationTime: totalInstallationTime, // Ajouter cette propriété pour référence
           status: formData.selectedTeam ? 'attribue' as const : 'non_attribue' as const,
           createdAt: new Date(),
           updatedAt: new Date()
@@ -362,7 +416,6 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
           </div>
         )}
       </AnimatePresence>
-
       <Toast
         message="Le dossier a été créé avec succès ! Le rendez-vous et le projet ont été créés."
         isVisible={showSuccessToast}

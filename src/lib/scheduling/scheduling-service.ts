@@ -24,6 +24,7 @@ export interface Appointment {
   teamColor?: string;
   type: 'installation' | 'maintenance' | 'urgence';
   duration: string;
+  installationTime?: number; // Ajouter cette propriété pour stocker le temps en minutes
   status: 'non_attribue' | 'attribue' | 'termine';
 }
 

@@ -344,8 +344,8 @@ export function Maintenance() {
                 <th className="text-left p-4 font-medium text-muted-foreground">Client</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Équipement</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Type</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Dernière</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Prochaine</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Début</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Fin</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Équipe</th>
                 <th className="text-center p-4 font-medium text-muted-foreground">Statut</th>
                 <th className="text-center p-4 font-medium text-muted-foreground">Contrat</th>

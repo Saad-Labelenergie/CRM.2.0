@@ -116,10 +116,10 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
         break;
       case 'schedule':
         if (!formData.lastMaintenance) {
-          newErrors.lastMaintenance = 'Veuillez sélectionner une date de dernière maintenance';
+          newErrors.lastMaintenance = 'Veuillez sélectionner une date de début de contrat';
         }
         if (!formData.nextMaintenance) {
-          newErrors.nextMaintenance = 'Veuillez sélectionner une date de prochaine maintenance';
+          newErrors.nextMaintenance = 'Veuillez sélectionner une date de fin de contrat';
         }
         break;
     }
@@ -355,7 +355,7 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
 
   const renderScheduleSelection = () => (
     <div className="space-y-6">
-      <div className="bg-accent/50 rounded-lg p-4">
+      {/* <div className="bg-accent/50 rounded-lg p-4">
         <h3 className="font-medium mb-4">Type de maintenance</h3>
         <div className="flex space-x-2">
           <button
@@ -381,7 +381,7 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
             Correctif
           </button>
         </div>
-      </div>
+      </div> */}
 
       <div className="bg-accent/50 rounded-lg p-4">
         <h3 className="font-medium mb-4">Fréquence</h3>
@@ -408,7 +408,7 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-muted-foreground mb-1">
-              Dernière maintenance
+              Début de contrat
             </label>
             <input
               type="date"
@@ -430,7 +430,7 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
           </div>
           <div>
             <label className="block text-sm font-medium text-muted-foreground mb-1">
-              Prochaine maintenance
+              Fin de contrat
             </label>
             <input
               type="date"
@@ -457,7 +457,7 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
         />
       </div>
 
-      <div className="bg-accent/50 rounded-lg p-4">
+      {/* <div className="bg-accent/50 rounded-lg p-4">
         <h3 className="font-medium mb-4">Équipe assignée</h3>
         {activeTeams.length === 0 ? (
           <div className="text-center py-4 text-muted-foreground">
@@ -487,9 +487,9 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
             ))}
           </div>
         )}
-      </div>
+      </div> */}
 
-      <div className="bg-accent/50 rounded-lg p-4">
+      {/* <div className="bg-accent/50 rounded-lg p-4">
         <h3 className="font-medium mb-4">Notes</h3>
         <textarea
           value={formData.notes}
@@ -497,7 +497,7 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
           placeholder="Informations complémentaires..."
           className="w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary h-24 resize-none"
         />
-      </div>
+      </div> */}
     </div>
   );
 
