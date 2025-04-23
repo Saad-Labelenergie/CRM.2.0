@@ -4,6 +4,7 @@ import { SchedulingService, Installation, Team } from './scheduling-service';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
+// Mettez à jour l'interface Appointment dans ce fichier également
 interface Appointment {
   id: string;
   title: string;
@@ -18,6 +19,13 @@ interface Appointment {
   teamColor?: string;
   type: 'installation' | 'maintenance' | 'urgence';
   duration: string;
+  installationTime?: number;
+  // Ajouter ces nouvelles propriétés pour les rendez-vous multi-jours
+  daysSpan?: number;
+  isMultiDay?: boolean;
+  isFirstDay?: boolean;
+  isLastDay?: boolean;
+  parentId?: string | null;
   status: 'non_attribue' | 'attribue' | 'termine';
 }
 

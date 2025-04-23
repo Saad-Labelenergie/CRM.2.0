@@ -18,12 +18,17 @@ interface ChangeTeamModalProps {
     time: string;
     duration: string;
     team: string | null;
+    // Ajouter les nouvelles propriétés pour les rendez-vous multi-jours
+    isMultiDay?: boolean;
+    isFirstDay?: boolean;
+    isLastDay?: boolean;
+    parentId?: string | null;
   } | null;
   onSave: (appointmentId: string, newTeamName: string) => void;
 }
 
 export function ChangeTeamModal({ isOpen, onClose, appointment, onSave }: ChangeTeamModalProps) {
-  const { teams } = useScheduling();
+  const { teams, appointments, updateAppointmentTeam } = useScheduling();
   const [selectedTeam, setSelectedTeam] = React.useState<string>('');
 
   // Réinitialiser l'équipe sélectionnée quand la modale s'ouvre
@@ -38,12 +43,45 @@ export function ChangeTeamModal({ isOpen, onClose, appointment, onSave }: Change
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (appointment && selectedTeam) {
-      onSave(appointment.id, selectedTeam);
+      // Vérifier si c'est un rendez-vous multi-jours
+      if (appointment.isMultiDay) {
+        // Si c'est le rendez-vous principal (premier jour)
+        if (appointment.isFirstDay && appointment.parentId === null) {
+          // Trouver tous les rendez-vous liés (même parentId ou même ID pour les jours suivants)
+          const relatedAppointments = appointments.filter(
+            app => app.parentId === appointment.id || app.id === appointment.id
+          );
+          
+          // Mettre à jour l'équipe pour tous les rendez-vous liés
+          for (const app of relatedAppointments) {
+            onSave(app.id, selectedTeam);
+          }
+        } 
+        // Si c'est un jour suivant
+        else if (appointment.parentId) {
+          // Trouver tous les rendez-vous liés (même parentId et le parent)
+          const relatedAppointments = appointments.filter(
+            app => app.parentId === appointment.parentId || app.id === appointment.parentId
+          );
+          
+          // Mettre à jour l'équipe pour tous les rendez-vous liés
+          for (const app of relatedAppointments) {
+            onSave(app.id, selectedTeam);
+          }
+        }
+      } else {
+        // Rendez-vous normal (un seul jour)
+        onSave(appointment.id, selectedTeam);
+      }
+      
       onClose();
     }
   };
 
   if (!appointment) return null;
+
+  // Ajouter un log pour déboguer les données du rendez-vous
+  console.log('Appointment data in modal:', appointment);
 
   return (
     <AnimatePresence>

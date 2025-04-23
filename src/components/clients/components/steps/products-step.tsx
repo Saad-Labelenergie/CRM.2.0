@@ -24,7 +24,8 @@ export function ProductsStep({
   );
 
   // Calculate number of days needed (8 hours per day)
-  const daysNeeded = Math.ceil(totalInstallationTime / (8 * 60));
+  // const daysNeeded = Math.ceil(totalInstallationTime / (8 * 60));
+  const daysNeeded = totalInstallationTime / (8 * 60); // Donne directement la valeur en jours avec décimales
 
   // Calculate total price
   const totalPrice = selectedProducts.reduce(

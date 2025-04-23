@@ -24,6 +24,13 @@ export interface Appointment {
   teamColor?: string;
   type: 'installation' | 'maintenance' | 'urgence';
   duration: string;
+  installationTime?: number;
+  // Ajouter ces nouvelles propriétés pour les rendez-vous multi-jours
+  daysSpan?: number;
+  isMultiDay?: boolean;
+  isFirstDay?: boolean;
+  isLastDay?: boolean;
+  parentId?: string | null;
   status: 'non_attribue' | 'attribue' | 'termine';
 }
 

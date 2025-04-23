@@ -89,10 +89,6 @@ export function AssignTeamModal({ isOpen, onClose, event, onAssign }: AssignTeam
                     <Clock className="w-4 h-4 mr-2" />
                     {event.time} • {event.duration}
                   </div>
-                  <div className="flex items-center mt-1">
-                    <Building2 className="w-4 h-4 mr-2" />
-                    {event.client.name} ({event.client.postalCode})
-                  </div>
                 </div>
               </div>
 
