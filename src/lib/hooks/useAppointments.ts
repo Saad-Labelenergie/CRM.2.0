@@ -4,7 +4,7 @@ interface Appointment {
   id: string;
   title: string;
   client: {
-    id: number;
+    id: string;
     name: string;
     postalCode: string;
   };
@@ -18,6 +18,7 @@ interface Appointment {
   createdAt: Date;
   updatedAt: Date;
 }
+
 
 export function useAppointments() {
   return useFirebase<Appointment>('appointments', { orderByField: 'date' });
