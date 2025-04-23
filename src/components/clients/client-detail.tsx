@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { UpdateClientModal } from './components/update-client-modal';
+import { useProducts } from '../../lib/hooks/useProducts';
+import { useAppointments } from '../../lib/hooks/useAppointments';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -32,11 +34,18 @@ export function ClientDetail() {
   const navigate = useNavigate();
   const { data: clients = [], loading, remove: removeClient,update} = useClients();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const { data: products = [] } = useProducts();
+  const { data: appointments = [] } = useAppointments();
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);  
+
+
 
   const client = clients.find(c => c.id === id);
 
+
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
@@ -64,7 +73,22 @@ export function ClientDetail() {
     );
   }
 
-  // Fonction utilitaire pour formater la date
+  //Produits
+
+  const assignedProducts = products.filter(product =>
+    client.productsIds?.includes(product.id)
+  );
+  
+  const totalTTC = assignedProducts.reduce((acc, product) => acc + Number(product.price?.ttc || 0), 0);
+
+
+  //Rendez-vous
+
+const clientAppointments = appointments.filter(
+  (appointment) => String(appointment.client.id) === client.id
+);
+  
+  // Fonction utilitaire pour formater la dates
 const formatClientSinceDate = (dateInput: any) => {
   // Si la date est déjà un objet Date valide
   if (dateInput instanceof Date && !isNaN(dateInput.getTime())) {
@@ -217,27 +241,77 @@ const handleUpdateClient  = async (updatedClient: any) => {
               <Package className="w-5 h-5 mr-2 text-green-500" />
               Installations
             </h2>
-            <div className="space-y-4">
-              <div className="text-center py-8 text-muted-foreground">
-                Aucune installation enregistrée
-              </div>
+<div className="space-y-4">
+  {assignedProducts.length > 0 ? (
+    <>
+      <ul className="divide-y divide-border">
+        {assignedProducts.map((product) => (
+          <li key={product.id} className="py-2">
+            <div className="flex justify-between items-center">
+              <span className="font-medium text-primary">{product.name}</span>
+              <span className="text-sm text-muted-foreground">{Number(product.price.ttc).toFixed(2)
+              } € TTC</span>
             </div>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-4 flex justify-end">
+        <div className="text-lg font-semibold text-green-600">
+          Total : {totalTTC.toFixed(2)} € TTC
+        </div>
+      </div>
+    </>
+  ) : (
+    <div className="text-center py-8 text-muted-foreground">
+      Aucune installation enregistrée
+    </div>
+  )}
+</div>
+
           </motion.div>
 
           <motion.div
-            whileHover={{ y: -5 }}
-            className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
-          >
-            <h2 className="text-xl font-semibold mb-6 flex items-center">
-              <Clock className="w-5 h-5 mr-2 text-orange-500" />
-              Rendez-vous
-            </h2>
-            <div className="space-y-4">
-              <div className="text-center py-8 text-muted-foreground">
-                Aucun rendez-vous programmé
+  whileHover={{ y: -5 }}
+  className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
+>
+  <h2 className="text-xl font-semibold mb-6 flex items-center">
+    <Clock className="w-5 h-5 mr-2 text-orange-500" />
+    Rendez-vous
+  </h2>
+
+  <div className="space-y-4">
+    {clientAppointments.length > 0 ? (
+      <ul className="divide-y divide-border">
+        {clientAppointments.map((appointment) => (
+          <li key={appointment.id} className="py-2">
+            <div className="flex justify-between items-center">
+              <div>
+                <div className="font-medium text-primary">{appointment.title}</div>
+                <div className="text-sm text-muted-foreground">
+                  {new Date(`${appointment.date}T${appointment.time}`).toLocaleString('fr-FR', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })} • {appointment.type}
+                </div>
+              </div>
+              <div className="text-xs font-medium rounded px-2 py-1" style={{ backgroundColor: appointment.teamColor || '#E5E7EB' }}>
+                {appointment.status}
               </div>
             </div>
-          </motion.div>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <div className="text-center py-8 text-muted-foreground">
+        Aucun rendez-vous programmé
+      </div>
+    )}
+  </div>
+</motion.div>
         </div>
 
         <div className="space-y-6">

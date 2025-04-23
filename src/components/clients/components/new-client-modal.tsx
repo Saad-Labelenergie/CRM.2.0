@@ -31,6 +31,7 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [formData, setFormData] = useState({
+    id:'',
     contact: {
       firstName: '',
       lastName: '',
@@ -53,9 +54,18 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { addProject, addAppointment } = useScheduling();
+    // ✅ INSERT THIS RIGHT HERE
+    useEffect(() => {
+      if (isOpen) {
+        setFormData((prev) => ({
+          ...prev,
+          id: prev.id || Math.random().toString(36).substring(2, 11),
+        }));
+        fetchProducts();
+      }
+    }, [isOpen]);
 
   // 🔄 Charger les produits depuis Firebase
-  useEffect(() => {
     const fetchProducts = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, 'products'));
@@ -77,7 +87,6 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
     if (isOpen) {
       fetchProducts();
     }
-  }, [isOpen]);
 
   const handleFieldUpdate = (field: string, value: any) => {
     const fields = field.split('.');
@@ -175,80 +184,64 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
   };
 
   const handleSubmit = async () => {
-    if (validateStep()) {
-      try {
-        const clientData = {
-          id: Math.random().toString(36).substr(2, 9),
-          name: `${formData.contact.firstName} ${formData.contact.lastName}`,
-          contact: formData.contact,
-          address: formData.address,
-          tag: formData.tag,
-          status: 'pending',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          // Add team information
-          team: formData.selectedTeam ? {
-            id: formData.selectedTeam._id,
-            name: formData.selectedTeam.name,
-            color: formData.selectedTeam.color
-          } : null,
-          // Add selected products IDs
-          productsIds: formData.selectedProducts.map(p => p.id)
-        };
-        onSave(clientData);
-
-        const projectId = Math.random().toString(36).substr(2, 9);
-        const projectName = formData.selectedProducts.map(p => p.name).join(", ");
-
-        const totalInstallationTime = formData.selectedProducts.reduce(
-          (acc, p) => acc + (parseInt(p.installationTime) || 0),
-          0
-        );
-
-        const appointmentId = Math.random().toString(36).substr(2, 9);
-        const appointment = {
-          id: appointmentId,
-          title: projectName,
-          client: {
-            id: parseInt(clientData.id),
-            name: clientData.name,
-            postalCode: formData.address.postalCode
-          },
-          date: formData.installationDate,
-          time: "09:00",
-          team: formData.selectedTeam?.name || null,
-          teamColor: formData.selectedTeam?.color || null,
-          type: "installation" as "installation" | "maintenance" | "urgence",
-          duration: `${Math.ceil(totalInstallationTime / 60)}h`,
-          status: formData.selectedTeam ? 'attribue' as const : 'non_attribue' as const,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-
-        const project = {
-          id: projectId,
-          name: projectName,
-          client: {
-            id: parseInt(clientData.id),
-            name: clientData.name
-          },
-          status: (formData.selectedTeam ? 'attribue' : 'en_attente') as 'en_attente' | 'charger' | 'en_cours' | 'terminer',
-          startDate: formData.installationDate,
-          type: formData.selectedProducts[0]?.type?.toUpperCase() || 'STANDARD',
-          team: formData.selectedTeam?.name || null,
-          appointments: [appointment]
-        };
-
-        await addProject(project);
-        await addAppointment(appointment);
-
-        setShowSuccessToast(true);
-        onClose();
-      } catch (error) {
-        console.error('Erreur lors de la création du dossier:', error);
-      }
+    if (!validateStep()) return;
+  
+    try {
+      const now = new Date();
+      const clientToAdd = {
+        name: `${formData.contact.firstName} ${formData.contact.lastName}`,
+        contact: formData.contact,
+        address: formData.address,
+        tag: formData.tag,
+        status: 'pending',
+        createdAt: now,
+        updatedAt: now,
+        team: formData.selectedTeam ? {
+          id: formData.selectedTeam._id,
+          name: formData.selectedTeam.name,
+          color: formData.selectedTeam.color
+        } : null,
+        productsIds: formData.selectedProducts.map(p => p.id)
+      };
+  
+      const clientRef = await onSave(clientToAdd); // must return the doc ref or {id, ...data}
+      const clientId = clientRef.id; // ← ✨ GET REAL FIREBASE ID HERE
+      const clientName = clientToAdd.name;
+  
+      const totalInstallationTime = formData.selectedProducts.reduce(
+        (acc, p) => acc + (parseInt(p.installationTime) || 0),
+        0
+      );
+  
+      const appointment = {
+        id: Math.random().toString(36).substr(2, 9),
+        title: formData.selectedProducts.map(p => p.name).join(", "),
+        client: {
+          id: clientId,
+          name: clientName,
+          postalCode: formData.address.postalCode
+        },
+        date: formData.installationDate,
+        time: "09:00",
+        team: formData.selectedTeam?.name || null,
+        teamColor: formData.selectedTeam?.color || null,
+        type: "installation",
+        duration: `${Math.ceil(totalInstallationTime / 60)}h`,
+        status: formData.selectedTeam ? 'attribue' : 'non_attribue',
+        createdAt: now,
+        updatedAt: now
+      };
+  
+      await addAppointment(appointment);
+      setShowSuccessToast(true);
+      onClose();
+  
+    } catch (error) {
+      console.error("Erreur lors de la création du dossier:", error);
     }
   };
+  
+  
 
   return (
     <>
