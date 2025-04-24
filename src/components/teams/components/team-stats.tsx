@@ -96,10 +96,7 @@ export function TeamStats({team}:TeamStatsProps) {
             {team.members?.length || 0}
             <span className="text-base font-medium text-muted-foreground/80 ml-1">membres</span>
           </p>
-          <p className="text-sm text-muted-foreground/70 flex items-center gap-1">
-            <span className="h-2 w-2 bg-muted-foreground/30 rounded-full" />
-            Aucun membre assigné
-          </p>
+
         </div>
       </motion.div>
 
