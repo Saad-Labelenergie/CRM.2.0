@@ -92,7 +92,7 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
     // if (isOpen) {
     //   fetchProducts();
     // }
-
+  },)
   // Modifier la fonction handleFieldUpdate pour calculer la durée d'installation lorsque les produits sont sélectionnés
   const handleFieldUpdate = (field: string, value: any) => {
     const fields = field.split('.');
@@ -153,6 +153,7 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
       });
     }
   };
+  
 
   const validateStep = () => {
     const newErrors: Record<string, string> = {};
