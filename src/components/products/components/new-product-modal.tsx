@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useFournisseurs } from '../../../lib/hooks/useFournisseurs';
 import { 
   X, 
   Check, 
@@ -21,13 +22,19 @@ interface NewProductModalProps {
 
 export function NewProductModal({ isOpen, onClose, onSave }: NewProductModalProps) {
   const { data: categories } = useCategories();
+  const { data: suppliers  } = useFournisseurs();
   const [step, setStep] = useState<'general' | 'supplier' | 'price'>('general');
   const [formData, setFormData] = useState({
     name: '',
     reference: '',
     brand: '',
     category: '',
-    supplier: '',
+    supplier: {
+      id: '',
+      name: '',
+      contact: '',
+      email: ''
+    },
     specifications: {
       puissance: '',
       surface: '',
@@ -45,6 +52,7 @@ export function NewProductModal({ isOpen, onClose, onSave }: NewProductModalProp
       ttc: ''
     }
   });
+  
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validateStep = () => {
@@ -205,91 +213,39 @@ export function NewProductModal({ isOpen, onClose, onSave }: NewProductModalProp
           Fournisseur
         </h3>
         <div>
-          <input
-            type="text"
-            value={formData.supplier}
-            onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-            className="w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="Nom du fournisseur"
-          />
+        <select
+  value={formData.supplier.name}
+  onChange={(e) => {
+    const selected = suppliers.find(f => f.name === e.target.value);
+    if (selected) {
+      setFormData({
+        ...formData,
+        supplier: {
+          id: selected.id,
+          name: selected.name,
+          contact: selected.contact || '',
+          email: selected.email || ''
+        }
+      });
+    }
+  }}
+  className="w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+>
+  <option value="">Sélectionner un fournisseur</option>
+  {suppliers?.map((supplier) => (
+    <option key={supplier.id} value={supplier.name}>
+      {supplier.name}
+    </option>
+  ))}
+</select>
+
+
           {errors.supplier && (
             <p className="text-destructive text-sm mt-1">{errors.supplier}</p>
           )}
         </div>
       </div>
-
-      <div className="bg-accent/50 rounded-lg p-4 space-y-4">
-        <h3 className="font-medium flex items-center">
-          <Gauge className="w-4 h-4 mr-2" />
-          Spécifications techniques
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">
-              Puissance
-            </label>
-            <input
-              type="text"
-              value={formData.specifications.puissance}
-              onChange={(e) => setFormData({
-                ...formData,
-                specifications: { ...formData.specifications, puissance: e.target.value }
-              })}
-              className="w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="ex: 9000 BTU"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">
-              Surface couverte
-            </label>
-            <input
-              type="text"
-              value={formData.specifications.surface}
-              onChange={(e) => setFormData({
-                ...formData,
-                specifications: { ...formData.specifications, surface: e.target.value }
-              })}
-              className="w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="ex: 20-25m²"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">
-              Niveau sonore
-            </label>
-            <input
-              type="text"
-              value={formData.specifications.niveau_sonore}
-              onChange={(e) => setFormData({
-                ...formData,
-                specifications: { ...formData.specifications, niveau_sonore: e.target.value }
-              })}
-              className="w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="ex: 21dB"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">
-              Efficacité énergétique
-            </label>
-            <input
-              type="text"
-              value={formData.specifications.efficacite}
-              onChange={(e) => setFormData({
-                ...formData,
-                specifications: { ...formData.specifications, efficacite: e.target.value }
-              })}
-              className="w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="ex: A++"
-            />
-          </div>
-        </div>
       </div>
-    </div>
   );
 
   const renderPriceStep = () => (
