@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
 import { useFirebase } from '../hooks/useFirebase';
 import { SchedulingService, Installation, Team } from './scheduling-service';
-import { doc, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc, collection, query, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 
 // Mettez à jour l'interface Appointment dans ce fichier également
@@ -75,6 +75,10 @@ interface SchedulingContextType {
 const SchedulingContext = createContext<SchedulingContextType | null>(null);
 
 export function SchedulingProvider({ children }: { children: React.ReactNode }) {
+  // Supprimer cette ligne qui crée un conflit
+  // const [teams, setTeams] = useState<Team[]>([]);
+  
+  // Garder uniquement cette déclaration
   const { 
     data: teams, 
     loading: teamsLoading, 
@@ -83,12 +87,22 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
     add: addTeam
   } = useFirebase<Team>('teams', { orderByField: 'name' });
 
+  // Garder cette ligne
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  
   const {
-    data: appointments,
+    data: appointmentsFromFirebase,
     add: addAppointment,
     update: updateAppointment,
     remove: removeAppointment
   } = useFirebase<Appointment>('appointments', { orderByField: 'date' });
+
+  // Fusionner les rendez-vous de useState et useFirebase
+  useEffect(() => {
+    if (appointmentsFromFirebase) {
+      setAppointments(appointmentsFromFirebase);
+    }
+  }, [appointmentsFromFirebase]);
 
   const {
     data: projects,
@@ -207,6 +221,29 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
       status: newStatus
     });
   };
+
+  // Assurez-vous que cette fonction récupère tous les rendez-vous
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        const appointmentsRef = collection(db, 'appointments');
+        const q = query(appointmentsRef);
+        const querySnapshot = await getDocs(q);
+        
+        const appointmentsData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Appointment[];
+        
+        setAppointments(appointmentsData);
+        console.log('Rendez-vous récupérés:', appointmentsData.length);
+      } catch (error) {
+        console.error('Erreur lors de la récupération des rendez-vous:', error);
+      }
+    };
+    
+    fetchAppointments();
+  }, []);
 
   const value = {
     findOptimalSlot,

@@ -31,7 +31,6 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [formData, setFormData] = useState({
-    id:'',
     contact: {
       firstName: '',
       lastName: '',
@@ -49,23 +48,15 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
     tag: null as 'MPR' | 'Financement' | null,
     selectedProducts: [] as any[],
     installationDate: '',
-    selectedTeam: null as any
+    selectedTeam: null as any,
+    installationDurationInDays: 0 // Nouvelle propriété pour stocker la durée d'installation en jours
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { addProject, addAppointment } = useScheduling();
-    // ✅ INSERT THIS RIGHT HERE
-    useEffect(() => {
-      if (isOpen) {
-        setFormData((prev) => ({
-          ...prev,
-          id: prev.id || Math.random().toString(36).substring(2, 11),
-        }));
-        fetchProducts();
-      }
-    }, [isOpen]);
 
   // 🔄 Charger les produits depuis Firebase
+  useEffect(() => {
     const fetchProducts = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, 'products'));
@@ -102,6 +93,7 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
     //   fetchProducts();
     // }
 
+  // Modifier la fonction handleFieldUpdate pour calculer la durée d'installation lorsque les produits sont sélectionnés
   const handleFieldUpdate = (field: string, value: any) => {
     const fields = field.split('.');
     setFormData(prev => {
@@ -111,9 +103,48 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
         current = current[fields[i]];
       }
       current[fields[fields.length - 1]] = value;
+  
+      // Si nous mettons à jour les produits sélectionnés, calculer la durée d'installation
+      if (field === 'selectedProducts') {
+        // Calcul du temps d'installation total
+        const totalInstallationTime = value.reduce(
+          (acc: number, p: any) => {
+            let installTime = 0;
+            
+            if (p.specifications && p.specifications.installationTime !== undefined) {
+              installTime = parseInt(p.specifications.installationTime) || 0;
+            } else if (p.installationTime !== undefined) {
+              installTime = parseInt(p.installationTime) || 0;
+            }
+            
+            return acc + installTime;
+          },
+          0
+        );
+  
+        // Calculer la durée en heures et jours
+        const durationInHours = Math.max(1, Math.ceil(totalInstallationTime / 60));
+        // Limiter la durée à maximum 2 jours
+        const durationInDays = Math.min(2, durationInHours / 8); // 8 heures par jour de travail
+        
+        console.log(`Mise à jour des produits: Durée d'installation calculée: ${durationInDays.toFixed(1)} jours`);
+        
+        // Mettre à jour la durée d'installation dans l'état
+        newData.installationDurationInDays = durationInDays;
+        
+        // Si un vendredi est déjà sélectionné et que la durée est > 1 jour, réinitialiser la date
+        if (newData.installationDate) {
+          const selectedDate = new Date(newData.installationDate);
+          if (selectedDate.getDay() === 5 && durationInDays > 1) {
+            console.log("Réinitialisation de la date car c'est un vendredi et l'installation prend plus d'un jour");
+            newData.installationDate = '';
+          }
+        }
+      }
+  
       return newData;
     });
-
+  
     if (errors[field]) {
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -197,6 +228,7 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
     }
   };
 
+  // Dans la fonction handleSubmit
   const handleSubmit = async () => {
     if (validateStep()) {
       try {
@@ -217,24 +249,28 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
           },
           0
         );
-
+  
         console.log(`Temps total d'installation en minutes: ${totalInstallationTime}`);
-
+  
         // Calculer la durée en heures et jours
         const durationInHours = Math.max(1, Math.ceil(totalInstallationTime / 60));
-        const durationInDays = durationInHours / 8; // 8 heures par jour de travail
-
-        console.log(`Durée en heures: ${durationInHours}h, Durée en jours: ${durationInDays.toFixed(1)} jours`);
-
+        // Limiter la durée à maximum 2 jours
+        const durationInDays = Math.min(2, durationInHours / 8); // 8 heures par jour de travail
+  
+        console.log(`Durée en heures: ${durationInHours}h, Durée en jours: ${durationInDays.toFixed(1)} jours (plafonnée à 2 jours)`);
+  
+        // Ajouter cette information à l'état pour la passer au composant PlanningStep
+        handleFieldUpdate('installationDurationInDays', durationInDays);
+  
         let durationText;
         if (durationInDays >= 1) {
-          // Si c'est plus d'un jour, afficher en jours
+          // Si c'est plus d'un jour, afficher en jours (maximum 2)
           durationText = `${durationInDays.toFixed(1)} jours`;
         } else {
           // Sinon afficher en heures
           durationText = `${durationInHours}h`;
         }
-
+  
         console.log(`Texte de durée formaté: ${durationText}`);
 // Génère un nouvel ID Firestore pour le client
 const newClientRef = doc(collection(db, "clients"));
@@ -363,8 +399,6 @@ onClose();
       }
     }
   };
-  
-  
 
   return (
     <>
@@ -435,6 +469,7 @@ onClose();
                     selectedProducts={formData.selectedProducts}
                     selectedTeam={formData.selectedTeam}
                     installationDate={formData.installationDate}
+                    installationDurationInDays={formData.installationDurationInDays}
                     errors={errors}
                     onTeamSelect={(team) => handleFieldUpdate('selectedTeam', team)}
                     onDateChange={(date) => handleFieldUpdate('installationDate', date)}
