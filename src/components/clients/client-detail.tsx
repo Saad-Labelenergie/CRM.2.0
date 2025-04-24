@@ -4,6 +4,7 @@ import { UpdateClientModal } from './components/update-client-modal';
 import { useProducts } from '../../lib/hooks/useProducts';
 import { useAppointments } from '../../lib/hooks/useAppointments';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSAV } from '../../contexts/sav-context';
 import { db } from '../../lib/firebase';
 import { 
   ArrowLeft, 
@@ -13,6 +14,7 @@ import {
   MapPin,
   Tag,
   Building2,
+  ArrowRight ,
   Calendar,
   Star,
   TrendingUp,
@@ -59,6 +61,7 @@ export function ClientDetail() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);  
   const [maintenanceRecords, setMaintenanceRecords] = useState<any[]>([]);
+  const { tickets } = useSAV();
 
 
 
@@ -161,7 +164,10 @@ const formatDate = (date: Date) => {
   })}`;
 };
 
-
+// Créez une variable pour filtrer les tickets du client
+const clientTickets = tickets.filter(ticket => 
+  ticket.client.id === client.id
+);
 
 
 const handleUpdateClient  = async (updatedClient: any) => {
@@ -290,10 +296,20 @@ const handleDeleteClient = async (clientId: string) => {
             whileHover={{ y: -5 }}
             className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
           >
-            <h2 className="text-xl font-semibold mb-6 flex items-center">
-              <Package className="w-5 h-5 mr-2 text-green-500" />
-              Produits
-            </h2>
+<h2 className="text-xl font-semibold mb-6 flex items-center justify-between">
+  <div className="flex items-center">
+  <Package className="w-5 h-5 mr-2 text-green-500" />
+  Produits
+  </div>
+  <motion.button
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    onClick={() => navigate(`/products`)}
+    className="text-primary hover:text-primary/80 transition-colors"
+  >
+    <ArrowRight className="w-5 h-5" />
+  </motion.button>
+</h2>
 <div className="space-y-4">
   {assignedProducts.length > 0 ? (
     <>
@@ -327,10 +343,20 @@ const handleDeleteClient = async (clientId: string) => {
   whileHover={{ y: -5 }}
   className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
 >
-  <h2 className="text-xl font-semibold mb-6 flex items-center">
-    <Clock className="w-5 h-5 mr-2 text-orange-500" />
-    Installations
-  </h2>
+<h2 className="text-xl font-semibold mb-6 flex items-center justify-between">
+  <div className="flex items-center">
+  <Clock className="w-5 h-5 mr-2 text-orange-500" />
+  Installations
+  </div>
+  <motion.button
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    onClick={() => navigate(`/calendar`)}
+    className="text-primary hover:text-primary/80 transition-colors"
+  >
+    <ArrowRight className="w-5 h-5" />
+  </motion.button>
+</h2>
 
   <div className="space-y-4">
     {clientAppointments.length > 0 ? (
@@ -384,13 +410,66 @@ const handleDeleteClient = async (clientId: string) => {
   whileHover={{ y: -5 }}
   className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
 >
-  <h2 className="text-xl font-semibold mb-6 flex items-center">
+<h2 className="text-xl font-semibold mb-6 flex items-center justify-between">
+  <div className="flex items-center">
     <AlertCircle className="w-5 h-5 mr-2 text-yellow-500" />
-    SAV
-  </h2>
+    SAV ({clientTickets.length})
+  </div>
+  <motion.button
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    onClick={() => navigate(`/sav`)}
+    className="text-primary hover:text-primary/80 transition-colors"
+  >
+    <ArrowRight className="w-5 h-5" />
+  </motion.button>
+</h2>
 
-  <div className="text-sm text-muted-foreground">
-    Aucune demande SAV enregistrée.
+  <div className="space-y-4">
+    {clientTickets.length > 0 ? (
+      <ul className="divide-y divide-border">
+        {clientTickets.map((ticket) => (
+          <li key={ticket.id} className="py-3 group">
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <div className="font-medium text-primary">
+                    Ticket #{ticket.number}
+                  </div>
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                    ticket.status === 'nouveau' ? 'bg-blue-100 text-blue-800' :
+                    ticket.status === 'en_cours' ? 'bg-orange-100 text-orange-800' :
+                    ticket.status === 'resolu' ? 'bg-green-100 text-green-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {ticket.status.replace('_', ' ').toUpperCase()}
+                  </span>
+                </div>
+                <div className="text-sm mt-1 text-muted-foreground">
+                  {ticket.product.name} ({ticket.product.reference})
+                </div>
+                <div className="text-sm mt-1">
+                  {ticket.description}
+                </div>
+                <div className="flex items-center text-sm mt-2 text-muted-foreground">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  {new Date(ticket.createdAt).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </div>
+
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <div className="text-center py-8 text-muted-foreground">
+        Aucune demande SAV enregistrée
+      </div>
+    )}
   </div>
 </motion.div>
         </div>
@@ -443,10 +522,20 @@ const handleDeleteClient = async (clientId: string) => {
   whileHover={{ y: -5 }}
   className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
 >
-  <h2 className="text-xl font-semibold mb-6 flex items-center">
-    <FileText className="w-5 h-5 mr-2 text-cyan-500" />
-    Entretien
-  </h2>
+<h2 className="text-xl font-semibold mb-6 flex items-center justify-between">
+  <div className="flex items-center">
+  <FileText className="w-5 h-5 mr-2 text-cyan-500" />
+  Entretien
+  </div>
+  <motion.button
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    onClick={() => navigate(`/maintenance`)}
+    className="text-primary hover:text-primary/80 transition-colors"
+  >
+    <ArrowRight className="w-5 h-5" />
+  </motion.button>
+</h2>
 
   {maintenanceRecords.length > 0 ? (
     <ul className="space-y-4">
