@@ -104,7 +104,8 @@ export function NewTicketModal({ isOpen, onClose, onSave }: NewTicketModalProps)
         number: generateTicketNumber(),
         client: {
           name: selectedInstallation!.client.name,
-          address: selectedInstallation!.client.address
+          address: selectedInstallation!.client.address,
+          id: selectedInstallation!.client.id
         },
         product: {
           name: selectedInstallation!.product.name,

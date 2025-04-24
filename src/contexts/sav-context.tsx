@@ -18,6 +18,7 @@ export interface Ticket {
   id?: string;
   number: string;
   client: {
+    id: string;
     name: string;
     address: string;
   };
@@ -42,6 +43,7 @@ export interface Ticket {
 export interface Installation {
   id?: string;
   client: {
+    id: string;
     name: string;
     address: string;
   };
@@ -255,14 +257,31 @@ export function SAVProvider({ children }: SAVProviderProps) {
 
   // Ajouter un nouveau ticket
   const addTicket = async (ticket: Omit<Ticket, 'id'>) => {
+    if (!ticket.client?.id) {
+      throw new Error("❌ Le champ 'client.id' est requis pour créer un ticket.");
+    }
+  
     try {
       await addDoc(collection(db, 'tickets'), {
-        ...ticket,
-        createdAt: new Date().toISOString()
+        number: ticket.number,
+        client: {
+          id: ticket.client.id,
+          name: ticket.client.name,
+          address: ticket.client.address
+        },
+        product: ticket.product,
+        issueType: ticket.issueType,
+        description: ticket.description,
+        status: ticket.status,
+        priority: ticket.priority,
+        createdAt: new Date().toISOString(),
+        team: ticket.team,
+        installationDate: ticket.installationDate,
+        lastUpdate: new Date().toISOString() // Set current time for lastUpdate
       });
     } catch (err) {
       console.error('Error adding ticket:', err);
-      setError('Erreur lors de l\'ajout du ticket');
+      setError("Erreur lors de l'ajout du ticket");
       throw err;
     }
   };
@@ -341,10 +360,11 @@ export function SAVProvider({ children }: SAVProviderProps) {
       installationsData.push({
         id: `${client.id}-${product.id}`,
         client: {
+          id:client.id,
           name: client.name || `${client.contact?.firstName || ''} ${client.contact?.lastName || ''}`.trim(),
           address: client.address ? 
             `${client.address.street}, ${client.address.postalCode} ${client.address.city}` : 
-            'Adresse non spécifiée'
+            'Adresse non spécifiée',
         },
         product: {
           name: product.name || 'Produit sans nom',
@@ -364,9 +384,10 @@ export function SAVProvider({ children }: SAVProviderProps) {
         id: `${client.id}-default`,
         client: {
           name: client.name || `${client.contact?.firstName || ''} ${client.contact?.lastName || ''}`.trim(),
-          address: client.address ? 
-            `${client.address.street}, ${client.address.postalCode} ${client.address.city}` : 
-            'Adresse non spécifiée'
+          address: client.address ?
+            `${client.address.street}, ${client.address.postalCode} ${client.address.city}` :
+            'Adresse non spécifiée',
+          id: client.id
         },
         product: {
           name: 'Produit non spécifié',
