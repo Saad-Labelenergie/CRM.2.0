@@ -101,7 +101,7 @@ export function TeamDetail() {
         </motion.button>
       </div>
 
-      <TeamStats />
+      <TeamStats team={team}/>
       <TeamPerformance />
       <TeamMembers teamId={team.id} />
       <CompletedProjects teamID={team.id} />
