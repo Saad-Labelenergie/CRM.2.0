@@ -307,7 +307,12 @@ export function Teams() {
                 </motion.button>
               </div>
 
-              <div className="mt-6 space-y-4" onClick={() => navigate(`/teams/${team.id}`)}>
+              <div className="mt-6 space-y-4 relative group">
+  <button
+    onClick={() => navigate(`/teams/${team.id}`)}
+    className="absolute inset-0 z-0 rounded-xl focus:outline-none"
+    aria-label={`Voir les détails de ${team.name}`}
+  />
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center text-muted-foreground">
                     <Users className="w-4 h-4 mr-2" />
