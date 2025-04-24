@@ -546,46 +546,57 @@ export function Clients() {
           className="bg-card rounded-xl shadow-lg border border-border/50 overflow-hidden"
         >
 <div className="rounded-lg border border-border/50 bg-card overflow-hidden">
-  <div className="relative overflow-x-auto">
-    <table className="w-full">
-      <thead className="bg-muted/50">
-        <tr className="border-b border-border/50">
-          <th className="text-left p-4 font-medium text-muted-foreground">Statut</th>
-          <th className="text-left p-4 font-medium text-muted-foreground">Client</th>
-          <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">Email</th>
-          <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Téléphone</th>
-          <th className="text-left p-4 font-medium text-muted-foreground hidden xl:table-cell">Adresse</th>
-          <th className="text-center p-4 font-medium text-muted-foreground">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {filteredClients.slice(clientsIndexOfFirstItem, clientsIndexOfLastItem).map((client, index) => (
-          <motion.tr
-            key={`${client.id}-${client.status}`}
-            variants={itemVariants}
-            onClick={() => navigate(`/clients/${client.id}`)}
-            className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors cursor-pointer group"
-          >
-            {/* Cellule Statut avec menu déroulant */}
-            <td className="p-4">
-              <div className="relative group">
-                <div className="flex items-center space-x-2 px-3 py-1 rounded-full text-sm cursor-default">
-                  <span className={`w-2 h-2 rounded-full ${
-                    client.status === 'completed' ? 'bg-green-500' :
-                    client.status === 'pending' ? 'bg-orange-500' :
-                    'bg-blue-500'
-                  }`}></span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    client.status === 'completed' 
-                      ? 'bg-green-100 text-green-800' 
-                      : client.status === 'pending'
-                      ? 'bg-orange-100 text-orange-800'
-                      : 'bg-blue-100 text-blue-800'
-                  }`}>
-                    {client.status === 'completed' ? 'Terminé' : 
-                    client.status === 'pending' ? 'En attente' : 'En cours'}
-                  </span>
-                </div>
+<div className="overflow-x-auto rounded-xl shadow-sm border border-border bg-card">
+  <table className="w-full text-sm text-left text-muted-foreground">
+    <thead className="bg-muted/50 text-muted-foreground sticky top-0 z-10 rounded-t-xl">
+      <tr className="border-b border-border">
+        <th className="px-6 py-4">Statut</th>
+        <th className="px-6 py-4">Client</th>
+        <th className="px-6 py-4 hidden lg:table-cell">Email</th>
+        <th className="px-6 py-4 hidden md:table-cell">Téléphone</th>
+        <th className="px-6 py-4 hidden xl:table-cell">Adresse</th>
+        <th className="px-6 py-4 text-center">Actions</th>
+      </tr>
+    </thead>
+    <tbody className="divide-y divide-border">
+      {filteredClients.slice(clientsIndexOfFirstItem, clientsIndexOfLastItem).map((client, index) => (
+        <motion.tr
+          key={`${client.id}-${client.status}`}
+          variants={itemVariants}
+          onClick={() => navigate(`/clients/${client.id}`)}
+          className="hover:bg-muted transition-colors cursor-pointer"
+        >
+
+
+          {/* Cellule Statut */}
+          <td className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
+            <select
+              value={client.status}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                e.stopPropagation();
+                setStatusChangeModal({
+                  isOpen: true,
+                  clientId: client.id,
+                  clientName: client.name,
+                  newStatus: e.target.value as ClientStatus
+                });
+              }}
+              className={`px-3 py-1 rounded-md border text-sm w-full
+                ${
+                  client.status === 'completed'
+                    ? 'bg-green-100 text-green-800 border-green-300'
+                    : client.status === 'pending'
+                    ? 'bg-orange-100 text-orange-800 border-orange-300'
+                    : 'bg-blue-100 text-blue-800 border-blue-300'
+                }`}
+            >
+              <option value="in-progress">En cours</option>
+              <option value="pending">En attente</option>
+              <option value="completed">Terminé</option>
+            </select>
+
+
 
                 {/* Menu déroulant du statut */}
                 <div className={`absolute right-0 w-48 bg-card rounded-lg shadow-lg border border-border/50 invisible group-hover:visible z-50 ${
@@ -648,8 +659,7 @@ export function Clients() {
                     </li>
                   </ul>
                 </div>
-              </div>
-            </td>
+          </td>    
 
             {/* Cellule Client */}
             <td className="p-4">
@@ -733,59 +743,45 @@ export function Clients() {
           </div>
         </div>
         
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => paginateClients(Math.max(1, currentClientsPage - 1))}
-            disabled={currentClientsPage === 1}
-            className={`px-3 py-1 rounded-lg transition-colors ${
-              currentClientsPage === 1
-                ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                : 'bg-accent hover:bg-accent/80'
-            }`}
-          >
-            Précédent
-          </button>
-          
-          {Array.from({ length: Math.min(5, clientsTotalPages) }, (_, i) => {
-            let pageNumber;
-            if (clientsTotalPages <= 5) {
-              pageNumber = i + 1;
-            } else if (currentClientsPage <= 3) {
-              pageNumber = i + 1;
-            } else if (currentClientsPage >= clientsTotalPages - 2) {
-              pageNumber = clientsTotalPages - 4 + i;
-            } else {
-              pageNumber = currentClientsPage - 2 + i;
-            }
-            
-            return (
-              <button
-                key={pageNumber}
-                onClick={() => paginateClients(pageNumber)}
-                className={`px-3 py-1 rounded-lg transition-colors min-w-[2.5rem] ${
-                  currentClientsPage === pageNumber
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-accent hover:bg-accent/80'
-                }`}
-              >
-                {pageNumber}
-              </button>
-            );
-          })}
-          
-          <button
-            onClick={() => paginateClients(Math.min(clientsTotalPages, currentClientsPage + 1))}
-            disabled={currentClientsPage === clientsTotalPages}
-            className={`px-3 py-1 rounded-lg transition-colors ${
-              currentClientsPage === clientsTotalPages
-                ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                : 'bg-accent hover:bg-accent/80'
-            }`}
-          >
-            Suivant
-          </button>
-        </div>
-      </div>
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-border px-4 py-3 bg-card rounded-b-xl">
+  <div className="text-sm text-muted-foreground">
+    Affichage de {clientsIndexOfFirstItem + 1} à {Math.min(clientsIndexOfLastItem, filteredClients.length)} sur {filteredClients.length}
+  </div>
+  <div className="flex items-center space-x-2">
+    <button
+      onClick={() => paginateClients(Math.max(1, currentClientsPage - 1))}
+      disabled={currentClientsPage === 1}
+      className="px-3 py-1 rounded-full border border-border bg-background hover:bg-accent disabled:opacity-50"
+    >
+      ←
+    </button>
+    {Array.from({ length: Math.min(5, clientsTotalPages) }, (_, i) => {
+      let page = currentClientsPage <= 3 ? i + 1 : currentClientsPage >= clientsTotalPages - 2 ? clientsTotalPages - 4 + i : currentClientsPage - 2 + i;
+      return (
+        <button
+          key={page}
+          onClick={() => paginateClients(page)}
+          className={`px-3 py-1 rounded-full text-sm transition-all min-w-[2.5rem] ${
+            currentClientsPage === page
+              ? 'bg-primary text-white shadow-sm'
+              : 'bg-background border border-border hover:bg-muted/30'
+          }`}
+        >
+          {page}
+        </button>
+      );
+    })}
+    <button
+      onClick={() => paginateClients(Math.min(clientsTotalPages, currentClientsPage + 1))}
+      disabled={currentClientsPage === clientsTotalPages}
+      className="px-3 py-1 rounded-full border border-border bg-background hover:bg-accent disabled:opacity-50"
+    >
+      →
+    </button>
+  </div>
+</div>
+</div>
+
     )}
   </div>
 </div>
