@@ -282,7 +282,7 @@ React.useEffect(() => {
             </AnimatePresence>
 
             <div className="flex items-center space-x-4">
-              <motion.button
+              {/* <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setIsDark(!isDark)}
@@ -314,7 +314,7 @@ React.useEffect(() => {
                 <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-primary text-primary-foreground text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                   {isDark ? 'Mode clair' : 'Mode sombre'}
                 </span>
-              </motion.button>
+              </motion.button> */}
               <div className="relative" ref={notificationRef}>
   <motion.button
     whileHover={{ scale: 1.05 }}
