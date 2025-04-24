@@ -116,7 +116,7 @@ export function VehicleTracking({ teamId }: VehicleTrackingProps) {
                   )}
                 </Section>
 
-                <Section title="Maintenance" icon={<Wrench className="w-4 h-4 mr-2 text-orange-500" />}>
+                {/* <Section title="Maintenance" icon={<Wrench className="w-4 h-4 mr-2 text-orange-500" />}>
                   <Row label="Dernière révision" value={vehicle?.lastMaintenance || 'Non assigné'} />
                   <Row label="Prochaine révision" value={vehicle?.nextMaintenance || 'Non assigné'} />
                   <Row
@@ -131,11 +131,11 @@ export function VehicleTracking({ teamId }: VehicleTrackingProps) {
                       )
                     }
                   />
-                </Section>
+                </Section> */}
               </div>
 
-              <div className="space-y-4">
-                <Section
+              {/* <div className="space-y-4"> */}
+                {/* <Section
                   title="Kilométrage"
                   icon={<Gauge className="w-4 h-4 mr-2 text-green-500" />}
                   trailing={
@@ -151,9 +151,9 @@ export function VehicleTracking({ teamId }: VehicleTrackingProps) {
                   <Row label="Kilométrage actuel" value={`${vehicle?.currentMileage?.toLocaleString() || 0} km`} />
                   <Row label="Moyenne mensuelle" value={`${vehicle?.monthlyAverage?.toLocaleString() || 0} km`} />
                   <Row label="Dernier relevé" value={vehicle?.lastReading || 'Non assigné'} />
-                </Section>
+                </Section> */}
 
-                <Section title="Consommation" icon={<Fuel className="w-4 h-4 mr-2 text-purple-500" />}>
+                {/* <Section title="Consommation" icon={<Fuel className="w-4 h-4 mr-2 text-purple-500" />}>
                   <Row label="Moyenne" value={`${vehicle?.fuelConsumption || 0} L/100km`} />
                   <Row
                     label="Dernier plein"
@@ -165,9 +165,9 @@ export function VehicleTracking({ teamId }: VehicleTrackingProps) {
                     }
                   />
                   <Row label="Coût mensuel moyen" value={`${vehicle?.monthlyCost || 0} €`} />
-                </Section>
+                </Section> */}
 
-                <Section title="Alertes" icon={<AlertOctagon className="w-4 h-4 mr-2 text-red-500" />}>
+                {/* <Section title="Alertes" icon={<AlertOctagon className="w-4 h-4 mr-2 text-red-500" />}>
                   <div className="flex items-center text-orange-500">
                     <AlertTriangle className="w-4 h-4 mr-2" />
                     <span className="text-sm">Révision à prévoir dans 15 jours</span>
@@ -176,8 +176,8 @@ export function VehicleTracking({ teamId }: VehicleTrackingProps) {
                     <CheckCircle className="w-4 h-4 mr-2" />
                     <span className="text-sm">Contrôle technique à jour</span>
                   </div>
-                </Section>
-              </div>
+                </Section> */}
+              {/* </div> */}
             </div>
           </motion.div>
         ))}
