@@ -3,6 +3,7 @@ import { Calendar, Clock, Package, Info, AlertCircle, Users, MapPin, ChevronRigh
 import { useScheduling } from '../../../../lib/scheduling/scheduling-context';
 import { format, addDays, startOfWeek, endOfWeek, isSameDay, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { isValid, isFriday } from 'date-fns';
 
 interface TeamAvailability {
   id?: string;
@@ -49,10 +50,11 @@ interface TeamAvailability {
   }>;
 }
 
-interface PlanningStepProps {
-  selectedProducts: Product[];
-  selectedTeam: TeamAvailability | null;
+export interface PlanningStepProps {
+  selectedProducts: any[];
+  selectedTeam: any;
   installationDate: string;
+  installationDurationInDays?: number; // Add this property to the interface
   errors: Record<string, string>;
   onTeamSelect: (team: TeamAvailability) => void;
   onDateChange: (date: string) => void;
@@ -62,6 +64,7 @@ export function PlanningStep({
   selectedProducts,
   selectedTeam,
   installationDate,
+  installationDurationInDays = 0, // Default value
   errors,
   onTeamSelect,
   onDateChange
@@ -94,13 +97,17 @@ export function PlanningStep({
       const isToday = isSameDay(date, today);
       const isSelected = installationDate && isSameDay(date, parseISO(installationDate));
       const isPast = date < today;
+      
+      // Vérifier si ce jour doit être désactivé (vendredi pour installation > 1 jour)
+      const isFridayMultiDay = dayOfWeek === 5 && installationDurationInDays > 1;
+      const isDisabled = isPast || isFridayMultiDay;
     
       days.push(
         <div
           key={date.toISOString()}
-          onClick={() => !isPast && onDateChange(format(date, 'yyyy-MM-dd'))}
+          onClick={() => !isDisabled && onDateChange(format(date, 'yyyy-MM-dd'))}
           className={`p-4 rounded-lg border cursor-pointer transition-all ${
-            isPast ? 'opacity-50 cursor-not-allowed' :
+            isDisabled ? 'opacity-50 cursor-not-allowed' :
             isSelected ? 'bg-primary/20 border-primary' :
             isToday ? 'bg-accent/50' : 'hover:bg-accent/50'
           }`}
@@ -114,6 +121,11 @@ export function PlanningStep({
           <div className="mt-1 text-sm text-muted-foreground">
             {format(date, 'MMMM', { locale: fr })}
           </div>
+          {isFridayMultiDay && (
+            <div className="mt-1 text-xs text-amber-500">
+              Non disponible (installation sur {installationDurationInDays.toFixed(1)} jours)
+            </div>
+          )}
         </div>
       );
     }

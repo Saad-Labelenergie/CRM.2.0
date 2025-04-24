@@ -383,7 +383,7 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
         </div>
       </div> */}
 
-      <div className="bg-accent/50 rounded-lg p-4">
+      {/* <div className="bg-accent/50 rounded-lg p-4">
         <h3 className="font-medium mb-4">Fréquence</h3>
         <div className="grid grid-cols-3 gap-2">
           {[3, 6, 12].map((months) => (
@@ -401,7 +401,7 @@ export function NewMaintenanceModal({ isOpen, onClose, onSave }: NewMaintenanceM
             </button>
           ))}
         </div>
-      </div>
+      </div> */}
 
       <div className="bg-accent/50 rounded-lg p-4">
         <h3 className="font-medium mb-4">Dates</h3>
