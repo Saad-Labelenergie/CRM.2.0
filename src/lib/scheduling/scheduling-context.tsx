@@ -9,7 +9,7 @@ interface Appointment {
   id: string;
   title: string;
   client: {
-    id: number;
+    id: string;
     name: string;
     postalCode: string;
   };

@@ -4,6 +4,7 @@ import { UpdateClientModal } from './components/update-client-modal';
 import { useProducts } from '../../lib/hooks/useProducts';
 import { useAppointments } from '../../lib/hooks/useAppointments';
 import { useParams, useNavigate } from 'react-router-dom';
+import { db } from '../../lib/firebase';
 import { 
   ArrowLeft, 
   Users,
@@ -28,6 +29,8 @@ import { DeleteClientModal } from './components/delete-client-modal';
 import { NewClientModal } from './components/new-client-modal';
 import { Toast } from '../ui/toast';
 import { ProductsStep } from './components/steps/products-step';
+import { deleteDoc, doc, collection, query, where, getDocs } from 'firebase/firestore';
+
 
 export function ClientDetail() {
   const { id } = useParams();
@@ -36,7 +39,6 @@ export function ClientDetail() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const { data: products = [] } = useProducts();
   const { data: appointments = [] } = useAppointments();
-
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);  
 
@@ -73,20 +75,15 @@ export function ClientDetail() {
     );
   }
 
-  //Produits
+  const clientAppointments = appointments.filter(
+    (a) => String(a.client.id) === String(client.id)
+  );
 
   const assignedProducts = products.filter(product =>
     client.productsIds?.includes(product.id)
   );
   
   const totalTTC = assignedProducts.reduce((acc, product) => acc + Number(product.price?.ttc || 0), 0);
-
-
-  //Rendez-vous
-
-const clientAppointments = appointments.filter(
-  (appointment) => String(appointment.client.id) === client.id
-);
   
   // Fonction utilitaire pour formater la dates
 const formatClientSinceDate = (dateInput: any) => {
@@ -131,18 +128,26 @@ const handleUpdateClient  = async (updatedClient: any) => {
 };
 
 
-  const handleDeleteClient = async () => {
-    try {
-      await removeClient(client.id);
-      setShowSuccessToast(true);
-      setTimeout(() => {
-        navigate('/clients');
-      }, 1500);
-    } catch (error) {
-      console.error('Erreur lors de la suppression du client:', error);
-    }
-  };
+const handleDeleteClient = async (clientId: string) => {
+  try {
+    // Supprimer les rendez-vous associés
+    const appointmentsQuery = query(
+      collection(db, 'appointments'), 
+      where('client.id', '==', clientId)
+    );
+    
+    const querySnapshot = await getDocs(appointmentsQuery);
+    const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+    await Promise.all(deletePromises);
 
+    // Supprimer le client
+    await deleteDoc(doc(db, 'clients', clientId));
+    
+    console.log('Client et rendez-vous supprimés avec succès');
+  } catch (error) {
+    console.error('Erreur lors de la suppression :', error);
+  }
+};
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -282,29 +287,44 @@ const handleUpdateClient  = async (updatedClient: any) => {
   <div className="space-y-4">
     {clientAppointments.length > 0 ? (
       <ul className="divide-y divide-border">
-        {clientAppointments.map((appointment) => (
-          <li key={appointment.id} className="py-2">
-            <div className="flex justify-between items-center">
-              <div>
-                <div className="font-medium text-primary">{appointment.title}</div>
-                <div className="text-sm text-muted-foreground">
-                  {new Date(`${appointment.date}T${appointment.time}`).toLocaleString('fr-FR', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })} • {appointment.type}
-                </div>
-              </div>
-              <div className="text-xs font-medium rounded px-2 py-1" style={{ backgroundColor: appointment.teamColor || '#E5E7EB' }}>
-                {appointment.status}
-              </div>
+  {clientAppointments.map((appointment) => (
+    <li key={appointment.id} className="py-2">
+      <div className="flex justify-between items-start gap-2">
+        <div>
+          <div className="font-medium text-primary">{appointment.title}</div>
+          <div className="text-sm text-muted-foreground">
+            {new Date(`${appointment.date}T${appointment.time}`).toLocaleString('fr-FR', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })} • {appointment.type}
+          </div>
+          {appointment.team && (
+            <div className="text-sm text-blue-600 mt-1">
+              Équipe : <span className="font-semibold">{appointment.team}</span>
             </div>
-          </li>
-        ))}
-      </ul>
+          )}
+          <div className="text-sm text-muted-foreground mt-1">
+            Durée : <span className="font-medium">{appointment.duration}</span>
+          </div>
+        </div>
+        {/* <div
+          className="text-xs font-medium rounded px-2 py-1 mt-1"
+          style={{
+            backgroundColor: appointment.teamColor || '#E5E7EB',
+            color: '#fff',
+          }}
+        >
+          {appointment.status}
+        </div> */}
+      </div>
+    </li>
+  ))}
+</ul>
+
     ) : (
       <div className="text-center py-8 text-muted-foreground">
         Aucun rendez-vous programmé
@@ -312,6 +332,7 @@ const handleUpdateClient  = async (updatedClient: any) => {
     )}
   </div>
 </motion.div>
+
         </div>
 
         <div className="space-y-6">
@@ -365,6 +386,7 @@ const handleUpdateClient  = async (updatedClient: any) => {
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDeleteClient}
         clientName={client.name}
+        clientId={client.id}
       />
 <UpdateClientModal
   isOpen={isEditModalOpen}
@@ -372,6 +394,7 @@ const handleUpdateClient  = async (updatedClient: any) => {
   onSave={handleUpdateClient}
   initialData={{
     ...client,
+    appointments: clientAppointments
   }}
 />
 
