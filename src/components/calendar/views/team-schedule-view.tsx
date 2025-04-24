@@ -261,7 +261,7 @@ export function TeamScheduleView() {
                               }}
                             >
                               {/* Apply bold, larger size, and wrapping */}
-                              <div className="text-sm font-semibold overflow-hidden"> 
+                              <div className="text-sm font-semibold overflow-hidden uppercase"> 
                                 {appointment.client.name}
                               </div>
                               <div className="text-xs mt-1 opacity-80">{appointment.duration}</div>

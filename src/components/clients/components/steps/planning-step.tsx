@@ -69,7 +69,7 @@ export function PlanningStep({
   onTeamSelect,
   onDateChange
 }: PlanningStepProps) {
-  const { teams } = useScheduling();
+  const { teams, appointments } = useScheduling(); // Récupérer aussi les rendez-vous
   
   const availableTeams = (teams?.filter(team => team.isActive) || []) as TeamAvailability[];
 
@@ -84,6 +84,36 @@ export function PlanningStep({
   );
   const daysNeeded = Math.ceil(totalInstallationTime / (8 * 60));
   const today = new Date();
+
+  // Filtrer les équipes disponibles en fonction de la date sélectionnée
+  const getAvailableTeamsForDate = () => {
+    if (!installationDate || !appointments) return availableTeams;
+
+    // Calculer les dates pour les installations multi-jours
+    const installationDates = [installationDate];
+    if (installationDurationInDays > 1) {
+      const nextDate = new Date(installationDate);
+      nextDate.setDate(nextDate.getDate() + 1);
+      installationDates.push(nextDate.toISOString().split('T')[0]);
+    }
+
+    // Filtrer les équipes qui n'ont pas de rendez-vous aux dates d'installation
+    return availableTeams.filter(team => {
+      // Vérifier si l'équipe a des rendez-vous aux dates d'installation
+      const hasAppointmentOnDate = appointments.some(appointment => {
+        return (
+          appointment.team === team.name && 
+          installationDates.includes(appointment.date)
+        );
+      });
+      
+      // Retourner true si l'équipe n'a pas de rendez-vous à ces dates
+      return !hasAppointmentOnDate;
+    });
+  };
+
+  // Obtenir les équipes disponibles pour la date sélectionnée
+  const teamsAvailableForSelectedDate = getAvailableTeamsForDate();
 
   const renderWeekCalendar = () => {
     const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -249,35 +279,46 @@ export function PlanningStep({
           <label className="block text-sm font-medium text-muted-foreground mb-2">
             Équipe d'installation
           </label>
-          {!teams || availableTeams.length === 0 ? (
+          {!teams ? (
             <div className="text-center py-4 text-muted-foreground">
-              {!teams ? 'Chargement des équipes...' : 'Aucune équipe active disponible'}
+              Chargement des équipes...
             </div>
+          ) : installationDate ? (
+            teamsAvailableForSelectedDate.length === 0 ? (
+              <div className="text-center py-4 text-amber-500 bg-amber-50 rounded-lg border border-amber-200 p-3">
+                <AlertCircle className="w-5 h-5 mx-auto mb-2" />
+                Aucune équipe disponible à cette date. Veuillez sélectionner une autre date.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {teamsAvailableForSelectedDate.map((team) => (
+                  <button
+                    key={team._id}
+                    onClick={() => onTeamSelect(team)}
+                    className={`w-full p-3 rounded-lg text-left transition-colors flex items-center justify-between ${
+                      selectedTeam?._id === team._id
+                        ? 'bg-primary/10 border-primary'
+                        : 'bg-background hover:bg-accent'
+                    } border`}
+                  >
+                    <div className="flex items-center">
+                      <Users className="w-4 h-4 mr-2" />
+                      {team.name}
+                      <div 
+                        className="w-3 h-3 rounded-full ml-2" 
+                        style={{ backgroundColor: team.color || '#3B82F6' }}
+                      />
+                    </div>
+                    {selectedTeam?._id === team._id && (
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )
           ) : (
-            <div className="space-y-2">
-              {availableTeams.map((team) => (
-                <button
-                  key={team._id}  // Utiliser _id au lieu de id
-                  onClick={() => onTeamSelect(team)}
-                  className={`w-full p-3 rounded-lg text-left transition-colors flex items-center justify-between ${
-                    selectedTeam?._id === team._id
-                      ? 'bg-primary/10 border-primary'
-                      : 'bg-background hover:bg-accent'
-                  } border`}
-                >
-                  <div className="flex items-center">
-                    <Users className="w-4 h-4 mr-2" />
-                    {team.name}
-                    <div 
-                      className="w-3 h-3 rounded-full ml-2" 
-                      style={{ backgroundColor: team.color || '#3B82F6' }}
-                    />
-                  </div>
-                  {selectedTeam?._id === team._id && (
-                    <div className="w-2 h-2 rounded-full bg-primary" />
-                  )}
-                </button>
-              ))}
+            <div className="text-center py-4 text-muted-foreground bg-accent/50 rounded-lg p-3">
+              Veuillez d'abord sélectionner une date d'installation
             </div>
           )}
         </div>
