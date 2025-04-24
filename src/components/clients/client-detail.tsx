@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { UpdateClientModal } from './components/update-client-modal';
 import { useProducts } from '../../lib/hooks/useProducts';
@@ -31,6 +31,23 @@ import { Toast } from '../ui/toast';
 import { ProductsStep } from './components/steps/products-step';
 import { deleteDoc, doc, collection, query, where, getDocs } from 'firebase/firestore';
 
+interface MaintenanceRecord {
+  id: string;
+  clientId: string;
+  clientName: string;
+  equipmentId: string;
+  equipmentName: string;
+  type: string;
+  frequency: number;
+  lastMaintenance: string;
+  nextMaintenance: string;
+  teamId: string | null;
+  teamName: string | null;
+  notes: string;
+  status: string;
+  contractNumber: string;
+  createdAt: string;
+} 
 
 export function ClientDetail() {
   const { id } = useParams();
@@ -41,12 +58,40 @@ export function ClientDetail() {
   const { data: appointments = [] } = useAppointments();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);  
+  const [maintenanceRecords, setMaintenanceRecords] = useState<any[]>([]);
+
 
 
 
   const client = clients.find(c => c.id === id);
 
-
+  useEffect(() => {
+    console.log("🔍 Fetching maintenance for clientId:", id);
+  
+    const fetchMaintenance = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, 'maintenances'));
+        const allRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  
+        console.log("📦 All maintenance records:", allRecords);
+  
+        const filteredRecords = allRecords.filter(
+          (r: any) => r.clientId?.trim() === id?.trim() // 🔥 Ajoute cette ligne ici
+        );
+  
+        console.log("✅ Filtered maintenance records:", filteredRecords);
+        setMaintenanceRecords(filteredRecords);
+  
+      } catch (error) {
+        console.error("❌ Error fetching maintenance:", error);
+      }
+    };
+  
+    fetchMaintenance();
+  }, [id]);
+  
+  
+  
   
   if (loading) {
     return (
@@ -115,6 +160,9 @@ const formatDate = (date: Date) => {
     year: 'numeric'
   })}`;
 };
+
+
+
 
 const handleUpdateClient  = async (updatedClient: any) => {
   try {
@@ -244,7 +292,7 @@ const handleDeleteClient = async (clientId: string) => {
           >
             <h2 className="text-xl font-semibold mb-6 flex items-center">
               <Package className="w-5 h-5 mr-2 text-green-500" />
-              Installations
+              Produits
             </h2>
 <div className="space-y-4">
   {assignedProducts.length > 0 ? (
@@ -281,7 +329,7 @@ const handleDeleteClient = async (clientId: string) => {
 >
   <h2 className="text-xl font-semibold mb-6 flex items-center">
     <Clock className="w-5 h-5 mr-2 text-orange-500" />
-    Rendez-vous
+    Installations
   </h2>
 
   <div className="space-y-4">
@@ -332,7 +380,19 @@ const handleDeleteClient = async (clientId: string) => {
     )}
   </div>
 </motion.div>
+<motion.div
+  whileHover={{ y: -5 }}
+  className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
+>
+  <h2 className="text-xl font-semibold mb-6 flex items-center">
+    <AlertCircle className="w-5 h-5 mr-2 text-yellow-500" />
+    SAV
+  </h2>
 
+  <div className="text-sm text-muted-foreground">
+    Aucune demande SAV enregistrée.
+  </div>
+</motion.div>
         </div>
 
         <div className="space-y-6">
@@ -377,9 +437,64 @@ const handleDeleteClient = async (clientId: string) => {
                 {client.tag}
               </div>
             </motion.div>
+            
           )}
+<motion.div
+  whileHover={{ y: -5 }}
+  className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
+>
+  <h2 className="text-xl font-semibold mb-6 flex items-center">
+    <FileText className="w-5 h-5 mr-2 text-cyan-500" />
+    Entretien
+  </h2>
+
+  {maintenanceRecords.length > 0 ? (
+    <ul className="space-y-4">
+      {maintenanceRecords.map((record) => (
+        <li key={record.id} className="bg-muted/10 rounded-lg p-4 border border-border/50">
+          <div className="font-semibold text-primary">{record.equipmentName}</div>
+          <div className="text-sm text-muted-foreground mt-1">
+            Contrat : <span className="font-medium">{record.contractNumber}</span>
+          </div>
+          <div className="text-sm mt-1">
+            Dernier entretien : <span className="font-medium">{record.lastMaintenance}</span>
+          </div>
+          <div className="text-sm">
+            Prochain : <span className="font-medium">{record.nextMaintenance}</span>
+          </div>
+          <div className="text-sm">
+            Fréquence : <span className="font-medium">{record.frequency} mois</span>
+          </div>
+          <div className="text-sm">
+            Type : <span className="font-medium capitalize">{record.type}</span>
+          </div>
+          <div className="text-sm text-blue-600 mt-1">
+            Équipe : <span className="font-semibold">{record.teamName}</span>
+          </div>
+          <div className="text-sm mt-1">
+            Statut : <span className={`font-semibold ${
+              record.status === 'upcoming'
+                ? 'text-orange-500'
+                : record.status === 'done'
+                ? 'text-green-600'
+                : 'text-muted-foreground'
+            }`}>
+              {record.status}
+            </span>
+          </div>
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <div className="text-center py-4 text-muted-foreground">
+      Aucun entretien enregistré
+    </div>
+  )}
+</motion.div>
+
         </div>
       </div>
+
 
       <DeleteClientModal
         isOpen={isDeleteModalOpen}
