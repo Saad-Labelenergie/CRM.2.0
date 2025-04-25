@@ -14,7 +14,14 @@ import { Toast } from '../../ui/toast';
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const WORKING_HOURS = { start: { hour: 9, minute: 0 }, end: { hour: 18, minute: 0 } };
 
-export function TeamScheduleView() {
+// Add interface for component props
+// Modifiez l'interface des props
+interface TeamScheduleViewProps {
+  filteredAppointments?: any[]; // Optional prop for filtered appointments
+  filteredTeams?: any[]; // Optional prop for filtered teams
+}
+
+export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamScheduleViewProps) {
   // État pour suivre l'heure actuelle à Paris
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   
@@ -61,7 +68,7 @@ export function TeamScheduleView() {
   };
 
   const { currentDate, selectedTeams } = useCalendarStore();
-  const { appointments, teams, updateAppointmentTeam, updateWeekTeam, deleteAppointment } = useScheduling();
+  const { appointments, teams, updateAppointmentTeam, deleteAppointment } = useScheduling();
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [isChangeTeamModalOpen, setIsChangeTeamModalOpen] = useState(false);
   const [isProjectDetailsModalOpen, setIsProjectDetailsModalOpen] = useState(false);
@@ -82,7 +89,15 @@ export function TeamScheduleView() {
 
   // Filtrer uniquement les rendez-vous attribués et les équipes actives
   const activeTeams = teams.filter(team => team.isActive);
-  const assignedAppointments = appointments.filter(appointment => {
+  
+  // Determine which teams to display
+  const teamsToDisplay = filteredTeams || 
+    (selectedTeams.length > 0 
+      ? activeTeams.filter(team => selectedTeams.includes(team.id))
+      : activeTeams);
+  
+  // Use filtered appointments if provided, otherwise use the default filter
+  const assignedAppointments = filteredAppointments || appointments.filter(appointment => {
     const matchesTeam = selectedTeams.length === 0 || selectedTeams.some(teamId => 
       appointment.team && appointment.team.includes(teamId)
     );
@@ -160,7 +175,7 @@ export function TeamScheduleView() {
         </div>
 
         {/* Grille des équipes et rendez-vous */}
-        {activeTeams.length === 0 ? (
+        {teamsToDisplay.length === 0 ? (
           <div className="text-center py-12">
             <h3 className="text-lg font-medium mb-2">Aucune équipe active</h3>
             <p className="text-muted-foreground">
@@ -169,7 +184,7 @@ export function TeamScheduleView() {
           </div>
         ) : (
           <div className="divide-y divide-border/50">
-            {activeTeams.map(team => (
+            {teamsToDisplay.map(team => (
               <div
                 key={team.id}
                 className="grid grid-cols-[200px_repeat(5,1fr)] border-b border-border/50"
