@@ -28,7 +28,6 @@ type Step = 'contact' | 'address' | 'products' | 'planning';
 export function UpdateClientModal({ isOpen, onClose, onSave, initialData }: UpdateClientModalProps) {
   const [step, setStep] = useState<Step>('contact');
   const [showSuccessToast, setShowSuccessToast] = useState(false);
-  
   const [products, setProducts] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     contact: {
@@ -52,8 +51,7 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData }: Upda
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { updateProject, updateAppointment } = useScheduling();
-
+  const { updateProject } = useScheduling();
 
   // 🔄 Charger les produits
   useEffect(() => {
@@ -195,7 +193,7 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData }: Upda
 
   const handleSubmit = async () => {
     if (!validateStep()) return;
-  
+
     try {
       const clientData = {
         id: initialData.id,
@@ -204,6 +202,7 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData }: Upda
         address: formData.address,
         tag: formData.tag,
         productsIds: formData.selectedProducts.map(p => p.id),
+        // Add team information
         team: formData.selectedTeam ? {
           id: formData.selectedTeam._id,
           name: formData.selectedTeam.name,
@@ -211,47 +210,39 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData }: Upda
         } : null,
         updatedAt: new Date()
       };
-  
+
       onSave(clientData);
-  
+
       if (initialData.projectId) {
         const projectName = formData.selectedProducts.map(p => p.name).join(', ');
         const totalInstallationTime = formData.selectedProducts.reduce(
           (acc, p) => acc + (parseInt(p.installationTime) || 0),
           0
         );
-  
-        // 3. Calculer la durée comme dans la création
-        const durationInHours = Math.max(1, Math.ceil(totalInstallationTime / 60));
-        const durationInDays = durationInHours / 8;
-        const durationText = durationInDays >= 1 ? 
-          `${durationInDays.toFixed(1)} jours` : 
-          `${durationInHours}h`;
-  
-        // 4. Mettre à jour tous les rendez-vous existants
-        const appointmentsToUpdate = initialData.appointments.map((apt: any) => ({
-          ...apt,
+
+        const appointment = {
+          id: initialData.appointmentId,
           title: projectName,
           client: {
-            id: clientData.id, // Garder l'ID original en string
+            id: parseInt(clientData.id),
             name: clientData.name,
             postalCode: formData.address.postalCode
           },
           date: formData.installationDate,
+          time: "09:00",
           team: formData.selectedTeam?.name || null,
           teamColor: formData.selectedTeam?.color || null,
-          duration: durationText,
-          installationTime: totalInstallationTime,
+          type: "installation",
+          duration: `${Math.ceil(totalInstallationTime / 60)}h`,
           status: formData.selectedTeam ? 'attribue' : 'non_attribue',
           updatedAt: new Date()
-        }));
-  
-        // 5. Mettre à jour le projet ET les rendez-vous
+        };
+
         const project = {
           id: initialData.projectId,
           name: projectName,
           client: {
-            id: clientData.id, // ID string ici aussi
+            id: parseInt(clientData.id),
             name: clientData.name
           },
           status: formData.selectedTeam ? 'attribue' : 'en_attente',
@@ -262,36 +253,33 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData }: Upda
             name: formData.selectedTeam.name,
             color: formData.selectedTeam.color
           } : null,
-          appointments: appointmentsToUpdate,
+          appointments: [appointment],
           products: formData.selectedProducts,
           updatedAt: new Date()
         };
-  
-        // Mettre à jour le projet
+
+        // Update the function calls with the correct parameters
+        // In handleSubmit, remove the updateAppointment call
         await updateProject(project.id, {
-          ...project,
+          name: project.name,
+          client: project.client,
           status: project.status as "en_attente" | "charger" | "en_cours" | "terminer",
+          startDate: project.startDate,
+          type: project.type,
+          team: formData.selectedTeam?.name || null,
           appointments: project.appointments.map(apt => ({
             ...apt,
             type: apt.type as "installation" | "maintenance" | "urgence",
             status: apt.status as "attribue" | "non_attribue",
           }))
         });
-  
-        // Mettre à jour chaque rendez-vous dans Firestore
-        for (const apt of appointmentsToUpdate) {
-          await updateAppointment(apt.id, {
-            ...apt,
-            type: apt.type as "installation" | "maintenance" | "urgence",
-            status: apt.status as "attribue" | "non_attribue",
-          });
-        }
-  
+        
+
         setShowSuccessToast(true);
         onClose();
       }
     } catch (error) {
-      console.error('Erreur mise à jour client :', error);
+      console.error('Erreur update client :', error);
     }
   };
 

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
 import { useFirebase } from '../hooks/useFirebase';
 import { SchedulingService, Installation, Team } from './scheduling-service';
-import { doc, deleteDoc, collection, query, getDocs } from 'firebase/firestore';
+import { doc, deleteDoc, collection, query, getDocs, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 // Mettez à jour l'interface Appointment dans ce fichier également
@@ -9,7 +9,7 @@ interface Appointment {
   id: string;
   title: string;
   client: {
-    id: string;
+    id: number;
     name: string;
     postalCode: string;
   };
@@ -62,6 +62,7 @@ interface SchedulingContextType {
   updateTeamSchedule: (teamId: string, schedule: any) => void;
   appointments: Appointment[];
   addAppointment: (appointment: Appointment) => Promise<string>;
+  updateAppointment: (appointmentId: string, updates: Partial<Appointment>) => Promise<void>;
   deleteAppointment: (appointmentId: string) => Promise<void>;
   projects: Project[];
   addProject: (project: Project) => Promise<string>;
@@ -92,8 +93,8 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
   
   const {
     data: appointmentsFromFirebase,
-    add: addAppointment,
-    update: updateAppointment,
+    add: addAppointmentToFirebase,
+    update: updateAppointmentInFirebase,
     remove: removeAppointment
   } = useFirebase<Appointment>('appointments', { orderByField: 'date' });
 
@@ -245,6 +246,62 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
     fetchAppointments();
   }, []);
 
+  // Ajouter ces deux fonctions manquantes
+  const addAppointment = async (appointment: Appointment): Promise<string> => {
+    try {
+      const id = await addAppointmentToFirebase(appointment);
+      return id;
+    } catch (error) {
+      console.error('Error adding appointment:', error);
+      throw error;
+    }
+  };
+
+  const updateAppointment = async (appointmentId: string, updates: Partial<Appointment>): Promise<void> => {
+    try {
+      console.log(`Updating appointment ${appointmentId} with:`, updates);
+      
+      // Vérifier si le document existe déjà
+      const appointmentRef = doc(db, 'appointments', appointmentId);
+      const appointmentSnap = await getDoc(appointmentRef);
+      
+      if (appointmentSnap.exists()) {
+        // Mettre à jour le document existant
+        await updateDoc(appointmentRef, {
+          ...updates,
+          updatedAt: new Date()
+        });
+        console.log(`Appointment ${appointmentId} updated successfully`);
+      } else {
+        // Créer un nouveau document avec l'ID spécifié
+        await setDoc(appointmentRef, {
+          ...updates,
+          id: appointmentId,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        console.log(`Appointment ${appointmentId} created successfully`);
+      }
+      
+      // Mettre à jour l'état local
+      setAppointments((prev: Appointment[]) => {
+        const index = prev.findIndex((a: Appointment) => a.id === appointmentId);
+        if (index >= 0) {
+          // Mettre à jour l'élément existant
+          const updated = [...prev];
+          updated[index] = { ...updated[index], ...updates };
+          return updated;
+        } else {
+          // Ajouter un nouvel élément
+          return [...prev, { id: appointmentId, ...updates } as Appointment];
+        }
+      });
+    } catch (error) {
+      console.error(`Error updating appointment ${appointmentId}:`, error);
+      throw error;
+    }
+  };
+
   const value = {
     findOptimalSlot,
     getAvailableTeamsForDate,
@@ -254,6 +311,7 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
     updateTeamSchedule: () => {},
     appointments,
     addAppointment,
+    updateAppointment, // Assurez-vous que cette ligne existe
     deleteAppointment,
     projects,
     addProject,
