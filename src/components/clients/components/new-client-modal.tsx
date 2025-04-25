@@ -15,7 +15,7 @@ import { PlanningStep } from './steps/planning-step';
 import { StepIndicator } from './steps/step-indicator';
 import { Toast } from '../../ui/toast';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
-import { getDocs, collection } from 'firebase/firestore';
+import { getDocs, collection,doc,setDoc} from 'firebase/firestore';
 import { db } from '../../../lib/firebase'; // adapte le chemin selon ta structure
 
 interface NewClientModalProps {
@@ -89,11 +89,10 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
       }
     };
 
-    if (isOpen) {
-      fetchProducts();
-    }
-  }, [isOpen]);
-
+    // if (isOpen) {
+    //   fetchProducts();
+    // }
+  },)
   // Modifier la fonction handleFieldUpdate pour calculer la durée d'installation lorsque les produits sont sélectionnés
   const handleFieldUpdate = (field: string, value: any) => {
     const fields = field.split('.');
@@ -154,6 +153,7 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
       });
     }
   };
+  
 
   const validateStep = () => {
     const newErrors: Record<string, string> = {};
@@ -273,135 +273,128 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
         }
   
         console.log(`Texte de durée formaté: ${durationText}`);
-  
-        const clientData = {
-          id: Math.random().toString(36).substr(2, 9),
-          name: `${formData.contact.firstName} ${formData.contact.lastName}`,
-          contact: formData.contact,
-          address: formData.address,
-          tag: formData.tag,
-          status: 'pending',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          // Add team information
-          team: formData.selectedTeam ? {
-            id: formData.selectedTeam._id,
-            name: formData.selectedTeam.name,
-            color: formData.selectedTeam.color
-          } : null,
-          // Add selected products IDs
-          productsIds: formData.selectedProducts.map(p => p.id),
-          // Ajouter les informations d'installation
-          installation: {
-            totalTime: totalInstallationTime,
-            durationInHours,
-            durationInDays,
-            durationText
-          }
-        };
-        onSave(clientData);
-  
-        const projectId = Math.random().toString(36).substr(2, 9);
-        const projectName = formData.selectedProducts.map(p => p.name).join(", ");
-  
-        // Calculer le nombre de jours entiers pour l'affichage multi-jours
-        const daysSpan = Math.ceil(durationInDays);
-        
-        // Créer un tableau pour stocker tous les rendez-vous (un par jour)
-        const allAppointments = [];
-        
-        // Créer le rendez-vous principal
-        const mainAppointmentId = Math.random().toString(36).substr(2, 9);
-        const mainAppointment = {
-          id: mainAppointmentId,
-          title: projectName,
-          client: {
-            id: parseInt(clientData.id),
-            name: clientData.name,
-            postalCode: formData.address.postalCode
-          },
-          date: formData.installationDate,
-          time: "09:00",
-          team: formData.selectedTeam?.name || null,
-          teamColor: formData.selectedTeam?.color || null,
-          type: "installation" as "installation" | "maintenance" | "urgence",
-          duration: durationText,
-          installationTime: totalInstallationTime,
-          daysSpan: daysSpan, // Ajouter le nombre de jours que couvre ce rendez-vous
-          isMultiDay: daysSpan > 1, // Indiquer s'il s'agit d'un rendez-vous multi-jours
-          isFirstDay: true, // Indiquer qu'il s'agit du premier jour
-          isLastDay: daysSpan === 1, // Indiquer s'il s'agit du dernier jour
-          status: formData.selectedTeam ? 'attribue' as const : 'non_attribue' as const,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          parentId: null // Le rendez-vous principal n'a pas de parent
-        };
-        
-        allAppointments.push(mainAppointment);
-        
-        // Créer les rendez-vous pour les jours suivants si nécessaire
-        if (daysSpan > 1) {
-          for (let i = 1; i < daysSpan; i++) {
-            // Calculer la date du jour suivant
-            const nextDate = new Date(formData.installationDate);
-            nextDate.setDate(nextDate.getDate() + i);
-            
-            // Créer un ID unique pour ce rendez-vous
-            const nextAppointmentId = Math.random().toString(36).substr(2, 9);
-            
-            // Créer le rendez-vous pour ce jour
-            const nextAppointment = {
-              id: nextAppointmentId,
-              title: projectName,
-              client: {
-                id: parseInt(clientData.id),
-                name: clientData.name,
-                postalCode: formData.address.postalCode
-              },
-              date: nextDate.toISOString().split('T')[0], // Format YYYY-MM-DD
-              time: "09:00",
-              team: formData.selectedTeam?.name || null,
-              teamColor: formData.selectedTeam?.color || null,
-              type: "installation" as "installation" | "maintenance" | "urgence",
-              duration: durationText,
-              installationTime: totalInstallationTime,
-              daysSpan: daysSpan,
-              isMultiDay: true,
-              isFirstDay: false,
-              isLastDay: i === daysSpan - 1, // Vrai si c'est le dernier jour
-              status: formData.selectedTeam ? 'attribue' as const : 'non_attribue' as const,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-              parentId: mainAppointmentId // Référence au rendez-vous principal
-            };
-            
-            allAppointments.push(nextAppointment);
-          }
-        }
+// Génère un nouvel ID Firestore pour le client
+const newClientRef = doc(collection(db, "clients"));
+const clientData = {
+  id: newClientRef.id,
+  name: `${formData.contact.firstName} ${formData.contact.lastName}`,
+  contact: formData.contact,
+  address: formData.address,
+  tag: formData.tag,
+  status: 'pending',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  team: formData.selectedTeam ? {
+    id: formData.selectedTeam._id,
+    name: formData.selectedTeam.name,
+    color: formData.selectedTeam.color
+  } : null,
+  productsIds: formData.selectedProducts.map(p => p.id),
+  installation: {
+    totalTime: totalInstallationTime,
+    durationInHours,
+    durationInDays,
+    durationText
+  }
+};
 
-        const project = {
-          id: projectId,
-          name: projectName,
-          client: {
-            id: parseInt(clientData.id),
-            name: clientData.name
-          },
-          status: (formData.selectedTeam ? 'attribue' : 'en_attente') as 'en_attente' | 'charger' | 'en_cours' | 'terminer',
-          startDate: formData.installationDate,
-          type: formData.selectedProducts[0]?.type?.toUpperCase() || 'STANDARD',
-          team: formData.selectedTeam?.name || null,
-          appointments: allAppointments // Utiliser tous les rendez-vous créés
-        };
+// ✅ Sauvegarder le client dans Firestore
+await setDoc(newClientRef, clientData);
 
-        await addProject(project);
-        
-        // Ajouter tous les rendez-vous à la base de données
-        for (const appointment of allAppointments) {
-          await addAppointment(appointment);
-        }
+// 🔁 Appel local si nécessaire
+//onSave(clientData);
 
-        setShowSuccessToast(true);
-        onClose();
+const projectId = Math.random().toString(36).substr(2, 9);
+const projectName = formData.selectedProducts.map(p => p.name).join(", ");
+const daysSpan = Math.ceil(durationInDays);
+const allAppointments = [];
+const mainAppointmentId = Math.random().toString(36).substr(2, 9);
+
+// ✅ Premier rendez-vous
+const mainAppointment = {
+  id: mainAppointmentId,
+  title: projectName,
+  client: {
+    id: clientData.id, // ✅ string correct
+    name: clientData.name,
+    postalCode: formData.address.postalCode
+  },
+  date: formData.installationDate,
+  time: "09:00",
+  team: formData.selectedTeam?.name || null,
+  teamColor: formData.selectedTeam?.color || null,
+  type: "installation",
+  duration: durationText,
+  installationTime: totalInstallationTime,
+  daysSpan: daysSpan,
+  isMultiDay: daysSpan > 1,
+  isFirstDay: true,
+  isLastDay: daysSpan === 1,
+  status: formData.selectedTeam ? 'attribue' : 'non_attribue',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  parentId: null
+};
+
+allAppointments.push(mainAppointment);
+
+// ✅ Création des jours suivants
+if (daysSpan > 1) {
+  for (let i = 1; i < daysSpan; i++) {
+    const nextDate = new Date(formData.installationDate);
+    nextDate.setDate(nextDate.getDate() + i);
+
+    allAppointments.push({
+      id: Math.random().toString(36).substr(2, 9),
+      title: projectName,
+      client: {
+        id: clientData.id, // ✅ toujours string
+        name: clientData.name,
+        postalCode: formData.address.postalCode
+      },
+      date: nextDate.toISOString().split('T')[0],
+      time: "09:00",
+      team: formData.selectedTeam?.name || null,
+      teamColor: formData.selectedTeam?.color || null,
+      type: "installation",
+      duration: durationText,
+      installationTime: totalInstallationTime,
+      daysSpan: daysSpan,
+      isMultiDay: true,
+      isFirstDay: false,
+      isLastDay: i === daysSpan - 1,
+      status: formData.selectedTeam ? 'attribue' : 'non_attribue',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      parentId: mainAppointmentId
+    });
+  }
+}
+
+// ✅ Ajout du projet
+const project = {
+  id: projectId,
+  name: projectName,
+  client: {
+    id: clientData.id,
+    name: clientData.name
+  },
+  status: formData.selectedTeam ? 'attribue' : 'en_attente',
+  startDate: formData.installationDate,
+  type: formData.selectedProducts[0]?.type?.toUpperCase() || 'STANDARD',
+  team: formData.selectedTeam?.name || null,
+  appointments: allAppointments
+};
+
+await addProject(project);
+
+// ✅ Envoi des rendez-vous
+for (const appointment of allAppointments) {
+  await addAppointment(appointment);
+}
+
+setShowSuccessToast(true);
+onClose();
       } catch (error) {
         console.error('Erreur lors de la création du dossier:', error);
       }

@@ -7,7 +7,8 @@ import {
   Filter,
   Plus,
   Trash,
-  PenTool
+  PenTool,
+  User
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -22,6 +23,10 @@ interface HistoryEntry {
   previousValue?: string;
   newValue?: string;
   timestamp: Date;
+}
+interface User {
+  userId: string;
+  userName: string;
 }
 
 const containerVariants = {
@@ -48,6 +53,9 @@ export function NotificationPopup() {
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFilter, setActionFilter] = useState<string | null>(null);
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [userFilter, setUserFilter] = useState<string | null>(null);
+  const [isUserFilterMenuOpen, setIsUserFilterMenuOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -63,27 +71,38 @@ export function NotificationPopup() {
         ...doc.data(),
         timestamp: doc.data().timestamp?.toDate()
       })) as HistoryEntry[];
+      
+      // Extraire les utilisateurs uniques
+      const uniqueUsers = historyData.reduce((acc: User[], entry) => {
+        if (!acc.find(u => u.userId === entry.userId)) {
+          acc.push({ userId: entry.userId, userName: entry.user });
+        }
+        return acc;
+      }, []);
+      setUsers(uniqueUsers);
+
       setHistory(historyData);
     });
 
     return () => unsubscribe();
   }, []);
 
+  // Mettre à jour le filtre pour inclure les utilisateurs
   const filteredHistory = history.filter(entry => {
     const matchesSearch = 
       entry.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       entry.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
       entry.details.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Fix the action filter condition
     const matchesAction = !actionFilter || (
       (actionFilter === 'created' && entry.action === 'created') ||
       (actionFilter === 'modified' && (entry.action === 'modified' || entry.action === 'status_changed')) ||
       (actionFilter === 'deleted' && entry.action === 'deleted')
     );
+    const matchesUser = !userFilter || entry.userId === userFilter;
 
-    return matchesSearch && matchesAction;
+    return matchesSearch && matchesAction && matchesUser;
   });
+
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -180,6 +199,50 @@ export function NotificationPopup() {
               </motion.div>
             )}
           </AnimatePresence>
+          <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setIsUserFilterMenuOpen(!isUserFilterMenuOpen)}
+              className={`p-3 rounded-lg transition-colors hover:bg-accent border ${
+                userFilter ? 'text-primary border-primary' : 'border-border'
+              }`}
+            >
+              <User className="w-5 h-5" />
+            </motion.button>
+            <AnimatePresence>
+              {isUserFilterMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute right-0 top-full mt-2 w-48 bg-card rounded-lg shadow-lg border border-border z-50"
+                >
+                  <div className="py-1 max-h-60 overflow-y-auto">
+                    <button 
+                      className="flex items-center w-full px-4 py-2 text-sm hover:bg-accent"
+                      onClick={() => {
+                        setUserFilter(null);
+                        setIsUserFilterMenuOpen(false);
+                      }}
+                    >
+                      Tous les utilisateurs
+                    </button>
+                    {users.map(user => (
+                      <button
+                        key={user.userId}
+                        className="flex items-center w-full px-4 py-2 text-sm hover:bg-accent"
+                        onClick={() => {
+                          setUserFilter(user.userId);
+                          setIsUserFilterMenuOpen(false);
+                        }}
+                      >
+                        {user.userName}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
         </div>
       </div>
 

@@ -9,6 +9,7 @@ import { db } from '../firebase';
 interface Appointment {
   id: string;
   title: string;
+<<<<<<< HEAD
   // Propriétés au niveau racine
   name?: string;
   postalCode?: string;
@@ -16,6 +17,10 @@ interface Appointment {
   // Ajout d'une propriété client optionnelle pour la compatibilité
   client?: {
     id: number;
+=======
+  client: {
+    id: string;
+>>>>>>> cb36a90c2ef46acd151c0c3c39b6329f6c3bf2d1
     name: string;
     postalCode: string;
   };

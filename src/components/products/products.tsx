@@ -15,7 +15,12 @@ import {
   Package,
   Settings,
   Tag,
-  Factory
+  Factory,
+  Box,
+  ShoppingCart,
+  Percent,
+  Layers,
+  AlertTriangle
 } from 'lucide-react';
 import { NewProductModal } from './components/new-product-modal';
 import { ManageFournisseursModal } from './components/manage-fournisseur-modal';
@@ -125,6 +130,81 @@ export function Products() {
           </motion.button>
         </div>
       </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+  {/* Carte Nombre total de produits */}
+  <motion.div
+    whileHover={{ y: -5 }}
+    className="bg-card p-4 rounded-xl border border-border/50 shadow-sm"
+  >
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-muted-foreground">Total Produits</p>
+        <h3 className="text-2xl font-bold mt-1">{products.length}</h3>
+      </div>
+      <div className="p-3 bg-blue-100/20 rounded-lg text-blue-500">
+        <Package className="w-6 h-6" />
+      </div>
+    </div>
+  </motion.div>
+
+  {/* Carte Valeur totale du stock */}
+  {/* <motion.div
+    whileHover={{ y: -5 }}
+    className="bg-card p-4 rounded-xl border border-border/50 shadow-sm"
+  >
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-muted-foreground">Valeur du stock</p>
+        <h3 className="text-2xl font-bold mt-1">
+          {products.reduce((acc, product) => acc + (product.stock?.current || 0) * (product.price?.ht || 0), 0).toFixed(2)} € HT
+        </h3>
+      </div>
+      <div className="p-3 bg-green-100/20 rounded-lg text-green-500">
+        <ShoppingCart className="w-6 h-6" />
+      </div>
+    </div>
+  </motion.div> */}
+
+  {/* Carte Produits en rupture */}
+  <motion.div
+    whileHover={{ y: -5 }}
+    className="bg-card p-4 rounded-xl border border-border/50 shadow-sm"
+  >
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-muted-foreground">En rupture</p>
+        <h3 className="text-2xl font-bold mt-1">
+          {products.filter(p => (p.stock?.current || 0) <= 0).length}
+        </h3>
+      </div>
+      <div className="p-3 bg-red-100/20 rounded-lg text-red-500">
+        <AlertTriangle className="w-6 h-6" />
+      </div>
+    </div>
+  </motion.div>
+
+  {/* Carte Produits à réapprovisionner */}
+  <motion.div
+    whileHover={{ y: -5 }}
+    className="bg-card p-4 rounded-xl border border-border/50 shadow-sm"
+  >
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-muted-foreground">À réapprovisionner</p>
+        <h3 className="text-2xl font-bold mt-1">
+          {products.filter(p => {
+            const current = p.stock?.current || 0;
+            const optimal = p.stock?.optimal || 0;
+            return current > 0 && current < optimal;
+          }).length}
+        </h3>
+      </div>
+      <div className="p-3 bg-orange-100/20 rounded-lg text-orange-500">
+        <Layers className="w-6 h-6" />
+      </div>
+    </div>
+  </motion.div>
+</div>
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">

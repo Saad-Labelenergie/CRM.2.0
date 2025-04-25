@@ -5,11 +5,12 @@ import { X, AlertTriangle, Trash2 } from 'lucide-react';
 interface DeleteClientModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (clientId: string) => Promise<void>; 
   clientName: string;
+  clientId: string; 
 }
 
-export function DeleteClientModal({ isOpen, onClose, onConfirm, clientName }: DeleteClientModalProps) {
+export function DeleteClientModal({ isOpen, onClose, onConfirm, clientName ,clientId}: DeleteClientModalProps) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -59,7 +60,7 @@ export function DeleteClientModal({ isOpen, onClose, onConfirm, clientName }: De
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
-                  onConfirm();
+                  onConfirm(clientId);
                   onClose();
                 }}
                 className="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-colors flex items-center"

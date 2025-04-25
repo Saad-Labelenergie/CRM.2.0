@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { UpdateClientModal } from './components/update-client-modal';
 import { useProducts } from '../../lib/hooks/useProducts';
 import { useAppointments } from '../../lib/hooks/useAppointments';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSAV } from '../../contexts/sav-context';
+import { db } from '../../lib/firebase';
 import { 
   ArrowLeft, 
   Users,
@@ -12,6 +14,7 @@ import {
   MapPin,
   Tag,
   Building2,
+  ArrowRight ,
   Calendar,
   Star,
   TrendingUp,
@@ -28,6 +31,25 @@ import { DeleteClientModal } from './components/delete-client-modal';
 import { NewClientModal } from './components/new-client-modal';
 import { Toast } from '../ui/toast';
 import { ProductsStep } from './components/steps/products-step';
+import { deleteDoc, doc, collection, query, where, getDocs } from 'firebase/firestore';
+
+interface MaintenanceRecord {
+  id: string;
+  clientId: string;
+  clientName: string;
+  equipmentId: string;
+  equipmentName: string;
+  type: string;
+  frequency: number;
+  lastMaintenance: string;
+  nextMaintenance: string;
+  teamId: string | null;
+  teamName: string | null;
+  notes: string;
+  status: string;
+  contractNumber: string;
+  createdAt: string;
+} 
 
 export function ClientDetail() {
   const { id } = useParams();
@@ -36,15 +58,43 @@ export function ClientDetail() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const { data: products = [] } = useProducts();
   const { data: appointments = [] } = useAppointments();
-
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);  
+  const [maintenanceRecords, setMaintenanceRecords] = useState<any[]>([]);
+  const { tickets } = useSAV();
+
 
 
 
   const client = clients.find(c => c.id === id);
 
-
+  useEffect(() => {
+    console.log("🔍 Fetching maintenance for clientId:", id);
+  
+    const fetchMaintenance = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, 'maintenances'));
+        const allRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  
+        console.log("📦 All maintenance records:", allRecords);
+  
+        const filteredRecords = allRecords.filter(
+          (r: any) => r.clientId?.trim() === id?.trim() // 🔥 Ajoute cette ligne ici
+        );
+  
+        console.log("✅ Filtered maintenance records:", filteredRecords);
+        setMaintenanceRecords(filteredRecords);
+  
+      } catch (error) {
+        console.error("❌ Error fetching maintenance:", error);
+      }
+    };
+  
+    fetchMaintenance();
+  }, [id]);
+  
+  
+  
   
   if (loading) {
     return (
@@ -73,20 +123,15 @@ export function ClientDetail() {
     );
   }
 
-  //Produits
+  const clientAppointments = appointments.filter(
+    (a) => String(a.client.id) === String(client.id)
+  );
 
   const assignedProducts = products.filter(product =>
     client.productsIds?.includes(product.id)
   );
   
   const totalTTC = assignedProducts.reduce((acc, product) => acc + Number(product.price?.ttc || 0), 0);
-
-
-  //Rendez-vous
-
-const clientAppointments = appointments.filter(
-  (appointment) => String(appointment.client.id) === client.id
-);
   
   // Fonction utilitaire pour formater la dates
 const formatClientSinceDate = (dateInput: any) => {
@@ -119,6 +164,12 @@ const formatDate = (date: Date) => {
   })}`;
 };
 
+// Créez une variable pour filtrer les tickets du client
+const clientTickets = tickets.filter(ticket => 
+  ticket.client.id === client.id
+);
+
+
 const handleUpdateClient  = async (updatedClient: any) => {
   try {
     await update(client.id, updatedClient); // Make sure you have this function in your useClients hook
@@ -131,18 +182,26 @@ const handleUpdateClient  = async (updatedClient: any) => {
 };
 
 
-  const handleDeleteClient = async () => {
-    try {
-      await removeClient(client.id);
-      setShowSuccessToast(true);
-      setTimeout(() => {
-        navigate('/clients');
-      }, 1500);
-    } catch (error) {
-      console.error('Erreur lors de la suppression du client:', error);
-    }
-  };
+const handleDeleteClient = async (clientId: string) => {
+  try {
+    // Supprimer les rendez-vous associés
+    const appointmentsQuery = query(
+      collection(db, 'appointments'), 
+      where('client.id', '==', clientId)
+    );
+    
+    const querySnapshot = await getDocs(appointmentsQuery);
+    const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+    await Promise.all(deletePromises);
 
+    // Supprimer le client
+    await deleteDoc(doc(db, 'clients', clientId));
+    
+    console.log('Client et rendez-vous supprimés avec succès');
+  } catch (error) {
+    console.error('Erreur lors de la suppression :', error);
+  }
+};
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -237,10 +296,20 @@ const handleUpdateClient  = async (updatedClient: any) => {
             whileHover={{ y: -5 }}
             className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
           >
-            <h2 className="text-xl font-semibold mb-6 flex items-center">
-              <Package className="w-5 h-5 mr-2 text-green-500" />
-              Installations
-            </h2>
+<h2 className="text-xl font-semibold mb-6 flex items-center justify-between">
+  <div className="flex items-center">
+  <Package className="w-5 h-5 mr-2 text-green-500" />
+  Produits
+  </div>
+  <motion.button
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    onClick={() => navigate(`/products`)}
+    className="text-primary hover:text-primary/80 transition-colors"
+  >
+    <ArrowRight className="w-5 h-5" />
+  </motion.button>
+</h2>
 <div className="space-y-4">
   {assignedProducts.length > 0 ? (
     <>
@@ -274,32 +343,123 @@ const handleUpdateClient  = async (updatedClient: any) => {
   whileHover={{ y: -5 }}
   className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
 >
-  <h2 className="text-xl font-semibold mb-6 flex items-center">
-    <Clock className="w-5 h-5 mr-2 text-orange-500" />
-    Rendez-vous
-  </h2>
+<h2 className="text-xl font-semibold mb-6 flex items-center justify-between">
+  <div className="flex items-center">
+  <Clock className="w-5 h-5 mr-2 text-orange-500" />
+  Installations
+  </div>
+  <motion.button
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    onClick={() => navigate(`/calendar`)}
+    className="text-primary hover:text-primary/80 transition-colors"
+  >
+    <ArrowRight className="w-5 h-5" />
+  </motion.button>
+</h2>
 
   <div className="space-y-4">
     {clientAppointments.length > 0 ? (
       <ul className="divide-y divide-border">
-        {clientAppointments.map((appointment) => (
-          <li key={appointment.id} className="py-2">
-            <div className="flex justify-between items-center">
-              <div>
-                <div className="font-medium text-primary">{appointment.title}</div>
-                <div className="text-sm text-muted-foreground">
-                  {new Date(`${appointment.date}T${appointment.time}`).toLocaleString('fr-FR', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })} • {appointment.type}
+  {clientAppointments.map((appointment) => (
+    <li key={appointment.id} className="py-2">
+      <div className="flex justify-between items-start gap-2">
+        <div>
+          <div className="font-medium text-primary">{appointment.title}</div>
+          <div className="text-sm text-muted-foreground">
+            {new Date(`${appointment.date}T${appointment.time}`).toLocaleString('fr-FR', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })} • {appointment.type}
+          </div>
+          {appointment.team && (
+            <div className="text-sm text-blue-600 mt-1">
+              Équipe : <span className="font-semibold">{appointment.team}</span>
+            </div>
+          )}
+          <div className="text-sm text-muted-foreground mt-1">
+            Durée : <span className="font-medium">{appointment.duration}</span>
+          </div>
+        </div>
+        {/* <div
+          className="text-xs font-medium rounded px-2 py-1 mt-1"
+          style={{
+            backgroundColor: appointment.teamColor || '#E5E7EB',
+            color: '#fff',
+          }}
+        >
+          {appointment.status}
+        </div> */}
+      </div>
+    </li>
+  ))}
+</ul>
+
+    ) : (
+      <div className="text-center py-8 text-muted-foreground">
+        Aucun rendez-vous programmé
+      </div>
+    )}
+  </div>
+</motion.div>
+<motion.div
+  whileHover={{ y: -5 }}
+  className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
+>
+<h2 className="text-xl font-semibold mb-6 flex items-center justify-between">
+  <div className="flex items-center">
+    <AlertCircle className="w-5 h-5 mr-2 text-yellow-500" />
+    SAV ({clientTickets.length})
+  </div>
+  <motion.button
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    onClick={() => navigate(`/sav`)}
+    className="text-primary hover:text-primary/80 transition-colors"
+  >
+    <ArrowRight className="w-5 h-5" />
+  </motion.button>
+</h2>
+
+  <div className="space-y-4">
+    {clientTickets.length > 0 ? (
+      <ul className="divide-y divide-border">
+        {clientTickets.map((ticket) => (
+          <li key={ticket.id} className="py-3 group">
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <div className="font-medium text-primary">
+                    Ticket #{ticket.number}
+                  </div>
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                    ticket.status === 'nouveau' ? 'bg-blue-100 text-blue-800' :
+                    ticket.status === 'en_cours' ? 'bg-orange-100 text-orange-800' :
+                    ticket.status === 'resolu' ? 'bg-green-100 text-green-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {ticket.status.replace('_', ' ').toUpperCase()}
+                  </span>
                 </div>
-              </div>
-              <div className="text-xs font-medium rounded px-2 py-1" style={{ backgroundColor: appointment.teamColor || '#E5E7EB' }}>
-                {appointment.status}
+                <div className="text-sm mt-1 text-muted-foreground">
+                  {ticket.product.name} ({ticket.product.reference})
+                </div>
+                <div className="text-sm mt-1">
+                  {ticket.description}
+                </div>
+                <div className="flex items-center text-sm mt-2 text-muted-foreground">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  {new Date(ticket.createdAt).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </div>
+
               </div>
             </div>
           </li>
@@ -307,7 +467,7 @@ const handleUpdateClient  = async (updatedClient: any) => {
       </ul>
     ) : (
       <div className="text-center py-8 text-muted-foreground">
-        Aucun rendez-vous programmé
+        Aucune demande SAV enregistrée
       </div>
     )}
   </div>
@@ -356,15 +516,81 @@ const handleUpdateClient  = async (updatedClient: any) => {
                 {client.tag}
               </div>
             </motion.div>
+            
           )}
+<motion.div
+  whileHover={{ y: -5 }}
+  className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
+>
+<h2 className="text-xl font-semibold mb-6 flex items-center justify-between">
+  <div className="flex items-center">
+  <FileText className="w-5 h-5 mr-2 text-cyan-500" />
+  Entretien
+  </div>
+  <motion.button
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    onClick={() => navigate(`/maintenance`)}
+    className="text-primary hover:text-primary/80 transition-colors"
+  >
+    <ArrowRight className="w-5 h-5" />
+  </motion.button>
+</h2>
+
+  {maintenanceRecords.length > 0 ? (
+    <ul className="space-y-4">
+      {maintenanceRecords.map((record) => (
+        <li key={record.id} className="bg-muted/10 rounded-lg p-4 border border-border/50">
+          <div className="font-semibold text-primary">{record.equipmentName}</div>
+          <div className="text-sm text-muted-foreground mt-1">
+            Contrat : <span className="font-medium">{record.contractNumber}</span>
+          </div>
+          <div className="text-sm mt-1">
+            Dernier entretien : <span className="font-medium">{record.lastMaintenance}</span>
+          </div>
+          <div className="text-sm">
+            Prochain : <span className="font-medium">{record.nextMaintenance}</span>
+          </div>
+          <div className="text-sm">
+            Fréquence : <span className="font-medium">{record.frequency} mois</span>
+          </div>
+          <div className="text-sm">
+            Type : <span className="font-medium capitalize">{record.type}</span>
+          </div>
+          <div className="text-sm text-blue-600 mt-1">
+            Équipe : <span className="font-semibold">{record.teamName}</span>
+          </div>
+          <div className="text-sm mt-1">
+            Statut : <span className={`font-semibold ${
+              record.status === 'upcoming'
+                ? 'text-orange-500'
+                : record.status === 'done'
+                ? 'text-green-600'
+                : 'text-muted-foreground'
+            }`}>
+              {record.status}
+            </span>
+          </div>
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <div className="text-center py-4 text-muted-foreground">
+      Aucun entretien enregistré
+    </div>
+  )}
+</motion.div>
+
         </div>
       </div>
+
 
       <DeleteClientModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDeleteClient}
         clientName={client.name}
+        clientId={client.id}
       />
 <UpdateClientModal
   isOpen={isEditModalOpen}
@@ -372,6 +598,7 @@ const handleUpdateClient  = async (updatedClient: any) => {
   onSave={handleUpdateClient}
   initialData={{
     ...client,
+    appointments: clientAppointments
   }}
 />
 
