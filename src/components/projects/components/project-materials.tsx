@@ -44,10 +44,16 @@ const installationIssueReasons = [
   "Autre"
 ];
 
+interface ProjectMaterialsProps {
+  materials: Material[];
+  onUpdate?: (materials: Material[]) => void;
+}
+
 export function ProjectMaterials({ materials: initialMaterials }: ProjectMaterialsProps) {
   const [materials, setMaterials] = React.useState(initialMaterials);
 
   const handleInstallationStatusChange = (materialId: number, status: 'installed' | 'not_installed') => {
+    
     setMaterials(prevMaterials => prevMaterials.map(material => {
       if (material.id !== materialId) return material;
 
@@ -68,6 +74,7 @@ export function ProjectMaterials({ materials: initialMaterials }: ProjectMateria
         };
       }
     }));
+    
   };
 
   const handleInstallationIssueChange = (materialId: number, reason: string) => {
@@ -91,7 +98,7 @@ export function ProjectMaterials({ materials: initialMaterials }: ProjectMateria
     >
       <h2 className="text-xl font-semibold mb-6 flex items-center">
         <Boxes className="w-5 h-5 mr-2 text-blue-500" />
-        Matériel
+        Produits
       </h2>
       <div className="space-y-4">
         {materials.map((material) => (

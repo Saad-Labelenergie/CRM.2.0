@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FileText } from 'lucide-react';
+import { FileText, ChevronDown } from 'lucide-react';
 
 interface ProjectInfoProps {
   type: string;
@@ -8,9 +8,32 @@ interface ProjectInfoProps {
   team: string | { name: string };
   status: string;
   progress: number;
+  onStatusChange: (newStatus: string) => void;
 }
 
-export function ProjectInfo({ type, startDate, team, status, progress }: ProjectInfoProps) {
+const statusOptions = [
+  { value: 'placer', label: 'Placé', color: 'text-orange-500' },
+  { value: 'confirmer', label: 'Confirmé', color: 'text-blue-500' },
+  { value: 'charger', label: 'Chargé', color: 'text-violet-500' },
+  { value: 'encours', label: 'En cours', color: 'text-yellow-500' },
+  { value: 'terminer', label: 'Terminé', color: 'text-green-500' },
+  { value: 'annuler', label: 'Annulé', color: 'text-red-500' }
+];
+
+export function ProjectInfo({
+  type,
+  startDate,
+  team,
+  status,
+  progress,
+  onStatusChange
+}: ProjectInfoProps) {
+  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    onStatusChange(e.target.value);
+  };
+
+  const currentStatus = statusOptions.find(opt => opt.value === status);
+
   return (
     <motion.div
       whileHover={{ y: -5 }}
@@ -33,26 +56,44 @@ export function ProjectInfo({ type, startDate, team, status, progress }: Project
           <div>
             <div className="text-sm text-muted-foreground">Équipe assignée</div>
             <div className="font-medium mt-1">
-  {typeof team === 'object' ? team.name : team}
-</div>          </div>
+              {typeof team === 'object' ? team.name : team}
+            </div>
+          </div>
         </div>
         <div className="space-y-4">
           <div>
-            <div className="text-sm text-muted-foreground">Statut</div>
-            <div className="mt-1">
-              <span className="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-full text-sm font-medium">
-                {status}
+            <div className="text-sm text-muted-foreground mb-1">Statut</div>
+            <div className="flex items-center gap-2 mb-2">
+              <span
+                className={`w-3 h-3 rounded-full ${currentStatus?.color.replace('text', 'bg')}`}
+              ></span>
+              <span className={`text-sm font-medium ${currentStatus?.color}`}>
+                {currentStatus?.label}
               </span>
+            </div>
+            <div className="relative">
+              <select
+                value={status}
+                onChange={handleStatusChange}
+                className={`w-full appearance-none rounded-lg border bg-white dark:bg-muted px-3 py-2 pr-10 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary font-medium transition-colors duration-200 ${currentStatus?.color}`}
+              >
+                {statusOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none text-muted-foreground" />
             </div>
           </div>
           <div>
-            <div className="text-sm text-muted-foreground">Progression</div>
+            <div className="text-sm text-muted-foreground mb-1">Progression</div>
             <div className="mt-2">
               <div className="flex justify-between text-sm mb-1">
                 <span className="font-medium">{progress}%</span>
               </div>
               <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-primary rounded-full transition-all duration-500"
                   style={{ width: `${progress}%` }}
                 />

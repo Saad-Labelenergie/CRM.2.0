@@ -1,31 +1,48 @@
 import { useFirebase } from './useFirebase';
+import { getFirestore, doc, updateDoc } from 'firebase/firestore';
 
-export interface Project {
+
+interface Product {
+  id: number | string;
+  name: string;
+  reference?: string;
+  quantity?: number;
+  unit?: string;
+  type?: string;
+}
+
+interface Project {
   id: string;
   name: string;
-  client: { id: number; name: string };
-  status: 'en_attente' | 'charger' | 'en_cours' | 'terminer';
-  startDate: string;
-  type: string;
-  team: string | null; // 🔁 RELATION
-  appointments: {
+  client: {
     id: string;
-    title: string;
-    date: string;
-    time: string;
-    duration: string;
-    status: string;
-  }[];
-  materials?: {
-    id: number;
     name: string;
-    status: 'installed' | 'not_installed';
-  }[];
-  createdAt: Date;
-  updatedAt: Date;
+  };
+  products?: Product[]; // ✅ AJOUTE CECI
+  team?: string;
+  startDate?: string;
+  status?: 'en_attente' | 'charger' | 'en_cours' | 'terminer';
+  type?: string;
+  appointments?: any[]; // adapte si typé
+  // autres propriétés...
 }
+
 
 
 export function useProjects() {
   return useFirebase<Project>('projects', { orderByField: 'startDate' });
+}
+
+export async function updateProjectStatus(projectId: string, newStatus: string) {
+  const db = getFirestore();
+  const projectRef = doc(db, 'projects', projectId);
+
+  try {
+    await updateDoc(projectRef, { status: newStatus });
+    console.log(`Statut du projet ${projectId} mis à jour: ${newStatus}`);
+    return { id: projectId, status: newStatus };
+  } catch (error) {
+    console.error('Erreur Firestore:', error);
+    throw error;
+  }
 }

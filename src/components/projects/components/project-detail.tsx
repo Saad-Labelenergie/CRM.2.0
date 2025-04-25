@@ -8,27 +8,10 @@ import { ProjectMaterials } from './project-materials';
 import { ProjectDocuments } from './project-documents';
 import { ProjectComments } from './project-comments';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
+import { useProjects } from '../../../lib/hooks/useProjects';
+import { updateProjectStatus } from '../../../lib/hooks/useProjects';
 
-const mockMaterials = [
-  {
-    id: 1,
-    name: "Climatiseur Mural 9000 BTU",
-    reference: "CLIM-MUR-9000",
-    quantity: 2,
-    installed: 0,
-    unit: "unité",
-    status: "pending"
-  },
-  {
-    id: 2,
-    name: "Support mural",
-    reference: "SUP-MUR-001",
-    quantity: 4,
-    installed: 0,
-    unit: "pièce",
-    status: "pending"
-  }
-];
+
 
 const mockSteps = [
   {
@@ -95,6 +78,7 @@ const mockComments = [
   }
 ];
 
+
 export function ProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -102,6 +86,7 @@ export function ProjectDetail() {
   const [showStepHistory, setShowStepHistory] = useState<number[]>([]);
   const [showAllComments, setShowAllComments] = useState(false);
 
+  
   const project = projects.find(p => p.id === id);
 
   if (!project) {
@@ -162,16 +147,28 @@ export function ProjectDetail() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ProjectInfo
-          type={project.type}
-          startDate={project.startDate}
-          team={project.team || 'Non assigné'}
-          status={project.status}
-          progress={75}
-        />
+      <ProjectInfo
+  type={project.type}
+  startDate={project.startDate}
+  team={project.team || 'Non assigné'}
+  status={project.status}
+  progress={75}
+  onStatusChange={(newStatus) => updateProjectStatus(project.id, newStatus)}
+/>
+
 
         <ProjectMaterials
-          materials={project.materials || mockMaterials}
+          materials={(project.products || []).map((p, index) => ({
+            id: p.id || index, // fallback si pas d'ID
+            name: p.name,
+            reference: p.reference || 'REF-UNKNOWN',
+            quantity: p.quantity || 1,
+            installed: 0,
+            unit: p.unit || 'unité',
+            status: 'pending'
+          }))}
+          onUpdate={handleMaterialStatusChange}
+
         />
       </div>
 
