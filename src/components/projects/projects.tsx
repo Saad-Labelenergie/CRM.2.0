@@ -83,7 +83,7 @@ export function Projects() {
           <h1 className="text-3xl font-bold text-primary">Projets en Cours</h1>
           <p className="text-muted-foreground mt-1">Suivez l'avancement de vos chantiers</p>
         </div>
-        <motion.button
+        {/* <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => navigate('/projects/create')}
@@ -91,7 +91,7 @@ export function Projects() {
         >
           <UserPlus className="w-4 h-4 mr-2" />
           Nouveau Projet
-        </motion.button>
+        </motion.button> */}
       </div>
 
       <div className="relative">
