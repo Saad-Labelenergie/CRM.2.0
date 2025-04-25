@@ -1,14 +1,20 @@
 import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
 import { useFirebase } from '../hooks/useFirebase';
 import { SchedulingService, Installation, Team } from './scheduling-service';
-import { doc, deleteDoc, collection, query, getDocs } from 'firebase/firestore';
+import { doc, deleteDoc, collection, query, getDocs, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 // Mettez à jour l'interface Appointment dans ce fichier également
+// Modifiez l'interface Appointment pour qu'elle soit compatible avec celle de scheduling-service.ts
 interface Appointment {
   id: string;
   title: string;
-  client: {
+  // Propriétés au niveau racine
+  name?: string;
+  postalCode?: string;
+  id2?: number;
+  // Ajout d'une propriété client optionnelle pour la compatibilité
+  client?: {
     id: number;
     name: string;
     postalCode: string;
@@ -62,6 +68,7 @@ interface SchedulingContextType {
   updateTeamSchedule: (teamId: string, schedule: any) => void;
   appointments: Appointment[];
   addAppointment: (appointment: Appointment) => Promise<string>;
+  updateAppointment: (appointmentId: string, updates: Partial<Appointment>) => Promise<void>;
   deleteAppointment: (appointmentId: string) => Promise<void>;
   projects: Project[];
   addProject: (project: Project) => Promise<string>;
@@ -92,8 +99,8 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
   
   const {
     data: appointmentsFromFirebase,
-    add: addAppointment,
-    update: updateAppointment,
+    add: addAppointmentToFirebase,
+    update: updateAppointmentInFirebase,
     remove: removeAppointment
   } = useFirebase<Appointment>('appointments', { orderByField: 'date' });
 
@@ -112,7 +119,21 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
 
   // Around line 91
   const schedulingService = useMemo(() => {
-    return new SchedulingService(appointments || [], teams || []);
+    // Adapter les rendez-vous pour qu'ils soient compatibles avec SchedulingService
+    const adaptedAppointments = appointments.map(apt => {
+      // Créer un objet client à partir des propriétés au niveau racine
+      const adaptedApt = {
+        ...apt,
+        client: {
+          id: apt.id2 || 0,
+          name: apt.name || '',
+          postalCode: apt.postalCode || ''
+        }
+      };
+      return adaptedApt;
+    });
+    
+    return new SchedulingService(adaptedAppointments, teams || []);
   }, [appointments, teams]);
 
   const findOptimalSlot = (installation: Installation) => {
@@ -245,6 +266,80 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
     fetchAppointments();
   }, []);
 
+  // Ajouter ces deux fonctions manquantes
+  const addAppointment = async (appointment: Appointment): Promise<string> => {
+    try {
+      const id = await addAppointmentToFirebase(appointment);
+      return id;
+    } catch (error) {
+      console.error('Error adding appointment:', error);
+      throw error;
+    }
+  };
+
+  const updateAppointment = async (appointmentId: string, updates: Partial<Appointment>): Promise<void> => {
+    try {
+      console.log(`Updating appointment ${appointmentId} with:`, updates);
+      
+      // Extraire les données client si elles existent dans l'objet updates
+      let updatesToSave = { ...updates };
+      
+      // Si updates contient un objet client, extraire ses propriétés au niveau racine
+      if (updatesToSave.client) {
+        console.log(`Client object detected in updates:`, updatesToSave.client);
+        
+        // Extraire les propriétés du client
+        if (updatesToSave.client.id !== undefined) updatesToSave.id2 = updatesToSave.client.id;
+        if (updatesToSave.client.name !== undefined) updatesToSave.name = updatesToSave.client.name;
+        if (updatesToSave.client.postalCode !== undefined) updatesToSave.postalCode = updatesToSave.client.postalCode;
+        
+        // Supprimer l'objet client car il n'existe pas dans la structure Firestore
+        delete updatesToSave.client;
+        
+        console.log(`Restructured updates for Firestore:`, updatesToSave);
+      }
+      
+      // Vérifier si le document existe déjà
+      const appointmentRef = doc(db, 'appointments', appointmentId);
+      const appointmentSnap = await getDoc(appointmentRef);
+      
+      if (appointmentSnap.exists()) {
+        // Mettre à jour le document existant
+        await updateDoc(appointmentRef, {
+          ...updatesToSave,
+          updatedAt: new Date()
+        });
+        console.log(`Appointment ${appointmentId} updated successfully`);
+      } else {
+        // Créer un nouveau document avec l'ID spécifié
+        await setDoc(appointmentRef, {
+          ...updatesToSave,
+          id: appointmentId,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        console.log(`Appointment ${appointmentId} created successfully`);
+      }
+      
+      // Mettre à jour l'état local
+      setAppointments((prev: Appointment[]) => {
+        const index = prev.findIndex((a: Appointment) => a.id === appointmentId);
+        if (index >= 0) {
+          // Mettre à jour l'élément existant
+          const updated = [...prev];
+          updated[index] = { ...updated[index], ...updates };
+          return updated;
+        } else {
+          // Ajouter un nouvel élément
+          return [...prev, { id: appointmentId, ...updates } as Appointment];
+        }
+      });
+    } catch (error) {
+      console.error(`Error updating appointment ${appointmentId}:`, error);
+      throw error;
+    }
+  };
+
   const value = {
     findOptimalSlot,
     getAvailableTeamsForDate,
@@ -254,6 +349,7 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
     updateTeamSchedule: () => {},
     appointments,
     addAppointment,
+    updateAppointment, // Assurez-vous que cette ligne existe
     deleteAppointment,
     projects,
     addProject,
@@ -278,3 +374,29 @@ export function useScheduling() {
   }
   return context;
 }
+
+// Supprimer cette fonction dupliquée ci-dessous
+// const updateAppointment = async (id: string, data: any) => {
+//   console.log(`updateAppointment appelé avec id: ${id}`);
+//   console.log(`Données reçues dans updateAppointment:`, data);
+//   console.log(`Structure client dans updateAppointment:`, data.client);
+  
+//   try {
+//     // Votre code existant pour mettre à jour le rendez-vous
+//     const appointmentRef = doc(db, 'appointments', id);
+//     console.log(`Référence Firestore créée pour ${id}`);
+    
+//     const result = await updateDoc(appointmentRef, data);
+//     console.log(`Mise à jour réussie pour ${id}`, result);
+    
+//     // Mettre à jour l'état local avec des types explicites
+//     setAppointments((prev: Appointment[]) => 
+//       prev.map((apt: Appointment) => apt.id === id ? { ...apt, ...data } : apt)
+//     );
+    
+//     return { success: true, id };
+//   } catch (error) {
+//     console.error(`Erreur dans updateAppointment pour ${id}:`, error);
+//     return { success: false, error };
+//   }
+// };
