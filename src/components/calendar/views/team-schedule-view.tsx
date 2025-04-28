@@ -256,25 +256,58 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                         {dayAppointments.map((appointment, index) => {
                           // Calculer la largeur du rendez-vous en fonction de sa durée
                           let colSpan = 1; // Par défaut, 1 jour
-                          
+                          let isShort = false;
+
                           // Extraire la durée en jours si disponible
                           if (appointment.duration) {
                             // Exemple: "1.5 jours" ou "2 jours"
                             const durationMatch = appointment.duration.match(/(\d+\.?\d*)\s*(jour|jours)/i);
                             if (durationMatch) {
-                              // Limiter la durée à maximum 2 jours
                               const durationDays = Math.min(2, parseFloat(durationMatch[1]));
                               colSpan = Math.min(durationDays, weekDays.length - dayIndex);
                             }
-                            
-                            // Vérifier si la durée est de 4 heures
+                            // Vérifier si la durée est de 4 heures ou moins
                             const hourMatch = appointment.duration.match(/(\d+)\s*h/i);
-                            if (hourMatch && parseInt(hourMatch[1]) === 4) {
-                              // Pour les rendez-vous de 4h, prendre la moitié de l'espace
+                            if (hourMatch && parseInt(hourMatch[1]) <= 4) {
                               colSpan = 0.5;
+                              isShort = true;
                             }
                           }
-                          
+
+                          // Trouver tous les rendez-vous courts ce jour-là
+                          const shortAppointments = dayAppointments.filter(app => {
+                            const hourMatch = app.duration?.match(/(\d+)\s*h/i);
+                            return hourMatch && parseInt(hourMatch[1]) <= 4;
+                          });
+
+                          // Si c'est un rendez-vous court, déterminer sa position (gauche ou droite)
+                          let positionStyle = {};
+                          if (isShort && shortAppointments.length > 1) {
+                            const shortIndex = shortAppointments.findIndex(app => app.id === appointment.id);
+                            if (shortIndex === 0) {
+                              // Premier court : à gauche, aligné en haut
+                              positionStyle = { left: '1px', right: 'auto', width: 'calc(50% - 2px)', top: 0 };
+                            } else if (shortIndex === 1) {
+                              // Deuxième court : à droite, aligné en haut
+                              positionStyle = { right: '1px', left: 'auto', width: 'calc(50% - 2px)', top: 0 };
+                            } else {
+                              // Si plus de deux, empile-les verticalement à droite
+                              positionStyle = { right: '1px', left: 'auto', width: 'calc(50% - 2px)', top: `${(shortIndex) * 5}px` };
+                            }
+                          } else {
+                            // Cas normal
+                            positionStyle = {
+                              left: '1px',
+                              width: colSpan === 0.5
+                                ? 'calc(50% - 2px)'
+                                : colSpan > 1
+                                  ? `calc(${colSpan * 100}% - ${colSpan * 4}px)`
+                                  : 'calc(100% - 2px)',
+                              right: colSpan > 1 ? 'auto' : '1px',
+                              top: `${index * 5}px`,
+                            };
+                          }
+
                           return (
                             <motion.div
                               key={appointment.id}
@@ -283,22 +316,15 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                               transition={{ delay: index * 0.05 }}
                               onClick={() => handleAppointmentClick(appointment)}
                               className={`
-                                absolute left-1 rounded-lg p-2 cursor-pointer 
+                                absolute rounded-lg p-2 cursor-pointer 
                                 shadow-sm hover:shadow-md transition-shadow duration-200 
                                 border-l-4 group
                               `}
                               style={{
                                 borderColor: team.color || '#ccc',
                                 backgroundColor: `${team.color}1A`,
-                                top: `${index * 5}px`,
                                 zIndex: 10 + index,
-                                // Étendre la largeur en fonction du nombre de jours ou demi-jour pour 4h
-                                width: colSpan === 0.5 
-                                  ? 'calc(50% - 2px)' 
-                                  : colSpan > 1 
-                                    ? `calc(${colSpan * 100}% - ${colSpan * 4}px)` 
-                                    : 'calc(100% - 2px)',
-                                right: colSpan > 1 ? 'auto' : '1px',
+                                ...positionStyle,
                               }}
                             >
                               {/* Apply bold, larger size, and wrapping */}
