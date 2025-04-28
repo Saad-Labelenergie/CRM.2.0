@@ -42,15 +42,15 @@ interface TeamMembersProps {
 }
 
 export function TeamMembers({ teamId }: TeamMembersProps) {
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAddModalOpen, setAddModalOpen] = useState(false);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
-const handleConfirmRemove = async () => {
-  if (!memberToRemove) return;
-  await handleRemoveMember(memberToRemove.id);
-  setMemberToRemove(null);
-};
 
+  const handleConfirmRemove = async () => {
+    if (!memberToRemove) return;
+    await handleRemoveMember(memberToRemove.id);
+    setMemberToRemove(null);
+  };
   const fetchMembers = async () => {
     try {
       const teamSnap = await getDoc(doc(db, 'teams', teamId));
@@ -136,7 +136,7 @@ const handleConfirmRemove = async () => {
   };
 
   return (
-    <motion.div  className="bg-card p-6 rounded-xl shadow-lg border border-border/50">
+    <motion.div className="bg-card p-6 rounded-xl shadow-lg border border-border/50">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-semibold flex items-center">
           <Users className="w-5 h-5 mr-2 text-purple-500" />
@@ -145,7 +145,7 @@ const handleConfirmRemove = async () => {
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={() => setAddModalOpen(true)}
           className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center"
         >
           <UserPlus className="w-4 h-4 mr-2" />
@@ -245,10 +245,11 @@ const handleConfirmRemove = async () => {
         </div>
       )}
 
-      <EditMemberModal
+<EditMemberModal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={() => setAddModalOpen(false)}
         onSave={handleAddMember}
+        existingMembers={members}
       />
     </motion.div>
     

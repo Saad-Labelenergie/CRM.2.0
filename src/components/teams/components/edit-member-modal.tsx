@@ -15,13 +15,19 @@ interface EditMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (user: User) => void;
+  existingMembers: User[]; // Nouvelle prop pour les membres existants
 }
 
-export function EditMemberModal({ isOpen, onClose, onSave }: EditMemberModalProps) {
+export function EditMemberModal({ isOpen, onClose, onSave, existingMembers }: EditMemberModalProps) {
   const { data: users = [], loading } = useFirebase<User>('users');
-
-  // 🔥 Exclure les administrateurs
-  const filteredUsers = users.filter(user => user.role !== 'Administrateur');
+  
+  // Extraire les IDs des membres existants
+  const existingMemberIds = existingMembers.map(member => member.id);
+  
+  // 🔥 Exclure les administrateurs et les membres existants
+  const filteredUsers = users.filter(user => 
+    user.role !== 'Administrateur' && !existingMemberIds.includes(user.id)
+  );
 
   return (
     <AnimatePresence>
@@ -48,40 +54,50 @@ export function EditMemberModal({ isOpen, onClose, onSave }: EditMemberModalProp
             </div>
 
             {loading ? (
-              <p className="text-center text-muted-foreground">Chargement des utilisateurs...</p>
-            ) : filteredUsers.length === 0 ? (
-              <p className="text-center text-muted-foreground">Aucun utilisateur disponible.</p>
-            ) : (
-              <div className="space-y-3">
-                {filteredUsers.map((user) => (
-                  <div key={user.id} className="flex items-center justify-between bg-accent/50 p-3 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <img
-                        src={user.avatar || '/default-avatar.png'}
-                        alt={user.name}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                      <div>
-                        <p className="font-medium">{user.name}</p>
-                        <p className="text-sm text-muted-foreground">{user.role}</p>
+            <p className="text-center text-muted-foreground">Chargement des utilisateurs...</p>
+          ) : filteredUsers.length === 0 ? (
+            <p className="text-center text-muted-foreground">Aucun utilisateur disponible.</p>
+          ) : (
+            <div className="space-y-3">
+              {users
+                .filter(user => user.role !== 'Administrateur')
+                .map((user) => {
+                  const isAlreadyMember = existingMemberIds.includes(user.id);
+                  return (
+                    <div key={user.id} className="flex items-center justify-between bg-accent/50 p-3 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <img
+                          src={user.avatar || '/default-avatar.png'}
+                          alt={user.name}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                        <div>
+                          <p className="font-medium">{user.name}</p>
+                          <p className="text-sm text-muted-foreground">{user.role}</p>
+                        </div>
                       </div>
+                      <button
+                        onClick={() => {
+                          onSave(user);
+                          onClose();
+                        }}
+                        disabled={isAlreadyMember}
+                        className={`px-3 py-1 rounded-md transition-colors ${
+                          isAlreadyMember 
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                            : 'bg-primary text-white hover:bg-primary/90'
+                        }`}
+                      >
+                        {isAlreadyMember ? 'Déjà membre' : 'Assigner'}
+                      </button>
                     </div>
-                    <button
-                      onClick={() => {
-                        onSave(user);
-                        onClose();
-                      }}
-                      className="px-3 py-1 bg-primary text-white rounded-md hover:bg-primary/90"
-                    >
-                      Assigner
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+                  );
+                })}
+            </div>
+          )}
+        </motion.div>
+      </div>
+    )}
+  </AnimatePresence>
   );
 }
