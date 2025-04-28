@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, Package, CheckCircle, Truck, AlertTriangle } from 'lucide-react';
+import { useScheduling } from '../../../lib/scheduling/scheduling-context';
 
 interface Material {
   id: number;
@@ -26,6 +27,7 @@ interface MaterialLoadingModalProps {
 }
 
 export function MaterialLoadingModal({ isOpen, onClose, project, onUpdateMaterials }: MaterialLoadingModalProps) {
+  const { addLoadingRecord } = useScheduling(); // <-- Add this line
   const [materials, setMaterials] = useState<Material[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [renderKey, setRenderKey] = useState(0); // Ajouter un état pour forcer le rendu
@@ -75,7 +77,26 @@ export function MaterialLoadingModal({ isOpen, onClose, project, onUpdateMateria
     try {
       console.log("Saving materials:", materials);
       await onUpdateMaterials(idToUse, materials);
-      onClose(); // Fermer le modal après une sauvegarde réussie
+
+      // OPTIONAL: Save to chargement collection
+      await addLoadingRecord({
+        projectId: idToUse,
+        projectName: project.name,
+        teamId: project.teamId || '',
+        teamName: '', // Fill if you have it
+        date: project.date,
+        materials: materials.map(m => ({
+          id: m.id,
+          name: m.name,
+          status: m.status === 'loaded' ? 'loaded' : 'not_loaded',
+          updatedAt: new Date(),
+        })),
+        documentsSubmitted: false,
+        progress: 0,
+        status: 'pending',
+      });
+
+      onClose();
     } catch (error) {
       console.error("Erreur lors de la mise à jour des matériaux:", error);
     } finally {

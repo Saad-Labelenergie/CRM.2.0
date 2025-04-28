@@ -147,14 +147,22 @@ export function Loading() {
                    app.duration === '4h' ? 4 : 8, // Estimation basée sur la durée
             date: format(new Date(app.date), 'dd/MM/yyyy'),
             teamId: team.id,
-            // Ajouter les matériaux du projet s'ils existent
-            materials: relatedProject?.materials || [
-              // Matériaux par défaut si aucun n'est défini
-              { id: 1, name: "Unité intérieure", status: "not_loaded" },
-              { id: 2, name: "Unité extérieure", status: "not_loaded" },
-              { id: 3, name: "Tuyauterie", status: "not_loaded" },
-              { id: 4, name: "Supports", status: "not_loaded" }
-            ],
+            // Correction ici : convertir les statuts Firestore en statuts d'affichage
+            materials: relatedProject?.materials
+              ? relatedProject.materials.map(m => ({
+                  ...m,
+                  status: m.status === 'installed'
+                    ? 'loaded'
+                    : m.status === 'not_installed'
+                    ? 'not_loaded'
+                    : (m.status as 'loaded' | 'not_loaded' | 'installed' | 'not_installed')
+                }))
+              : [
+                  { id: 1, name: "Unité intérieure", status: "not_loaded" as const },
+                  { id: 2, name: "Unité extérieure", status: "not_loaded" as const },
+                  { id: 3, name: "Tuyauterie", status: "not_loaded" as const },
+                  { id: 4, name: "Supports", status: "not_loaded" as const }
+                ],
             projectId: relatedProject?.id // Stocker l'ID du projet pour les mises à jour
           };
         });
@@ -221,44 +229,40 @@ export function Loading() {
     try {
       console.log("Updating materials for project:", projectId, materials);
       
-      // Trouver le projet correspondant
-      const project = projects.find(p => p.id === projectId);
-      if (!project) {
-        console.error("Projet non trouvé:", projectId);
-        return;
-      }
+      // Conserver le statut 'loaded' ou 'not_loaded' pour l'affichage local
+      const displayMaterials = [...materials];
       
-      // Trouver le rendez-vous correspondant
-      const appointment = appointments.find(a => 
-        a.title === project.name && 
-        a.team === project.team && 
-        a.date === project.startDate
-      );
+      // Convert materials to the expected format for the backend
+      const formattedMaterials = materials.map(material => {
+        return {
+          id: material.id,
+          name: material.name,
+          status: material.status === 'loaded' ? 'installed' as const : 
+                 material.status === 'not_loaded' ? 'not_installed' as const :
+                 material.status // Keep as is if already 'installed' or 'not_installed'
+        };
+      });
       
-      if (!appointment) {
-        console.error("Rendez-vous non trouvé pour le projet:", projectId);
-        return;
-      }
-      
-      // Convertir les matériaux au format attendu par le backend avec une assertion de type correcte
-      const formattedMaterials = materials.map(material => ({
-        id: material.id,
-        name: material.name,
-        status: material.status === 'loaded' ? 'installed' as const : 'not_installed' as const
-      }));
-      
-      console.log("Updating local project materials:", materials);
-      
-      // Mettre à jour les matériaux du rendez-vous
-      await updateAppointmentMaterials(appointment.id, formattedMaterials);
-      
-      // Mettre à jour les matériaux du projet
+      // Mettre à jour les matériaux du projet dans Firebase ou votre backend
       await updateProjectMaterials(projectId, formattedMaterials);
       
-      // Fermer le modal
+      // Mettre à jour l'état local avec les matériaux originaux (avec loaded/not_loaded)
+      setTeamsWithLoad(prevTeams => {
+        return prevTeams.map(team => ({
+          ...team,
+          projects: team.projects.map(project => {
+            if (project.projectId === projectId || project.id === projectId) {
+              console.log("Updating local project materials:", displayMaterials);
+              return { ...project, materials: displayMaterials };
+            }
+            return project;
+          })
+        }));
+      });
+      
       setIsMaterialModalOpen(false);
     } catch (error) {
-      console.error("Erreur lors de la mise à jour des matériaux:", error);
+      console.error('Erreur lors de la mise à jour des matériaux:', error);
     }
   };
 
@@ -274,15 +278,6 @@ export function Loading() {
           <h1 className="text-3xl font-bold text-primary">Chargement des Équipes</h1>
           <p className="text-muted-foreground mt-1">Gérez la répartition des chantiers et le chargement des matériels</p>
         </div>
-        {/* <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setIsAssignModalOpen(true)}
-          className="flex items-center px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors shadow-lg"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Assigner un Projet
-        </motion.button> */}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4">
