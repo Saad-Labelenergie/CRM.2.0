@@ -9,6 +9,8 @@ interface ProjectInfoProps {
   status: string;
   progress: number;
   onStatusChange: (newStatus: string) => void;
+  beforeImageUrl?: string;
+  afterImageUrl?: string;
 }
 
 const statusOptions = [
@@ -20,7 +22,6 @@ const statusOptions = [
   { value: 'annuler', label: 'Annulé', color: 'text-red-500' }
 ];
 
-//systeme de barre de progression
 const statusProgressMap: { [key: string]: number } = {
   placer: 10,
   confirmer: 25,
@@ -30,7 +31,6 @@ const statusProgressMap: { [key: string]: number } = {
   annuler: 0
 };
 
-//Couleur de baree de progression 
 const getProgressColor = (progress: number) => {
   if (progress <= 25) return 'bg-red-500';
   if (progress <= 50) return 'bg-yellow-500';
@@ -39,21 +39,22 @@ const getProgressColor = (progress: number) => {
   return 'bg-green-500';
 };
 
-
 export function ProjectInfo({
   type,
   startDate,
   team,
   status,
-  progress: _progress, // ignorer l'ancien progress donné
-  onStatusChange
+  progress: _progress,
+  onStatusChange,
+  beforeImageUrl,
+  afterImageUrl
 }: ProjectInfoProps) {
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     onStatusChange(e.target.value);
   };
 
   const currentStatus = statusOptions.find(opt => opt.value === status);
-  const progress = statusProgressMap[status] ?? 0; // Progress calculé dynamiquement
+  const progress = statusProgressMap[status] ?? 0;
 
   return (
     <motion.div whileHover={{ y: -5 }} className="bg-card p-6 rounded-xl shadow-lg border border-border/50">
@@ -111,16 +112,32 @@ export function ProjectInfo({
                 <span className="font-medium">{progress}%</span>
               </div>
               <div className="h-2 bg-secondary rounded-full overflow-hidden">
-              <div
-  className={`h-full rounded-full transition-all duration-500 ${getProgressColor(progress)}`}
-  style={{ width: `${progress}%` }}
-/>
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${getProgressColor(progress)}`}
+                  style={{ width: `${progress}%` }}
+                />
               </div>
             </div>
           </div>
         </div>
       </div>
+      {/* La partie de avant apres images */}
+      {/* {(beforeImageUrl || afterImageUrl) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          {beforeImageUrl && (
+            <div>
+              <div className="text-sm text-muted-foreground mb-1">Avant</div>
+              <img src={beforeImageUrl} alt="Photo avant" className="w-full h-64 object-cover rounded-lg shadow" />
+            </div>
+          )}
+          {afterImageUrl && (
+            <div>
+              <div className="text-sm text-muted-foreground mb-1">Après</div>
+              <img src={afterImageUrl} alt="Photo après" className="w-full h-64 object-cover rounded-lg shadow" />
+            </div>
+          )}
+        </div>
+      )} */}
     </motion.div>
   );
 }
-
