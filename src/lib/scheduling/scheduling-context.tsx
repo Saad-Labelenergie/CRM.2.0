@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
 import { useFirebase } from '../hooks/useFirebase';
 import { SchedulingService, Installation, Team } from './scheduling-service';
-import { doc, deleteDoc, collection, query, getDocs, getDoc, updateDoc, setDoc } from 'firebase/firestore';
+import { doc, deleteDoc, collection, query, getDocs, getDoc, updateDoc, setDoc, addDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 
 // Mettez à jour l'interface Appointment dans ce fichier également
@@ -79,6 +79,9 @@ interface SchedulingContextType {
   createTeam: (team: Omit<Team, 'id'>) => Promise<string>;
   updateTeamLoad: (teamId: string, currentLoad: number) => Promise<void>;
   updateAppointmentMaterials: (appointmentId: string, materials: { id: number; name: string; status: 'installed' | 'not_installed'; }[]) => Promise<void>;
+  addLoadingRecord: (record: Omit<LoadingRecord, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
+  updateLoadingRecord: (id: string, updates: Partial<LoadingRecord>) => Promise<void>;
+  getLoadingRecords: (teamId?: string) => Promise<LoadingRecord[]>;
 }
 
 const SchedulingContext = createContext<SchedulingContextType | null>(null);
@@ -394,7 +397,10 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
       updateProjectMaterials,
       createTeam,
       updateTeamLoad,
-      updateAppointmentMaterials // Ajoutez cette ligne qui manquait
+      updateAppointmentMaterials,
+      addLoadingRecord,
+      updateLoadingRecord,
+      getLoadingRecords,
     }}>
       {children}
     </SchedulingContext.Provider>
@@ -408,3 +414,61 @@ export function useScheduling() {
   }
   return context;
 }
+
+
+interface LoadingRecord {
+  id: string;
+  projectId: string;
+  projectName: string;
+  teamId: string;
+  teamName: string;
+  date: string;
+  materials: {
+    id: number;
+    name: string;
+    status: 'not_loaded' | 'loaded';
+    updatedAt: Date;
+    updatedBy?: string;
+  }[];
+  documentsSubmitted: boolean;
+  progress: number;
+  status: 'pending' | 'in_progress' | 'completed';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+
+// Add a loading record to the "chargement" collection
+const addLoadingRecord = async (record: Omit<LoadingRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+  const chargementRef = collection(db, 'chargement');
+  const now = new Date();
+  const docRef = await addDoc(chargementRef, {
+    ...record,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return docRef.id;
+};
+
+// Update a loading record in the "chargement" collection
+const updateLoadingRecord = async (id: string, updates: Partial<LoadingRecord>): Promise<void> => {
+  const recordRef = doc(db, 'chargement', id);
+  await updateDoc(recordRef, {
+    ...updates,
+    updatedAt: new Date(),
+  });
+};
+
+// Get loading records from the "chargement" collection (optionally filter by teamId)
+const getLoadingRecords = async (teamId?: string): Promise<LoadingRecord[]> => {
+  const chargementRef = collection(db, 'chargement');
+  let q = query(chargementRef);
+  if (teamId) {
+    q = query(chargementRef, where('teamId', '==', teamId));
+  }
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as LoadingRecord[];
+};
