@@ -7,7 +7,6 @@ import { Link } from 'react-router-dom';
 import { AssignProjectModal } from './components/assign-project-modal';
 import { MaterialLoadingModal } from './components/material-loading-modal';
 
-// Types pour les projets et équipes
 interface Project {
   id: string;
   name: string;
@@ -16,15 +15,13 @@ interface Project {
   teamId?: string;
   materials?: Material[];
   projectId?: string;
-  documentsSubmitted?: boolean; // Ajoutez cette propriété
+  documentsSubmitted?: boolean; 
 }
-
 interface Material {
   id: number;
   name: string;
   status: 'not_loaded' | 'loaded' | 'installed' | 'not_installed';
 }
-
 interface TeamWithLoad {
   id: string;
   name: string;
@@ -35,7 +32,6 @@ interface TeamWithLoad {
   expertise: string[];
   isActive: boolean;
 }
-
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -45,7 +41,6 @@ const containerVariants = {
     }
   }
 };
-
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
   visible: {
@@ -53,9 +48,7 @@ const itemVariants = {
     opacity: 1
   }
 };
-
 export function Loading() {
-  // Add missing state declarations
   const [searchTerm, setSearchTerm] = useState('');
   const [teamsWithLoad, setTeamsWithLoad] = useState<TeamWithLoad[]>([]);
   const [collapsedTeams, setCollapsedTeams] = useState<Record<string, boolean>>({});
@@ -64,54 +57,44 @@ export function Loading() {
   const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<TeamWithLoad | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  
-  // Mettez à jour l'importation du contexte pour inclure updateTeamLoad et updateProject
   const { teams, appointments, projects, updateProjectMaterials, updateTeamLoad, updateProject, updateAppointmentMaterials } = useScheduling();
-  
-  // Modifiez la fonction handleDocumentChange pour gérer uniquement l'état local
   const handleDocumentChange = (projectId: string, checked: boolean) => {
-  // Mettre à jour l'état local uniquement
   setDocumentsRemis(prev => ({
   ...prev,
   [projectId]: checked
   }));
-  
-  // Log pour le débogage
   console.log(`Document pour le projet ${projectId} marqué comme ${checked ? 'remis' : 'non remis'}`);
   };
-  
-  // Modifiez l'useEffect pour initialiser l'état des documents
   useEffect(() => {
   if (projects.length > 0) {
-  // Initialiser l'état des documents (tous à false par défaut)
   const documentsState = projects.reduce((acc, project) => {
   if (project.id) {
-  acc[project.id] = false; // Par défaut, aucun document n'est remis
+  acc[project.id] = false; 
   }
   return acc;
   }, {} as Record<string, boolean>);
-  
-  // Mettre à jour l'état local
   setDocumentsRemis(documentsState);
   }
   }, [projects]);
-  
-  // Add missing function to count materials to load
   const countMaterialsToLoad = (team: TeamWithLoad) => {
     return team.projects.reduce((count, project) => {
       if (!project.materials) return count;
       return count + project.materials.filter(m => m.status === 'not_loaded').length;
     }, 0);
   };
-  
-  // Add missing function to calculate progress
+  const calculateTeamProgress = (team: TeamWithLoad) => {
+   if (!team.projects.length) return 0;
+  const total = team.projects.reduce(
+    (sum, project) => sum + calculateProgress(project, documentsRemis[project.id] || false),
+    0
+    );
+   return Math.round(total / team.projects.length);
+  };
   const calculateProgress = (project: Project, documentsRemis: boolean) => {
     if (!project.materials) return 0;
-    
     const totalItems = project.materials.length + 1; // +1 for documents
     const loadedItems = project.materials.filter(m => m.status === 'loaded').length;
-    const docsValue = documentsRemis ? 1 : 0;
-    
+    const docsValue = documentsRemis ? 1 : 0; 
     return Math.round(((loadedItems + docsValue) / totalItems) * 100);
   };
   // Ajoutez cette fonction pour mettre à jour la charge dans la BDD
@@ -165,25 +148,21 @@ export function Loading() {
                 ],
             projectId: relatedProject?.id // Stocker l'ID du projet pour les mises à jour
           };
-        });
-        
+        });    
         // Calculer la charge actuelle
         const totalHours = teamProjects.reduce((sum, project) => sum + project.hours, 0);
-        const currentLoad = Math.min(Math.round((totalHours / 40) * 100), 100); // 40h = capacité hebdomadaire
-        
+        const currentLoad = Math.min(Math.round((totalHours / 40) * 100), 100); // 40h = capacité hebdomadaire     
         // Vérifier si la charge a changé avant de la mettre à jour dans la BDD
         if (team.currentLoad !== currentLoad) {
           updateTeamLoadInDatabase(team.id, currentLoad);
         }
-        
         return {
           ...team,
           projects: teamProjects,
           capacity: 40, // Capacité hebdomadaire en heures
           currentLoad
         };
-      });
-      
+      }); 
       setTeamsWithLoad(teamsWithProjects);
     } else {
       // Utiliser les données statiques si aucune donnée n'est disponible
@@ -192,7 +171,6 @@ export function Loading() {
       ]);
     }
   }, [teams, appointments, projects, updateTeamLoad]);
-
   // Add the toggleTeamCollapse function
   const toggleTeamCollapse = (teamId: string) => {
     setCollapsedTeams(prev => ({
@@ -200,38 +178,37 @@ export function Loading() {
       [teamId]: !prev[teamId]
     }));
   };
-  
   // Filtrer les équipes en fonction de la recherche
-  const filteredTeams = teamsWithLoad.filter(team => 
-    team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    team.projects.some(project => 
-      project.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
-
+  const filteredTeams = teamsWithLoad.filter(team => {
+    const search = searchTerm.trim().toLowerCase();
+    if (!search) return true; // Si la recherche est vide, tout afficher
+  
+    // Vérifie si le nom de l'équipe correspond
+    if ((team.name || '').toLowerCase().includes(search)) return true;
+  
+    // Vérifie si un projet de l'équipe correspond
+    return team.projects.some(project =>
+      (project.name || '').toLowerCase().includes(search)
+    );
+  });
   const handleOpenAssignModal = (team: TeamWithLoad) => {
     setSelectedTeam(team);
     setIsAssignModalOpen(true);
   };
-
   const handleAssignProject = (teamId: string, projectData: any) => {
     // Ici, vous implémenteriez la logique pour assigner un projet à une équipe
     console.log('Assigning project to team:', teamId, projectData);
     setIsAssignModalOpen(false);
   };
-
   const handleOpenMaterialModal = (project: Project) => {
     setSelectedProject(project);
     setIsMaterialModalOpen(true);
   };
-
   const handleUpdateMaterials = async (projectId: string, materials: Material[]) => {
     try {
       console.log("Updating materials for project:", projectId, materials);
-      
       // Conserver le statut 'loaded' ou 'not_loaded' pour l'affichage local
       const displayMaterials = [...materials];
-      
       // Convert materials to the expected format for the backend
       const formattedMaterials = materials.map(material => {
         return {
@@ -241,11 +218,9 @@ export function Loading() {
                  material.status === 'not_loaded' ? 'not_installed' as const :
                  material.status // Keep as is if already 'installed' or 'not_installed'
         };
-      });
-      
+      }); 
       // Mettre à jour les matériaux du projet dans Firebase ou votre backend
-      await updateProjectMaterials(projectId, formattedMaterials);
-      
+      await updateProjectMaterials(projectId, formattedMaterials); 
       // Mettre à jour l'état local avec les matériaux originaux (avec loaded/not_loaded)
       setTeamsWithLoad(prevTeams => {
         return prevTeams.map(team => ({
@@ -259,13 +234,24 @@ export function Loading() {
           })
         }));
       });
-      
       setIsMaterialModalOpen(false);
     } catch (error) {
       console.error('Erreur lors de la mise à jour des matériaux:', error);
     }
   };
-
+  // Calcul des statistiques globales
+  const totalTeams = teamsWithLoad.length;
+  const totalProjects = teamsWithLoad.reduce((sum, team) => sum + team.projects.length, 0);
+  const avgProgress =
+    totalTeams > 0
+      ? Math.round(
+          teamsWithLoad.reduce((sum, team) => sum + calculateTeamProgress(team), 0) / totalTeams
+        )
+      : 0;
+  const totalMaterialsToLoad = teamsWithLoad.reduce(
+    (sum, team) => sum + countMaterialsToLoad(team),
+    0
+  );
   return (
     <motion.div
       variants={containerVariants}
@@ -279,7 +265,30 @@ export function Loading() {
           <p className="text-muted-foreground mt-1">Gérez la répartition des chantiers et le chargement des matériels</p>
         </div>
       </div>
-
+      {/* --- Bloc Statistiques --- */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-accent/50 rounded-xl p-4 flex flex-col items-center">
+          <Users className="w-6 h-6 text-primary mb-2" />
+          <span className="text-lg font-bold">{totalTeams}</span>
+          <span className="text-sm text-muted-foreground">Équipes actives</span>
+        </div>
+        <div className="bg-accent/50 rounded-xl p-4 flex flex-col items-center">
+          <HardHat className="w-6 h-6 text-blue-500 mb-2" />
+          <span className="text-lg font-bold">{totalProjects}</span>
+          <span className="text-sm text-muted-foreground">Projets en cours</span>
+        </div>
+        <div className="bg-accent/50 rounded-xl p-4 flex flex-col items-center">
+          <Scale className="w-6 h-6 text-green-500 mb-2" />
+          <span className="text-lg font-bold">{avgProgress}%</span>
+          <span className="text-sm text-muted-foreground">Progression moyenne</span>
+        </div>
+        <div className="bg-accent/50 rounded-xl p-4 flex flex-col items-center">
+          <Package className="w-6 h-6 text-amber-500 mb-2" />
+          <span className="text-lg font-bold">{totalMaterialsToLoad}</span>
+          <span className="text-sm text-muted-foreground">Matériels à charger</span>
+        </div>
+      </div>
+      {/* --- Fin Bloc Statistiques --- */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
@@ -300,7 +309,6 @@ export function Loading() {
           Filtrer
         </motion.button>
       </div>
-
       <motion.div
         variants={containerVariants}
         className="grid gap-6"
@@ -332,19 +340,18 @@ export function Loading() {
                   <div className="flex items-center mt-1">
                     <Scale className="w-4 h-4 text-muted-foreground mr-1" />
                     <span className="text-sm text-muted-foreground">
-                      Charge : {team.currentLoad}%
+                      Progression : {calculateTeamProgress(team)}%
                     </span>
-                    {/* Display charge percentage with color indicator */}
                     <div className="ml-2 w-16 h-2 bg-secondary rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className={`h-full rounded-full transition-all duration-500 ${
-                          team.currentLoad >= 90 ? 'bg-red-500' : 
-                          team.currentLoad >= 70 ? 'bg-orange-500' :
-                          team.currentLoad >= 50 ? 'bg-amber-500' :
-                          team.currentLoad >= 30 ? 'bg-blue-500' :
-                          'bg-green-500'
+                          calculateTeamProgress(team) >= 100 ? 'bg-green-500' :
+                          calculateTeamProgress(team) >= 75 ? 'bg-blue-500' :
+                          calculateTeamProgress(team) >= 50 ? 'bg-amber-500' :
+                          calculateTeamProgress(team) >= 25 ? 'bg-orange-500' :
+                          'bg-red-500'
                         }`}
-                        style={{ width: `${team.currentLoad}%` }}
+                        style={{ width: `${calculateTeamProgress(team)}%` }}
                       />
                     </div>
                     {/* Afficher le nombre de matériels à charger */}
@@ -372,7 +379,6 @@ export function Loading() {
                 </div>
               </div>
             </div>
-
             {/* Afficher les projets seulement si l'équipe n'est pas repliée */}
             {!collapsedTeams[team.id] && (
               <div className="mt-6 space-y-4">
@@ -422,7 +428,6 @@ export function Loading() {
                         <Calendar className="w-4 h-4 mr-2" />
                         <span>{project.date}</span>
                       </div>
-                      
                       {/* Option pour les documents remis */}
                       <div className="flex items-center mt-2">
                         <input 
@@ -436,7 +441,6 @@ export function Loading() {
                           Document remis
                         </label>
                       </div>
-                      
                       {/* Affichage des matériaux et de leur statut */}
                       {project.materials && (
                         <div className="mt-3 pt-3 border-t border-border/50">
@@ -486,7 +490,6 @@ export function Loading() {
           </motion.div>
         ))}
       </motion.div>
-
       {/* Modal pour assigner un projet */}
       {isAssignModalOpen && (
         <AssignProjectModal
@@ -497,7 +500,6 @@ export function Loading() {
           selectedTeam={selectedTeam}
         />
       )}
-
       {/* Modal pour gérer les matériaux */}
       {isMaterialModalOpen && selectedProject && (
         <MaterialLoadingModal
@@ -509,4 +511,5 @@ export function Loading() {
       )}
     </motion.div>
   );
+  
 }

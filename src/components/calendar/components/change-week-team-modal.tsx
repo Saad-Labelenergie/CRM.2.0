@@ -78,7 +78,16 @@ export function ChangeWeekTeamModal({ isOpen, onClose, currentTeam, weekDates, o
                 </div>
                 <div className="flex items-center text-sm">
                   <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
-                  <span>Semaine du {format(weekDates[0], 'd')} au {format(weekDates[6], 'd MMMM yyyy', { locale: fr })}</span>
+                  <span>
+                    Semaine du
+                    {weekDates[0] instanceof Date && !isNaN(weekDates[0].getTime())
+                      ? ` ${format(weekDates[0], 'd')}`
+                      : ' ?'}
+                    au
+                    {weekDates[6] instanceof Date && !isNaN(weekDates[6].getTime())
+                      ? ` ${format(weekDates[6], 'd MMMM yyyy', { locale: fr })}`
+                      : ' ?'}
+                  </span>
                 </div>
               </div>
             </div>
