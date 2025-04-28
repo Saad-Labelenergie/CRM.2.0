@@ -103,7 +103,15 @@ export function Loading() {
       return count + project.materials.filter(m => m.status === 'not_loaded').length;
     }, 0);
   };
-  
+  // Fonction pour la progression réelle de l'équipe
+  const calculateTeamProgress = (team: TeamWithLoad) => {
+   if (!team.projects.length) return 0;
+  const total = team.projects.reduce(
+    (sum, project) => sum + calculateProgress(project, documentsRemis[project.id] || false),
+    0
+    );
+   return Math.round(total / team.projects.length);
+  };
   // Add missing function to calculate progress
   const calculateProgress = (project: Project, documentsRemis: boolean) => {
     if (!project.materials) return 0;
@@ -332,19 +340,18 @@ export function Loading() {
                   <div className="flex items-center mt-1">
                     <Scale className="w-4 h-4 text-muted-foreground mr-1" />
                     <span className="text-sm text-muted-foreground">
-                      Charge : {team.currentLoad}%
+                      Progression : {calculateTeamProgress(team)}%
                     </span>
-                    {/* Display charge percentage with color indicator */}
                     <div className="ml-2 w-16 h-2 bg-secondary rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className={`h-full rounded-full transition-all duration-500 ${
-                          team.currentLoad >= 90 ? 'bg-red-500' : 
-                          team.currentLoad >= 70 ? 'bg-orange-500' :
-                          team.currentLoad >= 50 ? 'bg-amber-500' :
-                          team.currentLoad >= 30 ? 'bg-blue-500' :
-                          'bg-green-500'
+                          calculateTeamProgress(team) >= 100 ? 'bg-green-500' :
+                          calculateTeamProgress(team) >= 75 ? 'bg-blue-500' :
+                          calculateTeamProgress(team) >= 50 ? 'bg-amber-500' :
+                          calculateTeamProgress(team) >= 25 ? 'bg-orange-500' :
+                          'bg-red-500'
                         }`}
-                        style={{ width: `${team.currentLoad}%` }}
+                        style={{ width: `${calculateTeamProgress(team)}%` }}
                       />
                     </div>
                     {/* Afficher le nombre de matériels à charger */}
@@ -509,4 +516,8 @@ export function Loading() {
       )}
     </motion.div>
   );
+  
 }
+
+
+
