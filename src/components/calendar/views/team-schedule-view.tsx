@@ -146,15 +146,45 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
   };
 
   const handleChangeWeekTeam = (currentTeamId: string, newTeamName: string) => {
-    const weekAppointments = assignedAppointments.filter(appointment => {
-      const appointmentDate = new Date(appointment.date);
-      return appointment.team === teams.find(t => t.id === currentTeamId)?.name &&
-             appointmentDate >= weekStart &&
-             appointmentDate <= weekEnd;
-    });
+    // Find team objects
+    const currentTeam = teams.find(t => t.id === currentTeamId);
+    const newTeam = teams.find(t => t.name === newTeamName);
+    console.log("currentTeamId:", currentTeamId, "newTeamName:", newTeamName);
+    console.log("currentTeam:", currentTeam);
+    console.log("newTeam:", newTeam);
+    if (!currentTeam || !newTeam) {
+      console.warn("Team(s) not found, aborting swap.");
+      return;
+    }
 
-    weekAppointments.forEach(appointment => {
-      updateAppointmentTeam(appointment.id, newTeamName);
+    // Define week period
+    const weekStart = weekDays[0];
+    const weekEnd = weekDays[weekDays.length - 1];
+    console.log("weekStart:", weekStart, "weekEnd:", weekEnd);
+
+    // Find appointments for each team in the week
+    const currentTeamAppointments = appointments.filter(app =>
+      app.team === currentTeam.name &&
+      new Date(app.date) >= weekStart &&
+      new Date(app.date) <= weekEnd
+    );
+    const newTeamAppointments = appointments.filter(app =>
+      app.team === newTeam.name &&
+      new Date(app.date) >= weekStart &&
+      new Date(app.date) <= weekEnd
+    );
+
+    console.log("currentTeamAppointments:", currentTeamAppointments);
+    console.log("newTeamAppointments:", newTeamAppointments);
+
+    // Swap teams on appointments
+    currentTeamAppointments.forEach(app => {
+      console.log(`Updating appointment ${app.id} from ${currentTeam.name} to ${newTeam.name}`);
+      updateAppointmentTeam(app.id, newTeam.name);
+    });
+    newTeamAppointments.forEach(app => {
+      console.log(`Updating appointment ${app.id} from ${newTeam.name} to ${currentTeam.name}`);
+      updateAppointmentTeam(app.id, currentTeam.name);
     });
   };
 
@@ -331,8 +361,15 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                               <div className="text-sm font-semibold overflow-hidden uppercase"> 
                                 {appointment.client.name}
                               </div>
-                              <div className="text-xs mt-1 opacity-80">{appointment.duration}</div>
-                              
+                              {/* Display appointment title just below client name */}
+                              {appointment.title && (
+                                <div className="text-xs font-medium mt-1 text-primary">
+                                  {appointment.title}
+                                </div>
+                              )}
+                              {/* <div className="text-xs mt-1 opacity-80">{appointment.duration}</div>
+                             
+                              */}
                               {/* Action buttons */}
                               <div className="absolute top-1 right-1 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button 
