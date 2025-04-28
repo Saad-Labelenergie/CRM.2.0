@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { format, addDays, startOfWeek, endOfWeek, isToday, differenceInMinutes, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useCalendarStore } from '../../../lib/calendar/calendar-store';
@@ -8,7 +8,7 @@ import { ChangeTeamModal } from '../components/change-team-modal';
 import { ChangeWeekTeamModal } from '../components/change-week-team-modal';
 import { ProjectDetailsModal } from '../components/project-details-modal';
 // Import Eye icon from lucide-react
-import { ExternalLink, Trash2, Eye } from 'lucide-react';
+import { ExternalLink, Trash2, Eye, X, AlertTriangle } from 'lucide-react';
 import { Toast } from '../../ui/toast';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -73,6 +73,10 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
   const [isChangeTeamModalOpen, setIsChangeTeamModalOpen] = useState(false);
   const [isProjectDetailsModalOpen, setIsProjectDetailsModalOpen] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  // Add state for delete confirmation modal
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [appointmentToDelete, setAppointmentToDelete] = useState<string | null>(null);
+  
   const [changeWeekTeamData, setChangeWeekTeamData] = useState<{
     isOpen: boolean;
     team: { id: string; name: string; } | null;
@@ -116,13 +120,24 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
     setIsProjectDetailsModalOpen(true);
   };
 
-  const handleDeleteAppointment = async (e: React.MouseEvent, appointmentId: string) => {
+  // Update this function to open the confirmation modal instead of deleting immediately
+  const handleDeleteAppointment = (e: React.MouseEvent, appointment: any) => {
     e.stopPropagation();
-    try {
-      await deleteAppointment(appointmentId);
-      setShowSuccessToast(true);
-    } catch (error) {
-      console.error('Erreur lors de la suppression du rendez-vous:', error);
+    setSelectedAppointment(appointment);
+    setAppointmentToDelete(appointment.id);
+    setIsDeleteModalOpen(true);
+  };
+
+  // Add a new function to handle the actual deletion
+  const confirmDeleteAppointment = async () => {
+    if (appointmentToDelete) {
+      try {
+        await deleteAppointment(appointmentToDelete);
+        setShowSuccessToast(true);
+        setIsDeleteModalOpen(false);
+      } catch (error) {
+        console.error('Erreur lors de la suppression du rendez-vous:', error);
+      }
     }
   };
 
@@ -251,6 +266,13 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                               const durationDays = Math.min(2, parseFloat(durationMatch[1]));
                               colSpan = Math.min(durationDays, weekDays.length - dayIndex);
                             }
+                            
+                            // Vérifier si la durée est de 4 heures
+                            const hourMatch = appointment.duration.match(/(\d+)\s*h/i);
+                            if (hourMatch && parseInt(hourMatch[1]) === 4) {
+                              // Pour les rendez-vous de 4h, prendre la moitié de l'espace
+                              colSpan = 0.5;
+                            }
                           }
                           
                           return (
@@ -270,8 +292,12 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                                 backgroundColor: `${team.color}1A`,
                                 top: `${index * 5}px`,
                                 zIndex: 10 + index,
-                                // Étendre la largeur en fonction du nombre de jours
-                                width: colSpan > 1 ? `calc(${colSpan * 100}% - ${colSpan * 4}px)` : 'calc(100% - 2px)',
+                                // Étendre la largeur en fonction du nombre de jours ou demi-jour pour 4h
+                                width: colSpan === 0.5 
+                                  ? 'calc(50% - 2px)' 
+                                  : colSpan > 1 
+                                    ? `calc(${colSpan * 100}% - ${colSpan * 4}px)` 
+                                    : 'calc(100% - 2px)',
                                 right: colSpan > 1 ? 'auto' : '1px',
                               }}
                             >
@@ -291,7 +317,7 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                                   <Eye className="w-3 h-3" />
                                 </button>
                                 <button 
-                                  onClick={(e) => handleDeleteAppointment(e, appointment.id)}
+                                  onClick={(e) => handleDeleteAppointment(e, appointment)}
                                   className="p-1 rounded-full hover:bg-black/20"
                                   title="Supprimer"
                                 >
@@ -337,6 +363,72 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
         isVisible={showSuccessToast}
         onClose={() => setShowSuccessToast(false)}
       />
+
+      {/* Add delete confirmation modal */}
+      <AnimatePresence>
+        {isDeleteModalOpen && selectedAppointment && (
+          <div className="fixed inset-0 flex items-center justify-center z-[100]">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50"
+              onClick={() => setIsDeleteModalOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-md bg-card p-6 rounded-xl shadow-xl z-[101] border border-border/50 mx-4"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                  <AlertTriangle className="w-5 h-5 mr-2 text-destructive" />
+                  <h2 className="text-xl font-semibold">Supprimer le rendez-vous</h2>
+                </div>
+                <button
+                  onClick={() => setIsDeleteModalOpen(false)}
+                  className="p-2 hover:bg-accent rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <p className="text-muted-foreground mb-6">
+                Êtes-vous sûr de vouloir supprimer le rendez-vous suivant ?
+                <br /><br />
+                <span className="font-medium">{selectedAppointment.title || 'Rendez-vous'}</span>
+                <br />
+                Client : {selectedAppointment.client?.name}
+                <br />
+                Date : {selectedAppointment.date}
+                <br /><br />
+                Cette action est irréversible.
+              </p>
+
+              <div className="flex justify-end space-x-2">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setIsDeleteModalOpen(false)}
+                  className="px-4 py-2 rounded-lg bg-accent hover:bg-accent/80 transition-colors"
+                >
+                  Annuler
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={confirmDeleteAppointment}
+                  className="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-colors flex items-center"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Supprimer
+                </motion.button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

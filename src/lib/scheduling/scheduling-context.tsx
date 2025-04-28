@@ -27,6 +27,11 @@ interface Appointment {
   isLastDay?: boolean;
   parentId?: string | null;
   status: 'non_attribue' | 'attribue' | 'termine';
+  materials?: {
+    id: number;
+    name: string;
+    status: 'installed' | 'not_installed';
+  }[];
 }
 
 interface Project {
@@ -48,6 +53,7 @@ interface Project {
   }[];
 }
 
+// Modifiez l'interface SchedulingContextType pour inclure updateAppointmentMaterials
 interface SchedulingContextType {
   findOptimalSlot: (installation: Installation) => {
     team: Team;
@@ -71,6 +77,8 @@ interface SchedulingContextType {
   updateAppointmentTeam: (appointmentId: string, newTeamName: string) => Promise<void>;
   updateProjectMaterials: (projectId: string, materials: { id: number; name: string; status: 'installed' | 'not_installed'; }[]) => Promise<void>;
   createTeam: (team: Omit<Team, 'id'>) => Promise<string>;
+  updateTeamLoad: (teamId: string, currentLoad: number) => Promise<void>;
+  updateAppointmentMaterials: (appointmentId: string, materials: { id: number; name: string; status: 'installed' | 'not_installed'; }[]) => Promise<void>;
 }
 
 const SchedulingContext = createContext<SchedulingContextType | null>(null);
@@ -302,28 +310,92 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  const value = {
-    findOptimalSlot,
-    getAvailableTeamsForDate,
-    teams,
-    loading: teamsLoading,
-    error: teamsError,
-    updateTeamSchedule: () => {},
-    appointments,
-    addAppointment,
-    updateAppointment, // Assurez-vous que cette ligne existe
-    deleteAppointment,
-    projects,
-    addProject,
-    updateProject,
-    toggleTeamActive,
-    updateAppointmentTeam,
-    updateProjectMaterials,
-    createTeam
+  // Ajoutez la fonction updateTeamLoad ici, avant le return
+  const updateTeamLoad = async (teamId: string, currentLoad: number) => {
+    try {
+      // Use type assertion to tell TypeScript that currentLoad is a valid property
+      await updateTeam(teamId, { currentLoad } as Partial<Team>);
+      console.log(`Charge de l'équipe ${teamId} mise à jour: ${currentLoad}%`);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la charge de l\'équipe:', error);
+      throw error;
+    }
   };
 
+  // Ajoutez cette fonction directement ici (pas dans un composant imbriqué)
+  // Modifions la fonction updateAppointmentMaterials pour qu'elle fonctionne correctement
+  const updateAppointmentMaterials = async (appointmentId: string, materials: { id: number; name: string; status: 'installed' | 'not_installed'; }[]) => {
+  try {
+    console.log(`Mise à jour des matériaux pour le rendez-vous ${appointmentId}:`, materials);
+    
+    // Vérifier si le document existe déjà
+    const appointmentRef = doc(db, 'appointments', appointmentId);
+    const appointmentSnap = await getDoc(appointmentRef);
+    
+    if (appointmentSnap.exists()) {
+      // Mettre à jour le document existant
+      await updateDoc(appointmentRef, {
+        materials,
+        updatedAt: new Date()
+      });
+      console.log(`Matériaux du rendez-vous ${appointmentId} mis à jour avec succès`);
+      
+      // Mettre à jour l'état local
+      setAppointments(prev => prev.map(app => 
+        app.id === appointmentId ? { ...app, materials } : app
+      ));
+      
+      // Mettre à jour également le projet associé si nécessaire
+      const project = projects.find(p => p.appointments?.some(a => a.id === appointmentId));
+      if (project) {
+        const updatedAppointments = project.appointments.map(a => {
+          if (a.id === appointmentId) {
+            return { ...a, materials };
+          }
+          return a;
+        });
+        
+        await updateProject(project.id, {
+          appointments: updatedAppointments,
+          // Mettre à jour les matériaux du projet également
+          materials
+        });
+      }
+    } else {
+      console.error(`Le rendez-vous ${appointmentId} n'existe pas`);
+    }
+  } catch (error) {
+    console.error(`Erreur lors de la mise à jour des matériaux du rendez-vous ${appointmentId}:`, error);
+    throw error;
+  }
+};
+
+  // Supprimez tout le bloc du SchedulingProvider imbriqué qui commence par:
+  // const SchedulingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // et se termine par le return et le JSX à l'intérieur
+  
   return (
-    <SchedulingContext.Provider value={value}>
+    <SchedulingContext.Provider value={{
+      findOptimalSlot,
+      getAvailableTeamsForDate,
+      teams,
+      loading: teamsLoading,
+      error: teamsError,
+      updateTeamSchedule: updateTeam,
+      appointments,
+      addAppointment,
+      updateAppointment,
+      deleteAppointment,
+      projects,
+      addProject,
+      updateProject,
+      toggleTeamActive,
+      updateAppointmentTeam,
+      updateProjectMaterials,
+      createTeam,
+      updateTeamLoad,
+      updateAppointmentMaterials // Ajoutez cette ligne qui manquait
+    }}>
       {children}
     </SchedulingContext.Provider>
   );

@@ -34,16 +34,23 @@ export interface Appointment {
   status: 'non_attribue' | 'attribue' | 'termine';
 }
 
+// Add currentLoad to the Team interface
 export interface Team {
   id: string;
   name: string;
-  color: string;  // Add this line
-  expertise: string[];
+  color: string;
+  isActive: boolean;
+  members?: string[];
+  currentLoad?: number;
+  expertise: string[]; // Add expertise property
   schedule: {
     date: string;
-    slots: TimeSlot[];
-  }[];
-  isActive: boolean;
+    slots: {
+      start: string;
+      end: string;
+      isAvailable: boolean;
+    }[];
+  }[]; // Add schedule property
 }
 
 export interface TimeSlot {
