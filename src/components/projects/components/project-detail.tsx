@@ -57,26 +57,6 @@ const mockSteps = [
   }
 ];
 
-const mockComments = [
-  {
-    id: 1,
-    author: "Jean D.",
-    date: "2024-02-20T08:00:00",
-    content: "Matériel chargé et vérifié"
-  },
-  {
-    id: 2,
-    author: "Sophie M.",
-    date: "2024-02-20T09:30:00",
-    content: "Installation démarrée"
-  },
-  {
-    id: 3,
-    author: "Pierre L.",
-    date: "2024-02-20T11:15:00",
-    content: "Support client contacté pour validation emplacement"
-  }
-];
 
 
 export function ProjectDetail() {
@@ -201,7 +181,7 @@ export function ProjectDetail() {
         />
 
         <ProjectComments
-          comments={mockComments}
+          projectId={project.id}
           showAllComments={showAllComments}
           onToggleShowAll={() => setShowAllComments(!showAllComments)}
         />
