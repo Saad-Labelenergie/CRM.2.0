@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { motion } from 'framer-motion';
+import { Trash2 } from 'lucide-react';
 import { useCalendarStore } from '../../../lib/calendar/calendar-store';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
-import { Trash2 } from 'lucide-react';
-import { Toast } from '../../ui/toast';
-import { DeleteAppointmentModal } from '../components/delete-appointment-modal';
+import { Toast } from '../../../components/ui/toast';
 
+// Définition des heures
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 export function DayView() {
@@ -131,16 +130,9 @@ export function DayView() {
           </div>
         </div>
       </div>
-
-      <DeleteAppointmentModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={handleConfirmDelete}
-        appointment={selectedAppointment}
-      />
-
+      {/* Toast de succès */}
       <Toast
-        message="Le rendez-vous a été supprimé avec succès"
+        message="Rendez-vous supprimé avec succès"
         isVisible={showSuccessToast}
         onClose={() => setShowSuccessToast(false)}
       />

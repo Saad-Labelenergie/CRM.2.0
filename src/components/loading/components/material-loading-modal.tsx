@@ -37,6 +37,7 @@ export function MaterialLoadingModal({ isOpen, onClose, project, onUpdateMateria
     }
   }, [isOpen, project]);
 
+  // Dans la fonction handleToggleMaterial, assurons-nous que l'état est correctement mis à jour
   const handleToggleMaterial = (materialId: number) => {
     console.log("Toggling material:", materialId);
     setMaterials(prevMaterials => {
@@ -53,18 +54,14 @@ export function MaterialLoadingModal({ isOpen, onClose, project, onUpdateMateria
       console.log("New materials state:", newMaterials);
       return newMaterials;
     });
-    
-    // Forcer un rendu après la mise à jour de l'état
-    setRenderKey(prev => prev + 1);
   };
-
-  // Correction de l'indentation du useEffect et amélioration de la fonction handleUpdateMaterials
   
-  // Ajouter cet effet pour forcer le rendu après chaque changement d'état
+  // Ajoutons un useEffect pour déboguer les changements d'état
   useEffect(() => {
-    console.log("Materials state updated:", materials);
+    console.log("Materials state in modal:", materials);
   }, [materials]);
-
+  
+  // Dans la fonction handleSave, assurons-nous que les données sont correctement formatées
   const handleSave = async () => {
     // Utiliser projectId s'il existe, sinon utiliser l'ID du projet
     const idToUse = project.projectId || project.id;
@@ -76,10 +73,8 @@ export function MaterialLoadingModal({ isOpen, onClose, project, onUpdateMateria
     
     setIsLoading(true);
     try {
-      // Assurez-vous que les matériaux sont correctement formatés avant de les envoyer
-      const updatedMaterials = [...materials];
-      console.log("Saving materials:", updatedMaterials);
-      await onUpdateMaterials(idToUse, updatedMaterials);
+      console.log("Saving materials:", materials);
+      await onUpdateMaterials(idToUse, materials);
       onClose(); // Fermer le modal après une sauvegarde réussie
     } catch (error) {
       console.error("Erreur lors de la mise à jour des matériaux:", error);

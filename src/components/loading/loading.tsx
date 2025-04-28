@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Scale, Users, HardHat, AlertTriangle, Calendar, Search, Filter, MoreVertical, Plus, CheckCircle, Truck, Package } from 'lucide-react';
+import { Scale, Users, HardHat, AlertTriangle, Calendar, Search, Filter, MoreVertical, Plus, CheckCircle, Truck, Package, ChevronDown, ChevronRight } from 'lucide-react';
 import { useScheduling } from '../../lib/scheduling/scheduling-context';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
@@ -15,7 +15,8 @@ interface Project {
   date: string;
   teamId?: string;
   materials?: Material[];
-  projectId?: string; // Add this property
+  projectId?: string;
+  documentsSubmitted?: boolean; // Ajoutez cette propriété
 }
 
 interface Material {
@@ -54,56 +55,82 @@ const itemVariants = {
 };
 
 export function Loading() {
-  const { teams, appointments, projects, updateProjectMaterials } = useScheduling();
+  // Add missing state declarations
   const [searchTerm, setSearchTerm] = useState('');
   const [teamsWithLoad, setTeamsWithLoad] = useState<TeamWithLoad[]>([]);
-  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState<TeamWithLoad | null>(null);
-  const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [collapsedTeams, setCollapsedTeams] = useState<Record<string, boolean>>({});
   const [documentsRemis, setDocumentsRemis] = useState<Record<string, boolean>>({});
-
-  // Fonction pour gérer le changement d'état du document remis
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<TeamWithLoad | null>(null);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  
+  // Mettez à jour l'importation du contexte pour inclure updateTeamLoad et updateProject
+  const { teams, appointments, projects, updateProjectMaterials, updateTeamLoad, updateProject, updateAppointmentMaterials } = useScheduling();
+  
+  // Modifiez la fonction handleDocumentChange pour gérer uniquement l'état local
   const handleDocumentChange = (projectId: string, checked: boolean) => {
-    setDocumentsRemis(prev => ({
-      ...prev,
-      [projectId]: checked
-    }));
+  // Mettre à jour l'état local uniquement
+  setDocumentsRemis(prev => ({
+  ...prev,
+  [projectId]: checked
+  }));
+  
+  // Log pour le débogage
+  console.log(`Document pour le projet ${projectId} marqué comme ${checked ? 'remis' : 'non remis'}`);
   };
-
-  // Fonction pour calculer le pourcentage de progression
-  const calculateProgress = (project: Project, isDocumentRemis: boolean) => {
-    if (!project.materials || project.materials.length === 0) return 0;
-    
-    // Calculer le pourcentage des matériels chargés
-    const loadedMaterials = project.materials.filter(m => m.status === 'loaded').length;
-    const totalMaterials = project.materials.length;
-    
-    // Si le document n'est pas remis, la progression maximale est de 90%
-    const materialsProgress = (loadedMaterials / totalMaterials) * (isDocumentRemis ? 100 : 90);
-    
-    return Math.round(materialsProgress);
+  
+  // Modifiez l'useEffect pour initialiser l'état des documents
+  useEffect(() => {
+  if (projects.length > 0) {
+  // Initialiser l'état des documents (tous à false par défaut)
+  const documentsState = projects.reduce((acc, project) => {
+  if (project.id) {
+  acc[project.id] = false; // Par défaut, aucun document n'est remis
+  }
+  return acc;
+  }, {} as Record<string, boolean>);
+  
+  // Mettre à jour l'état local
+  setDocumentsRemis(documentsState);
+  }
+  }, [projects]);
+  
+  // Add missing function to count materials to load
+  const countMaterialsToLoad = (team: TeamWithLoad) => {
+    return team.projects.reduce((count, project) => {
+      if (!project.materials) return count;
+      return count + project.materials.filter(m => m.status === 'not_loaded').length;
+    }, 0);
   };
-
-  // Vérifier si le projet est complet (tous les matériels chargés et document remis)
-  const isProjectComplete = (project: Project, isDocumentRemis: boolean) => {
-    if (!project.materials || project.materials.length === 0) return false;
+  
+  // Add missing function to calculate progress
+  const calculateProgress = (project: Project, documentsRemis: boolean) => {
+    if (!project.materials) return 0;
     
-    const allMaterialsLoaded = project.materials.every(m => m.status === 'loaded');
-    return allMaterialsLoaded && isDocumentRemis;
+    const totalItems = project.materials.length + 1; // +1 for documents
+    const loadedItems = project.materials.filter(m => m.status === 'loaded').length;
+    const docsValue = documentsRemis ? 1 : 0;
+    
+    return Math.round(((loadedItems + docsValue) / totalItems) * 100);
   };
-
-  // Calculer la charge des équipes en fonction des rendez-vous
+  // Ajoutez cette fonction pour mettre à jour la charge dans la BDD
+  const updateTeamLoadInDatabase = async (teamId: string, currentLoad: number) => {
+    try {
+      await updateTeamLoad(teamId, currentLoad);
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de la charge de l'équipe:", error);
+    }
+  };
+  // Modifiez l'useEffect qui calcule la charge des équipes
   useEffect(() => {
     if (teams.length > 0 && appointments.length > 0 && projects.length > 0) {
       const activeTeams = teams.filter(team => team.isActive);
-      
       const teamsWithProjects = activeTeams.map(team => {
         // Trouver tous les rendez-vous assignés à cette équipe
         const teamAppointments = appointments.filter(
           app => app.team === team.name && app.status === 'attribue'
         );
-        
         // Convertir les rendez-vous en projets avec leurs matériaux
         const teamProjects = teamAppointments.map(app => {
           // Trouver le projet correspondant à ce rendez-vous
@@ -112,7 +139,6 @@ export function Loading() {
             p.team === team.name && 
             p.startDate === app.date
           );
-          
           return {
             id: app.id,
             name: app.title,
@@ -137,6 +163,11 @@ export function Loading() {
         const totalHours = teamProjects.reduce((sum, project) => sum + project.hours, 0);
         const currentLoad = Math.min(Math.round((totalHours / 40) * 100), 100); // 40h = capacité hebdomadaire
         
+        // Vérifier si la charge a changé avant de la mettre à jour dans la BDD
+        if (team.currentLoad !== currentLoad) {
+          updateTeamLoadInDatabase(team.id, currentLoad);
+        }
+        
         return {
           ...team,
           projects: teamProjects,
@@ -152,8 +183,16 @@ export function Loading() {
         // ... vos données statiques existantes ...
       ]);
     }
-  }, [teams, appointments, projects]);
+  }, [teams, appointments, projects, updateTeamLoad]);
 
+  // Add the toggleTeamCollapse function
+  const toggleTeamCollapse = (teamId: string) => {
+    setCollapsedTeams(prev => ({
+      ...prev,
+      [teamId]: !prev[teamId]
+    }));
+  };
+  
   // Filtrer les équipes en fonction de la recherche
   const filteredTeams = teamsWithLoad.filter(team => 
     team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -182,42 +221,44 @@ export function Loading() {
     try {
       console.log("Updating materials for project:", projectId, materials);
       
-      // Conserver le statut 'loaded' ou 'not_loaded' pour l'affichage local
-      const displayMaterials = [...materials];
+      // Trouver le projet correspondant
+      const project = projects.find(p => p.id === projectId);
+      if (!project) {
+        console.error("Projet non trouvé:", projectId);
+        return;
+      }
       
-      // Convert materials to the expected format for the backend
-      // Map 'loaded' to 'installed' and 'not_loaded' to 'not_installed'
-      const formattedMaterials = materials.map(material => {
-        return {
-          id: material.id,
-          name: material.name,
-          // Convert status to match the expected type
-          status: material.status === 'loaded' ? 'installed' as const : 
-                 material.status === 'not_loaded' ? 'not_installed' as const :
-                 material.status // Keep as is if already 'installed' or 'not_installed'
-        };
-      });
+      // Trouver le rendez-vous correspondant
+      const appointment = appointments.find(a => 
+        a.title === project.name && 
+        a.team === project.team && 
+        a.date === project.startDate
+      );
       
-      // Mettre à jour les matériaux du projet dans Firebase ou votre backend
+      if (!appointment) {
+        console.error("Rendez-vous non trouvé pour le projet:", projectId);
+        return;
+      }
+      
+      // Convertir les matériaux au format attendu par le backend avec une assertion de type correcte
+      const formattedMaterials = materials.map(material => ({
+        id: material.id,
+        name: material.name,
+        status: material.status === 'loaded' ? 'installed' as const : 'not_installed' as const
+      }));
+      
+      console.log("Updating local project materials:", materials);
+      
+      // Mettre à jour les matériaux du rendez-vous
+      await updateAppointmentMaterials(appointment.id, formattedMaterials);
+      
+      // Mettre à jour les matériaux du projet
       await updateProjectMaterials(projectId, formattedMaterials);
       
-      // Mettre à jour l'état local avec les matériaux originaux (avec loaded/not_loaded)
-      setTeamsWithLoad(prevTeams => {
-        return prevTeams.map(team => ({
-          ...team,
-          projects: team.projects.map(project => {
-            if (project.projectId === projectId || project.id === projectId) {
-              console.log("Updating local project materials:", displayMaterials);
-              return { ...project, materials: displayMaterials };
-            }
-            return project;
-          })
-        }));
-      });
-      
+      // Fermer le modal
       setIsMaterialModalOpen(false);
     } catch (error) {
-      console.error('Erreur lors de la mise à jour des matériaux:', error);
+      console.error("Erreur lors de la mise à jour des matériaux:", error);
     }
   };
 
@@ -277,6 +318,17 @@ export function Loading() {
           >
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-4">
+                {/* Ajouter un bouton pour replier/déplier */}
+                <button 
+                  onClick={() => toggleTeamCollapse(team.id)}
+                  className="p-1 hover:bg-accent rounded-full transition-colors"
+                >
+                  {collapsedTeams[team.id] ? (
+                    <ChevronRight className="w-5 h-5 text-primary" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-primary" />
+                  )}
+                </button>
                 <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
                   <Users className="w-6 h-6 text-primary" />
                 </div>
@@ -287,23 +339,31 @@ export function Loading() {
                     <span className="text-sm text-muted-foreground">
                       Charge : {team.currentLoad}%
                     </span>
+                    {/* Display charge percentage with color indicator */}
+                    <div className="ml-2 w-16 h-2 bg-secondary rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          team.currentLoad >= 90 ? 'bg-red-500' : 
+                          team.currentLoad >= 70 ? 'bg-orange-500' :
+                          team.currentLoad >= 50 ? 'bg-amber-500' :
+                          team.currentLoad >= 30 ? 'bg-blue-500' :
+                          'bg-green-500'
+                        }`}
+                        style={{ width: `${team.currentLoad}%` }}
+                      />
+                    </div>
+                    {/* Afficher le nombre de matériels à charger */}
+                    {countMaterialsToLoad(team) > 0 && (
+                      <span className="ml-3 text-xs px-2 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full flex items-center">
+                        <Package className="w-3 h-3 mr-1" />
+                        {countMaterialsToLoad(team)} matériels à charger
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
               <div className="flex items-center">
-                <div className="w-32 h-2 bg-secondary rounded-full overflow-hidden mr-4">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${team.currentLoad}%` }}
-                    className={`h-full rounded-full ${
-                      team.currentLoad >= 90 ? 'bg-red-500' :
-                      team.currentLoad >= 75 ? 'bg-orange-500' :
-                      'bg-green-500'
-                    }`}
-                  />
-                </div>
                 <div className="flex space-x-2">
-                  {/* Bouton d'assignation de projet supprimé */}
                   <Link to={`/teams/${team.id}`}>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
@@ -318,108 +378,116 @@ export function Loading() {
               </div>
             </div>
 
-            <div className="mt-6 space-y-4">
-              {team.projects.length === 0 ? (
-                <div className="bg-accent/30 rounded-lg p-4 text-center text-muted-foreground">
-                  Aucun projet assigné à cette équipe
-                </div>
-              ) : (
-                team.projects.map((project, index) => (
-                  <div
-                    key={project.id || index}
-                    className="bg-accent/50 rounded-lg p-4 space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <HardHat className="w-4 h-4 text-primary" />
-                        <span className="font-medium">{project.name}</span>
-                      </div>
-                      {/* Suppression de l'affichage des heures */}
-                    </div>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      <span>{project.date}</span>
-                    </div>
-                    
-                    {/* Option pour les documents remis */}
-                    <div className="flex items-center mt-2">
-                      <input 
-                        type="checkbox" 
-                        id={`document-${project.id}`}
-                        checked={documentsRemis[project.id] || false}
-                        onChange={(e) => handleDocumentChange(project.id, e.target.checked)}
-                        className="mr-2 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                      <label htmlFor={`document-${project.id}`} className="text-sm">
-                        Document remis
-                      </label>
-                    </div>
-                    
-                    {/* Affichage des matériaux et de leur statut */}
-                    {project.materials && (
-                      <div className="mt-3 pt-3 border-t border-border/50">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-sm font-medium">Matériels à charger</h4>
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => handleOpenMaterialModal(project)}
-                            className="text-xs px-2 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded-md flex items-center"
-                          >
-                            <Truck className="w-3 h-3 mr-1" />
-                            Gérer
-                          </motion.button>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          {project.materials.map((material) => (
-                            <div 
-                              key={material.id} 
-                              className={`flex items-center p-2 rounded-md text-xs ${
-                                material.status === 'loaded' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                'bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400'
-                              }`}
-                            >
-                              {material.status === 'loaded' ? (
-                                <CheckCircle className="w-3 h-3 mr-1" />
-                              ) : (
-                                <Package className="w-3 h-3 mr-1" />
-                              )}
-                              {material.name}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+            {/* Afficher les projets seulement si l'équipe n'est pas repliée */}
+            {!collapsedTeams[team.id] && (
+              <div className="mt-6 space-y-4">
+                {team.projects.length === 0 ? (
+                  <div className="bg-accent/30 rounded-lg p-4 text-center text-muted-foreground">
+                    Aucun projet assigné à cette équipe
                   </div>
-                ))
-              )}
-            </div>
-
+                ) : (
+                  team.projects.map((project, index) => (
+                    <div
+                      key={project.id || index}
+                      className="bg-accent/50 rounded-lg p-4 space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <HardHat className="w-4 h-4 text-primary" />
+                          <span className="font-medium">{project.name}</span>
+                        </div>
+                        {/* Ajout de la barre de progression dynamique à côté du titre */}
+                        <div className="flex items-center">
+                          <div className="flex items-center mr-2">
+                            <span className="text-xs font-medium mr-2">
+                              {calculateProgress(project, documentsRemis[project.id] || false)}%
+                            </span>
+                            <div className="w-20 h-2 bg-secondary rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  calculateProgress(project, documentsRemis[project.id] || false) >= 100 
+                                    ? 'bg-green-500' : 
+                                  calculateProgress(project, documentsRemis[project.id] || false) >= 75 
+                                    ? 'bg-blue-500' :
+                                  calculateProgress(project, documentsRemis[project.id] || false) >= 50 
+                                    ? 'bg-amber-500' :
+                                  calculateProgress(project, documentsRemis[project.id] || false) >= 25 
+                                    ? 'bg-orange-500' :
+                                  'bg-red-500'
+                                }`}
+                                style={{ 
+                                  width: `${calculateProgress(project, documentsRemis[project.id] || false)}%` 
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Calendar className="w-4 h-4 mr-2" />
+                        <span>{project.date}</span>
+                      </div>
+                      
+                      {/* Option pour les documents remis */}
+                      <div className="flex items-center mt-2">
+                        <input 
+                          type="checkbox" 
+                          id={`document-${project.id}`}
+                          checked={documentsRemis[project.id] || false}
+                          onChange={(e) => handleDocumentChange(project.id, e.target.checked)}
+                          className="mr-2 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <label htmlFor={`document-${project.id}`} className="text-sm">
+                          Document remis
+                        </label>
+                      </div>
+                      
+                      {/* Affichage des matériaux et de leur statut */}
+                      {project.materials && (
+                        <div className="mt-3 pt-3 border-t border-border/50">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-sm font-medium">Matériels à charger</h4>
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => handleOpenMaterialModal(project)}
+                              className="text-xs px-2 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded-md flex items-center"
+                            >
+                              <Truck className="w-3 h-3 mr-1" />
+                              Gérer
+                            </motion.button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            {project.materials.map((material) => (
+                              <div 
+                                key={material.id} 
+                                className={`flex items-center p-2 rounded-md text-xs ${
+                                  material.status === 'loaded' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                  'bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400'
+                                }`}
+                              >
+                                {material.status === 'loaded' ? (
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                ) : (
+                                  <Package className="w-3 h-3 mr-1" />
+                                )}
+                                {material.name}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
             {team.currentLoad >= 90 && (
               <div className="mt-4 flex items-center text-orange-500 bg-orange-100 dark:bg-orange-900/30 p-3 rounded-lg">
                 <AlertTriangle className="w-4 h-4 mr-2" />
                 <span className="text-sm">Cette équipe approche de sa capacité maximale</span>
               </div>
             )}
-            {/* Barre d'avancement dynamique */}
-                        <div className="mt-3">
-                          <div className="flex justify-between text-xs mb-1">
-                            <span>Progression</span>
-                            {calculateProgress(project, documentsRemis[project.id] || false)}%
-                          </div>
-                          <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full rounded-full transition-all duration-500 ${
-                                isProjectComplete(project, documentsRemis[project.id] || false) 
-                                  ? 'bg-green-500' 
-                                  : 'bg-blue-500'
-                              }`}
-                              style={{ 
-                                width: `${calculateProgress(project, documentsRemis[project.id] || false)}%` 
-                              }}
-                            />
-                          </div>
-                        </div>
           </motion.div>
         ))}
       </motion.div>
