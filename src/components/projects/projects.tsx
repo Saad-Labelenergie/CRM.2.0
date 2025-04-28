@@ -16,7 +16,11 @@ import {
   Upload,
   Truck,
   Check ,
-  Ban
+  Ban,
+  List,
+  LayoutGrid,
+  Eye
+
 } from 'lucide-react';
 import { collection, getDocs, query, where, deleteDoc,updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -76,6 +80,8 @@ export function Projects() {
   });
   const [cancelProjectId, setCancelProjectId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
 
   useEffect(() => {
     fetchProjects();
@@ -118,6 +124,9 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
     setCancelReason('');
     setCustomReason('');
   };
+
+
+
 
   return (
     <motion.div
@@ -215,10 +224,26 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
       animate="visible"
       className="space-y-6"
     >
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-primary">Projets en Cours</h1>
           <p className="text-muted-foreground mt-1">Suivez l'avancement de vos chantiers</p>
+        </div>
+        
+        {/* Boutons de vue */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
+          >
+            <LayoutGrid className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
+          >
+            <List className="w-5 h-5" />
+          </button>
         </div>
       </div>
 
@@ -249,12 +274,15 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
           className="w-full pl-12 pr-4 py-3 bg-background border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
         />
       </div>
+     
 
       {/* Project Cards */}
+      {viewMode === 'grid' ? (
       <motion.div
         variants={containerVariants}
         className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
       >
+        
         {filteredProjects.map((project) => (
           <motion.div
             key={project.id}
@@ -330,7 +358,7 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
                 ))}
               </div>
               <motion.button
-    whileHover={{ scale: 1.05 }}
+            whileHover={{ scale: 1.05 }}
     whileTap={{ scale: 0.95 }}
     className="text-sm text-primary font-medium hover:underline"
     onClick={(e) => {
@@ -342,8 +370,123 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
   </motion.button>
             </div>
           </motion.div>
+          
         ))}
       </motion.div>
+         ) : (
+          /* Nouvelle Vue Tableau */
+          <div className="overflow-x-auto border rounded-lg">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-muted/50 border-b">
+                <th className="text-left p-4 font-medium text-muted-foreground">Numéro</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Client</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Projet</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Équipe</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Échéance</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Statut</th>
+                <th className="text-center p-4 font-medium text-muted-foreground">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <AnimatePresence>
+                {filteredProjects.map((project) => (
+                  <motion.tr
+                    key={project.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="border-b last:border-b-0 hover:bg-muted/30 transition-colors"
+                  >
+                    <td className="p-4 font-mono">#{project.id.slice(0, 6)}</td>
+                    <td className="p-4">{project.client.name}</td>
+                    <td className="p-4 font-medium">{project.name}</td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-muted-foreground" />
+                        {project.teamSize ?? 0}
+                      </div>
+                    </td>
+                    <td className="p-4">{project.dueDate || 'Non définie'}</td>
+                    <td className="p-4">
+                      <div className="flex flex-col gap-2">
+                        <div className={`px-2 py-1 rounded-full text-xs inline-flex items-center ${
+                          project.status === 'annuler' ? 'bg-red-100 text-red-800' :
+                          project.status === 'terminer' ? 'bg-green-100 text-green-800' :
+                          project.status === 'encours' ? 'bg-blue-100 text-blue-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {project.status === 'annuler' ? 'Annulé' :
+                           project.status === 'terminer' ? 'Terminé' :
+                           project.status === 'encours' ? 'En cours' :
+                           project.status?.replace('_', ' ')}
+                        </div>
+                        <div className="flex gap-1 mt-1">
+                          {['confirmer', 'placer', 'charger', 'encours', 'terminer', 'annuler'].map((status) => (
+                            <button
+                              key={status}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (status === 'annuler') {
+                                  setCancelProjectId(project.id);
+                                } else {
+                                  // Logique de changement de statut
+                                }
+                              }}
+                              className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                                project.status === status 
+                                  ? status === 'annuler' ? 'bg-red-500 text-white' :
+                                    status === 'terminer' ? 'bg-green-500 text-white' :
+                                    status === 'encours' ? 'bg-blue-500 text-white' :
+                                    'bg-yellow-500 text-white'
+                                  : status === 'annuler' ? 'bg-red-100 hover:bg-red-200' :
+                                    status === 'terminer' ? 'bg-green-100 hover:bg-green-200' :
+                                    status === 'encours' ? 'bg-blue-100 hover:bg-blue-200' :
+                                    'bg-yellow-100 hover:bg-yellow-200'
+                              }`}
+                              title={status.charAt(0).toUpperCase() + status.slice(1)}
+                            >
+                              {project.status === status && <Check className="w-3 h-3" />}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center justify-center space-x-2">
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/projects/${project.id}`);
+                          }}
+                          className="p-1 hover:bg-muted rounded-full"
+                          title="Voir les détails"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCancelProjectId(project.id);
+                          }}
+                          className="p-1 hover:bg-red-100 rounded-full text-red-500"
+                          title="Annuler le projet"
+                        >
+                          <Ban className="w-4 h-4" />
+                        </motion.button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                ))}
+              </AnimatePresence>
+            </tbody>
+          </table>
+        </div>
+        )}
       <AnimatePresence>
   {cancelProjectId && (
     <CancelConfirmationModal 
