@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { collection, getDocs, query, where, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+
 interface Project {
   id: string;
   name: string;
@@ -30,25 +31,26 @@ interface Project {
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
 };
 
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1
-  }
+  visible: { y: 0, opacity: 1 }
 };
+
+const tabs = [
+  { id: 'all', label: 'Tous' },
+  { id: 'confirmer', label: 'confirmé' },
+  { id: 'placer', label: 'placé' },
+  { id: 'en_attente', label: 'En attente' }
+];
 
 export function Projects() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [activeTab, setActiveTab] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchProjects();
@@ -71,6 +73,12 @@ export function Projects() {
     }
   };
 
+  const filteredProjects = projects.filter(project => {
+    const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) || project.client.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = activeTab === 'all' || (project.status || 'confirmer' || 'placer') === activeTab;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <motion.div
       variants={containerVariants}
@@ -83,31 +91,41 @@ export function Projects() {
           <h1 className="text-3xl font-bold text-primary">Projets en Cours</h1>
           <p className="text-muted-foreground mt-1">Suivez l'avancement de vos chantiers</p>
         </div>
-        {/* <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => navigate('/projects/create')}
-          className="flex items-center px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors shadow-lg"
-        >
-          <UserPlus className="w-4 h-4 mr-2" />
-          Nouveau Projet
-        </motion.button> */}
       </div>
 
+      {/* Tabs */}
+      <div className="flex overflow-x-auto space-x-2 pb-2">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center px-4 py-2 rounded-lg whitespace-nowrap ${
+              activeTab === tab.id ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Search Bar */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
         <input
           type="text"
           placeholder="Rechercher un projet..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full pl-12 pr-4 py-3 bg-background border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
         />
       </div>
 
+      {/* Project Cards */}
       <motion.div
         variants={containerVariants}
         className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
       >
-        {projects.map((project) => (
+        {filteredProjects.map((project) => (
           <motion.div
             key={project.id}
             variants={itemVariants}
@@ -126,9 +144,9 @@ export function Projects() {
                 </div>
               </div>
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                project.priority === "Haute" ? "bg-orange-100 text-orange-700" :
-                project.priority === "Urgente" ? "bg-red-100 text-red-700" :
-                "bg-blue-100 text-blue-700"
+                project.priority === 'Haute' ? 'bg-orange-100 text-orange-700' :
+                project.priority === 'Urgente' ? 'bg-red-100 text-red-700' :
+                'bg-blue-100 text-blue-700'
               }`}>
                 {project.priority || 'Normale'}
               </span>
@@ -144,7 +162,7 @@ export function Projects() {
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${project.progress ?? 0}%` }}
-                    transition={{ duration: 1, ease: "easeOut" }}
+                    transition={{ duration: 1, ease: 'easeOut' }}
                     className="bg-primary h-2 rounded-full"
                   />
                 </div>
