@@ -9,7 +9,13 @@ import {
   Users,
   AlertCircle,
   Briefcase,
-  Trash2
+  Trash2,
+  CircleDot,
+  CheckCircle,
+  Upload,
+  Truck,
+  Check ,
+  Ban
 } from 'lucide-react';
 import { collection, getDocs, query, where, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -41,11 +47,13 @@ const itemVariants = {
 
 const tabs = [
   { id: 'all', label: 'Tous' },
-  { id: 'confirmer', label: 'confirmé' },
-  { id: 'placer', label: 'placé' },
-  { id: 'en_attente', label: 'En attente' }
+  { id: 'confirmer', label: 'Confirmé', icon: CheckCircle },
+  { id: 'placer', label: 'Placé', icon: Upload },
+  { id: 'charger', label: 'Chargé', icon: Truck },
+  { id: 'encours', label: 'En cours', icon: Clock },
+  { id: 'terminer', label: 'Terminé', icon:Check },
+  { id: 'annuler', label: 'Annuler', icon: Ban }
 ];
-
 export function Projects() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -75,7 +83,7 @@ export function Projects() {
 
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) || project.client.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = activeTab === 'all' || (project.status || 'confirmer' || 'placer' || 'charger') === activeTab;
+    const matchesStatus = activeTab === 'all' || (project.status || 'confirmer' || 'placer' || 'charger' ||'encours' || 'terminer' || 'annuler') === activeTab;
     return matchesSearch && matchesStatus;
   });
 
@@ -95,18 +103,19 @@ export function Projects() {
 
       {/* Tabs */}
       <div className="flex overflow-x-auto space-x-2 pb-2">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center px-4 py-2 rounded-lg whitespace-nowrap ${
-              activeTab === tab.id ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+  {tabs.map((tab) => (
+    <button
+      key={tab.id}
+      onClick={() => setActiveTab(tab.id)}
+      className={`flex items-center px-4 py-2 rounded-lg whitespace-nowrap ${
+        activeTab === tab.id ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80'
+      }`}
+    >
+      {tab.icon && <tab.icon className="w-4 h-4 mr-2" />}
+      {tab.label}
+    </button>
+  ))}
+</div>
 
       {/* Search Bar */}
       <div className="relative">
