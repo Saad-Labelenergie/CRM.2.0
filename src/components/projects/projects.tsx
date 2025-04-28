@@ -75,7 +75,7 @@ export function Projects() {
 
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) || project.client.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = activeTab === 'all' || (project.status || 'confirmer' || 'placer') === activeTab;
+    const matchesStatus = activeTab === 'all' || (project.status || 'confirmer' || 'placer' || 'charger') === activeTab;
     return matchesSearch && matchesStatus;
   });
 
