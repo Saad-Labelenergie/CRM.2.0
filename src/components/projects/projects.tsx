@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import {
   UserPlus,
   Search,
@@ -17,9 +18,16 @@ import {
   Check ,
   Ban
 } from 'lucide-react';
-import { collection, getDocs, query, where, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, query, where, deleteDoc,updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 
+// Ajoutez ces interfaces
+interface CancelReason {
+  projectId: string;
+  reason: 'chantier infaisable' | 'annulation client' | 'autre' | '';
+}
+
+// Modifiez l'interface Project
 interface Project {
   id: string;
   name: string;
@@ -33,6 +41,7 @@ interface Project {
   location?: string;
   teamSize?: number;
   priority?: string;
+  cancellationReason?: string; // Nouveau champ
 }
 
 const containerVariants = {
@@ -54,11 +63,19 @@ const tabs = [
   { id: 'terminer', label: 'Terminé', icon:Check },
   { id: 'annuler', label: 'Annuler', icon: Ban }
 ];
+// Dans le composant Projects
 export function Projects() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelProjectData, setCancelProjectData] = useState<CancelReason>({ 
+    projectId: '', 
+    reason: '' 
+  });
+  const [cancelProjectId, setCancelProjectId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState<string>('');
 
   useEffect(() => {
     fetchProjects();
@@ -69,17 +86,121 @@ export function Projects() {
     const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Project[];
     setProjects(data);
   };
+  
+// Annuler un projet :
+const handleCancelProject = async () => {
+  if (!cancelReason || !cancelProjectId) return;
+  
+  try {
+    await updateDoc(doc(db, 'projects', cancelProjectId), {
+      status: 'annuler',
+      cancellationReason: cancelReason,
+      updatedAt: new Date()
+    });
+    fetchProjects();
+  } catch (error) {
+    console.error("Erreur d'annulation :", error);
+  } finally {
+    setCancelProjectId(null);
+    setCancelReason('');
+  }
+};
 
-  const deleteProjectByName = async (name: string) => {
-    const q = query(collection(db, 'projects'), where('name', '==', name));
-    const snapshot = await getDocs(q);
-    if (!snapshot.empty) {
-      await deleteDoc(doc(db, 'projects', snapshot.docs[0].id));
-      fetchProjects();
-    } else {
-      alert('Projet non trouvé');
-    }
+// Ajoutez ce modal de confirmation
+
+const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProjectId, handleCancelProject, projectName }) => {
+  const [customReason, setCustomReason] = useState('');
+
+  const submitCancel = () => {
+    const finalReason = cancelReason === 'autre' ? customReason : cancelReason;
+    handleCancelProject(finalReason);
+    setCancelProjectId(null);
+    setCancelReason('');
+    setCustomReason('');
   };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        className="relative bg-card rounded-2xl shadow-2xl p-8 w-full max-w-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Nouveau message */}
+        <div className="mb-6 space-y-2 text-center">
+          <h2 className="text-xl font-semibold text-destructive">
+            Vous êtes sur le point d'annuler le chantier <span className="font-bold">{projectName}</span>. Êtes-vous sûr ?
+          </h2>
+          <p className="text-muted-foreground">
+            Veuillez donner la raison de l'annulation de ce chantier.
+          </p>
+        </div>
+
+        {/* Choix des raisons */}
+        <div className="space-y-4 mb-8">
+          {['chantier infaisable', 'annulation client', 'autre'].map((reason) => (
+            <label
+              key={reason}
+              className="flex items-center gap-4 p-4 bg-accent/20 rounded-xl cursor-pointer hover:bg-accent/30 transition-transform transform hover:scale-[1.02]"
+            >
+              <input
+                type="radio"
+                name="cancelReason"
+                value={reason}
+                checked={cancelReason === reason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="form-radio text-primary focus:ring-2 focus:ring-primary h-5 w-5"
+              />
+              <span className="capitalize text-lg">{reason}</span>
+            </label>
+          ))}
+        </div>
+
+        {/* Zone de texte si "autre" */}
+        {cancelReason === 'autre' && (
+          <div className="mb-8">
+            <textarea
+              value={customReason}
+              onChange={(e) => setCustomReason(e.target.value)}
+              placeholder="Entrez la raison d'annulation..."
+              className="w-full p-4 border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            />
+          </div>
+        )}
+
+        <div className="flex justify-end gap-4">
+          <button
+            onClick={() => {
+              setCancelProjectId(null);
+              setCancelReason('');
+              setCustomReason('');
+            }}
+            className="px-5 py-3 rounded-xl bg-muted hover:bg-muted/80 shadow-sm hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-muted"
+          >
+            Retour
+          </button>
+          <button
+            onClick={submitCancel}
+            disabled={cancelReason === 'autre' && customReason.trim() === ''}
+            className="px-5 py-3 bg-destructive text-destructive-foreground rounded-xl shadow-sm hover:bg-destructive/90 hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-destructive"
+          >
+            Confirmer
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) || project.client.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -209,20 +330,32 @@ export function Projects() {
                 ))}
               </div>
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="text-sm text-primary font-medium hover:underline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteProjectByName(project.name);
-                }}
-              >
-                <Trash2 className="w-4 h-4 text-red-500 inline mr-1" /> Supprimer
-              </motion.button>
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    className="text-sm text-primary font-medium hover:underline"
+    onClick={(e) => {
+      e.stopPropagation();
+      setCancelProjectId(project.id);
+    }}
+  >
+    <Ban className="w-4 h-4 text-red-500 inline mr-1" /> Annuler
+  </motion.button>
             </div>
           </motion.div>
         ))}
       </motion.div>
+      <AnimatePresence>
+  {cancelProjectId && (
+    <CancelConfirmationModal 
+      cancelReason={cancelReason}
+      setCancelReason={setCancelReason}
+      setCancelProjectId={setCancelProjectId}
+      handleCancelProject={handleCancelProject}
+      projectName={projects.find(p => p.id === cancelProjectId)?.name || ''}
+    />
+  )}
+</AnimatePresence>
+
     </motion.div>
   );
 }
