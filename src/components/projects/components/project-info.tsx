@@ -20,12 +20,32 @@ const statusOptions = [
   { value: 'annuler', label: 'Annulé', color: 'text-red-500' }
 ];
 
+//systeme de barre de progression
+const statusProgressMap: { [key: string]: number } = {
+  placer: 10,
+  confirmer: 25,
+  charger: 50,
+  encours: 75,
+  terminer: 100,
+  annuler: 0
+};
+
+//Couleur de baree de progression 
+const getProgressColor = (progress: number) => {
+  if (progress <= 25) return 'bg-red-500';
+  if (progress <= 50) return 'bg-yellow-500';
+  if (progress <= 75) return 'bg-blue-500';
+  if (progress < 100) return 'bg-indigo-500';
+  return 'bg-green-500';
+};
+
+
 export function ProjectInfo({
   type,
   startDate,
   team,
   status,
-  progress,
+  progress: _progress, // ignorer l'ancien progress donné
   onStatusChange
 }: ProjectInfoProps) {
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -33,12 +53,10 @@ export function ProjectInfo({
   };
 
   const currentStatus = statusOptions.find(opt => opt.value === status);
+  const progress = statusProgressMap[status] ?? 0; // Progress calculé dynamiquement
 
   return (
-    <motion.div
-      whileHover={{ y: -5 }}
-      className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
-    >
+    <motion.div whileHover={{ y: -5 }} className="bg-card p-6 rounded-xl shadow-lg border border-border/50">
       <h2 className="text-xl font-semibold mb-6 flex items-center">
         <FileText className="w-5 h-5 mr-2 text-blue-500" />
         Informations du projet
@@ -93,10 +111,10 @@ export function ProjectInfo({
                 <span className="font-medium">{progress}%</span>
               </div>
               <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary rounded-full transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
+              <div
+  className={`h-full rounded-full transition-all duration-500 ${getProgressColor(progress)}`}
+  style={{ width: `${progress}%` }}
+/>
               </div>
             </div>
           </div>
@@ -105,3 +123,4 @@ export function ProjectInfo({
     </motion.div>
   );
 }
+
