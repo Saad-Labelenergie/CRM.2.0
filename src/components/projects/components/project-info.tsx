@@ -90,7 +90,7 @@ export function ProjectInfo({
                 {currentStatus?.label}
               </span>
             </div>
-            <div className="relative">
+            {/* <div className="relative">
               <select
                 value={status}
                 onChange={handleStatusChange}
@@ -103,7 +103,7 @@ export function ProjectInfo({
                 ))}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none text-muted-foreground" />
-            </div>
+            </div> */}
           </div>
           <div>
             <div className="text-sm text-muted-foreground mb-1">Progression</div>
