@@ -58,21 +58,41 @@ const itemVariants = {
   visible: { y: 0, opacity: 1 }
 };
 
+const statusProgressMap: { [key: string]: number } = {
+  placer: 10,
+  confirmer: 25,
+  charger: 50,
+  encours: 75,
+  terminer: 100,
+  annuler: 0
+};
+
+const getProgressColor = (progress: number) => {
+  if (progress <= 25) return 'bg-red-500';
+  if (progress <= 50) return 'bg-yellow-500';
+  if (progress <= 75) return 'bg-blue-500';
+  if (progress < 100) return 'bg-indigo-500';
+  return 'bg-green-500';
+};
+
+
 const tabs = [
-  { id: 'all', label: 'Tous' },
-  { id: 'confirmer', label: 'Confirmé', icon: CheckCircle },
-  { id: 'placer', label: 'Placé', icon: Upload },
-  { id: 'charger', label: 'Chargé', icon: Truck },
-  { id: 'encours', label: 'En cours', icon: Clock },
-  { id: 'terminer', label: 'Terminé', icon:Check },
-  { id: 'annuler', label: 'Annuler', icon: Ban }
+  { id: 'all', label: 'Tous', icon: null, color: 'bg-gray-200 text-gray-800' },
+  { id: 'confirmer', label: 'Confirmé', icon: CheckCircle, color: 'bg-yellow-100 text-yellow-800' },
+  { id: 'placer', label: 'Placé', icon: Upload, color: 'bg-orange-100 text-orange-800' },
+  { id: 'charger', label: 'Chargé', icon: Truck, color: 'bg-blue-100 text-blue-800' },
+  { id: 'encours', label: 'En cours', icon: Clock, color: 'bg-indigo-100 text-indigo-800' },
+  { id: 'terminer', label: 'Terminé', icon: Check, color: 'bg-green-100 text-green-800' },
+  { id: 'annuler', label: 'Annuler', icon: Ban, color: 'bg-red-100 text-red-800' }
 ];
+
 // Dans le composant Projects
 export function Projects() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelProjectData, setCancelProjectData] = useState<CancelReason>({ 
     projectId: '', 
@@ -81,7 +101,6 @@ export function Projects() {
   const [cancelProjectId, setCancelProjectId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-
 
   useEffect(() => {
     fetchProjects();
@@ -253,8 +272,10 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
     <button
       key={tab.id}
       onClick={() => setActiveTab(tab.id)}
-      className={`flex items-center px-4 py-2 rounded-lg whitespace-nowrap ${
-        activeTab === tab.id ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80'
+      className={`flex items-center px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+        activeTab === tab.id
+          ? `${tab.color} font-semibold`
+          : 'bg-muted text-muted-foreground hover:bg-muted/80'
       }`}
     >
       {tab.icon && <tab.icon className="w-4 h-4 mr-2" />}
@@ -283,7 +304,12 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
         className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
       >
         
-        {filteredProjects.map((project) => (
+        {filteredProjects.map((project) => {
+          const projectProgress = statusProgressMap[project.status || 'confirmer'] ?? 0;
+
+          return(
+          
+          
           <motion.div
             key={project.id}
             variants={itemVariants}
@@ -314,16 +340,17 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
               <div>
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-muted-foreground">Progression</span>
-                  <span className="font-medium">{project.progress ?? 0}%</span>
-                </div>
+                  <span className="font-medium">{projectProgress}%</span>
+                  </div>
                 <div className="w-full bg-secondary rounded-full h-2">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${project.progress ?? 0}%` }}
-                    transition={{ duration: 1, ease: 'easeOut' }}
-                    className="bg-primary h-2 rounded-full"
-                  />
-                </div>
+  <motion.div
+    initial={{ width: 0 }}
+    animate={{ width: `${projectProgress}%` }}
+    transition={{ duration: 1, ease: 'easeOut' }}
+    className={`h-2 rounded-full ${getProgressColor(projectProgress)}`}
+  />
+</div>
+
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -371,7 +398,7 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
             </div>
           </motion.div>
           
-        ))}
+        );})}
       </motion.div>
          ) : (
           /* Nouvelle Vue Tableau */
