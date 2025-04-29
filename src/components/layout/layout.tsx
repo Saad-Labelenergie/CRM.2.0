@@ -342,7 +342,7 @@ React.useEffect(() => {
 
               <motion.div
                 whileHover={{ scale: 1.05 }}
-                onClick={() => setIsUserDetailsOpen(true)}
+                onClick={() => navigate('/profile')}
                 className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center cursor-pointer"
               >
                 <span className="text-sm font-medium">

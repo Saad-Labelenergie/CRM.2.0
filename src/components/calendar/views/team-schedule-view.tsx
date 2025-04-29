@@ -9,8 +9,7 @@ import { ChangeWeekTeamModal } from '../components/change-week-team-modal';
 import { ProjectDetailsModal } from '../components/project-details-modal';
 import { ExternalLink, Trash2, Eye, X, AlertTriangle, CalendarDays } from 'lucide-react';
 import { Toast } from '../../ui/toast';
-// Ajout de l'import du composant de changement de semaine
-import { ChangeSemainModal } from '../components/change-semain';
+import { UpdateClientModal } from '../components/change-semain';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const WORKING_HOURS = { start: { hour: 9, minute: 0 }, end: { hour: 18, minute: 0 } };
@@ -23,12 +22,34 @@ interface TeamScheduleViewProps {
 export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamScheduleViewProps) {
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
 
+  // Déplacer ces fonctions en dehors du useEffect pour qu'elles soient accessibles partout dans le composant
+  const handleAppointmentClick = (appointment: any) => {
+    setSelectedAppointment(appointment);
+    setIsProjectDetailsModalOpen(true);
+  };
+
+  const handleViewDetails = (e: React.MouseEvent, appointment: any) => {
+    e.stopPropagation();
+    setSelectedAppointment(appointment);
+    setIsProjectDetailsModalOpen(true);
+  };
+
+  const handleDeleteAppointment = (e: React.MouseEvent, appointment: any) => {
+    e.stopPropagation();
+    setSelectedAppointment(appointment);
+    setAppointmentToDelete(appointment.id);
+    setIsDeleteModalOpen(true);
+  };
+
   useEffect(() => {
     const updateCurrentTime = () => {
       const now = new Date();
       const parisTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
       setCurrentTime(parisTime);
     };
+    
+    // Supprimer ces définitions de fonctions d'ici
+    
     updateCurrentTime();
     const interval = setInterval(updateCurrentTime, 60000);
     return () => clearInterval(interval);
@@ -64,7 +85,6 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
     team: null
   });
 
-  // Ajout des états pour la modale de changement de date
   const [isChangeSemainModalOpen, setIsChangeSemainModalOpen] = useState(false);
   const [appointmentToChangeDate, setAppointmentToChangeDate] = useState<any>(null);
 
@@ -80,7 +100,54 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
       ? activeTeams.filter(team => selectedTeams.includes(team.id))
       : activeTeams);
 
-  const assignedAppointments = filteredAppointments || appointments.filter(appointment => {
+  const [appointmentsState, setAppointmentsState] = useState<any[]>(appointments);
+
+  const handleChangeAppointmentDate = (appointmentId: string, newDate: string) => {
+    setAppointmentsState(prevAppointments => {
+      return prevAppointments.map(appointment => {
+        if (appointment.id === appointmentId) {
+          return { ...appointment, date: newDate };
+        }
+        return appointment;
+      });
+    });
+
+    console.log(`Updating appointment ${appointmentId} to new date: ${newDate}`);
+    setIsChangeSemainModalOpen(false);
+  };
+
+  const handleUpdateClientModalDate = (clientData: any) => {
+    try {
+      if (appointmentToChangeDate && clientData.installationDate) {
+        // Sauvegarde de l'ancienne date pour référence
+        const oldDate = appointmentToChangeDate.date;
+        
+        // Création de l'objet rendez-vous mis à jour
+        const updatedAppointment = {
+          ...appointmentToChangeDate,
+          date: clientData.installationDate,
+          team: clientData.team?.name || appointmentToChangeDate.team,
+        };
+        
+        // Mise à jour de l'état local des rendez-vous
+        setAppointmentsState(prev => {
+          // Filtrer le rendez-vous de son ancienne position et l'ajouter à sa nouvelle position
+          const filteredAppointments = prev.filter(app => app.id !== updatedAppointment.id);
+          return [...filteredAppointments, updatedAppointment];
+        });
+        
+        // Mise à jour du rendez-vous dans le backend
+        updateAppointmentTeam(updatedAppointment.id, updatedAppointment.team);
+        
+        console.log(`Rendez-vous déplacé: de ${oldDate} à ${clientData.installationDate}`);
+      }
+      setIsChangeSemainModalOpen(false);
+    } catch (error) {
+      console.error('Error updating appointment:', error);
+    }
+  };
+
+  const assignedAppointments = filteredAppointments || appointmentsState.filter(appointment => {
     const matchesTeam = selectedTeams.length === 0 || selectedTeams.some(teamId =>
       appointment.team && appointment.team.includes(teamId)
     );
@@ -88,40 +155,12 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
     return matchesTeam && isAssigned;
   });
 
-  const handleAppointmentClick = (appointment: any) => {
-    setSelectedAppointment(appointment);
-    setIsChangeTeamModalOpen(true);
-  };
-
-  const handleViewDetails = (e: React.MouseEvent, appointment: any) => {
-    e.stopPropagation();
-    setSelectedAppointment(appointment);
-    setIsProjectDetailsModalOpen(true);
-  };
-
-  const handleDeleteAppointment = (e: React.MouseEvent, appointment: any) => {
-    e.stopPropagation();
-    setSelectedAppointment(appointment);
-    setAppointmentToDelete(appointment.id);
-    setIsDeleteModalOpen(true);
-  };
-
-  const confirmDeleteAppointment = async () => {
-    if (appointmentToDelete) {
-      try {
-        await deleteAppointment(appointmentToDelete);
-        setShowSuccessToast(true);
-        setIsDeleteModalOpen(false);
-      } catch (error) {
-        console.error('Erreur lors de la suppression du rendez-vous:', error);
-      }
-    }
-  };
-
   const handleChangeTeam = (appointmentId: string, newTeamName: string) => {
+    console.log(`Changing team for appointment ${appointmentId} to ${newTeamName}`);
     updateAppointmentTeam(appointmentId, newTeamName);
   };
 
+  // Define the handleChangeWeekTeam function
   const handleChangeWeekTeam = (currentTeamId: string, newTeamName: string) => {
     const currentTeam = teams.find(t => t.id === currentTeamId);
     const newTeam = teams.find(t => t.name === newTeamName);
@@ -149,17 +188,22 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
     });
   };
 
-  // Fonction de sauvegarde pour la modale de changement de date
-  const handleChangeAppointmentDate = (appointmentId: string, newDate: string) => {
-    // À adapter selon ta logique métier (ex: updateAppointmentDate)
-    // updateAppointmentDate(appointmentId, newDate);
-    setIsChangeSemainModalOpen(false);
+  // Correct the function name for deleting appointments
+  const confirmDeleteAppointment = async () => {
+    if (appointmentToDelete) {
+      try {
+        await deleteAppointment(appointmentToDelete);
+        setShowSuccessToast(true);
+        setIsDeleteModalOpen(false);
+      } catch (error) {
+        console.error('Erreur lors de la suppression du rendez-vous:', error);
+      }
+    }
   };
 
   return (
     <>
       <div className="min-w-[1200px]">
-        {/* En-tête des jours */}
         <div className="grid grid-cols-[200px_repeat(5,1fr)] border-b border-border/50">
           <div className="p-4 font-medium text-muted-foreground">Équipes</div>
           {weekDays.map(day => (
@@ -185,7 +229,6 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
           ))}
         </div>
 
-        {/* Grille des équipes et rendez-vous */}
         {teamsToDisplay.length === 0 ? (
           <div className="text-center py-12">
             <h3 className="text-lg font-medium mb-2">Aucune équipe active</h3>
@@ -200,7 +243,6 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                 key={team.id}
                 className="grid grid-cols-[200px_repeat(5,1fr)] border-b border-border/50"
               >
-                {/* Nom de l'équipe */}
                 <div
                   className="p-4 flex items-center cursor-pointer hover:bg-accent/50 rounded-lg transition-colors"
                   onClick={() => setChangeWeekTeamData({
@@ -211,7 +253,6 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                   <div className="font-medium">{team.name}</div>
                 </div>
 
-                {/* Cellules des jours */}
                 {weekDays.map((day, dayIndex) => {
                   const dayAppointments = assignedAppointments.filter(appointment => {
                     const startsThisDay = appointment.date === format(day, 'yyyy-MM-dd');
@@ -313,7 +354,6 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                                   {appointment.title}
                                 </div>
                               )}
-                              {/* Action buttons */}
                               <div className="absolute top-1 right-1 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
                                   onClick={(e) => handleViewDetails(e, appointment)}
@@ -381,15 +421,15 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
         onClose={() => setShowSuccessToast(false)}
       />
 
-      {/* Modale de changement de date */}
-      <ChangeSemainModal
+      <UpdateClientModal
         isOpen={isChangeSemainModalOpen}
         onClose={() => setIsChangeSemainModalOpen(false)}
+        initialData={appointmentToChangeDate}
+        onSave={handleUpdateClientModalDate}
         appointment={appointmentToChangeDate}
-        appointments={appointments}
-        teams={activeTeams} // <-- Ajoute cette ligne
-        onSave={handleChangeAppointmentDate}
+        teams={activeTeams}
       />
+
       <AnimatePresence>
         {isDeleteModalOpen && selectedAppointment && (
           <div className="fixed inset-0 flex items-center justify-center z-[100]">

@@ -22,6 +22,8 @@ import { ContractDetailPage } from './components/maintenance/components/Contract
 import { CreateProjectForm } from './components/projects/components/add-project';
 import { SAVProvider } from './contexts/sav-context';
 import VehiculesPage from './components/vehicule/vehicule';
+import { TicketDetailPage } from './components/sav/ticket-detail-page';
+import { UserProfile } from './components/users/user-profile';
 
 // Composant de protection de route
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -47,32 +49,35 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/*" element={
             <ProtectedRoute>
-  <SAVProvider>
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/teams" element={<Teams />} />
-        <Route path="/teams/:id" element={<TeamDetail />} />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/projects/:id" element={<ProjectDetail />} />
-        <Route path="/calendar" element={<Calendar />} />
-        <Route path="/loading" element={<Loading />} />
-        <Route path="/products" element={<Products />} />
-        <Route path="/products/:id" element={<ProductDetail />} />
-        <Route path="/projects/create" element={<CreateProjectForm />} />
-        <Route path="/sav" element={<SAV />} />
-        <Route path="/clients" element={<Clients />} />
-        <Route path="/clients/:id" element={<ClientDetail />} />
-        <Route path="/users" element={<Users />} />
-        <Route path="/maintenance" element={<Maintenance />} />
-        <Route path="/history" element={<History />} />
-        <Route path="/ContractDetailPage" element={<ContractDetailPage />} />
-        <Route path="/vehicule" element={<VehiculesPage />}></Route>
-      </Routes>
-    </Layout>
-  </SAVProvider>
-</ProtectedRoute>
-
+              <SAVProvider>
+                <Layout>
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/teams" element={<Teams />} />
+                    <Route path="/teams/:id" element={<TeamDetail />} />
+                    <Route path="/projects" element={<Projects />} />
+                    <Route path="/projects/:id" element={<ProjectDetail />} />
+                    <Route path="/calendar" element={<Calendar />} />
+                    <Route path="/loading" element={<Loading />} />
+                    <Route path="/products" element={<Products />} />
+                    <Route path="/products/:id" element={<ProductDetail />} />
+                    <Route path="/projects/create" element={<CreateProjectForm />} />
+                    <Route path="/sav" element={<SAV />} />
+                    <Route path="/clients" element={<Clients />} />
+                    <Route path="/clients/:id" element={<ClientDetail />} />
+                    <Route path="/users" element={<Users />} />
+                    <Route path="/maintenance" element={<Maintenance />} />
+                    <Route path="/history" element={<History />} />
+                    <Route path="/ContractDetailPage" element={<ContractDetailPage />} />
+                    <Route path="/vehicule" element={<VehiculesPage />}></Route>
+                    // Dans la définition des routes, ajouter:
+                    <Route path="/sav/:ticketId" element={<TicketDetailPage />} />
+                    // Add this route inside your Routes component
+                    <Route path="/profile" element={<UserProfile />} />
+                  </Routes>
+                </Layout>
+              </SAVProvider>
+            </ProtectedRoute>
           } />
         </Routes>
       </motion.div>
