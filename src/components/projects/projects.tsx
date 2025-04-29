@@ -353,8 +353,8 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
                   <Briefcase className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg">{project.name}</h3>
-                  <p className="text-sm text-muted-foreground">{project.client?.name}</p>
+                  <h3 className="font-semibold text-lg">{project.client?.name}</h3>
+                  <p className="text-sm text-muted-foreground">{project.name}</p>
                 </div>
               </div>
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${
