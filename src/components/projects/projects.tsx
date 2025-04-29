@@ -39,6 +39,7 @@ interface Project {
     id: string;
     name: string;
   };
+  team:String;
   progress?: number;
   status?: string;
   dueDate?: string;
@@ -394,7 +395,7 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
                 </div>
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Users className="w-4 h-4 mr-2" />
-                  <span>{project.teamSize ?? 0} membres</span>
+                  <span>{project.team} </span>
                 </div>
                 <div className="flex items-center text-sm text-muted-foreground">
                   <AlertCircle className="w-4 h-4 mr-2" />
