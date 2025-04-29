@@ -243,7 +243,37 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
       animate="visible"
       className="space-y-6"
     >
+      {/* Statistiques */}
+<motion.div 
+  initial={{ opacity: 0, y: -10 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.5 }}
+  className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-8 gap-4"
+>
+  {/* Carte Stat */}
+  {[
+    { label: 'Tous', value: projects.length, color: 'bg-gray-100 text-gray-800', icon: <List className="w-5 h-5" /> },
+    { label: 'Confirmé', value: projects.filter(p => p.status === 'confirmer').length, color: 'bg-yellow-100 text-yellow-800', icon: <CheckCircle className="w-5 h-5" /> },
+    { label: 'Placé', value: projects.filter(p => p.status === 'placer').length, color: 'bg-orange-100 text-orange-800', icon: <Upload className="w-5 h-5" /> },
+    { label: 'Chargé', value: projects.filter(p => p.status === 'charger').length, color: 'bg-blue-100 text-blue-800', icon: <Truck className="w-5 h-5" /> },
+    { label: 'En cours', value: projects.filter(p => p.status === 'encours').length, color: 'bg-indigo-100 text-indigo-800', icon: <Clock className="w-5 h-5" /> },
+    { label: 'Terminé', value: projects.filter(p => p.status === 'terminer').length, color: 'bg-green-100 text-green-800', icon: <Check className="w-5 h-5" /> },
+    { label: 'Annulé', value: projects.filter(p => p.status === 'annuler').length, color: 'bg-red-100 text-red-800', icon: <Ban className="w-5 h-5" /> },
+  ].map((stat, index) => (
+    <motion.div
+      key={index}
+      whileHover={{ scale: 1.05 }}
+      className={`flex flex-col items-center justify-center p-4 rounded-xl shadow ${stat.color}`}
+    >
+      <div className="mb-2">{stat.icon}</div>
+      <div className="text-xl font-bold">{stat.value}</div>
+      <div className="text-sm">{stat.label}</div>
+    </motion.div>
+  ))}
+</motion.div>
+
       <div className="flex flex-col sm:flex-row justify-between gap-4">
+        
         <div>
           <h1 className="text-3xl font-bold text-primary">Projets en Cours</h1>
           <p className="text-muted-foreground mt-1">Suivez l'avancement de vos chantiers</p>
