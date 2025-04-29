@@ -104,9 +104,10 @@ export function SAV() {
   const currentTickets = filteredTickets.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredTickets.length / itemsPerPage);
 
+  // Remplacer la fonction handleViewTicket par une redirection
   const handleViewTicket = (ticket: any) => {
-    setSelectedTicket(ticket);
-    setIsDetailModalOpen(true);
+  // Au lieu d'ouvrir un modal, rediriger vers la page de détails
+  window.location.href = `/sav/${ticket.id}`;
   };
 
   // Update the handleStatusChange function to use the correct status type
@@ -362,12 +363,16 @@ export function SAV() {
                   <th className="text-left p-4 font-medium text-muted-foreground">Équipes</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">Date</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">Statuts</th>
-                  <th className="text-center p-4 font-medium text-muted-foreground">Détails</th>
+                  {/* Colonne "Détails" supprimée */}
                 </tr>
               </thead>
               <tbody>
                 {currentTickets.map((ticket) => (
-                  <tr key={ticket.id} className="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
+                  <tr 
+                    key={ticket.id} 
+                    className="border-b last:border-b-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                    onClick={() => handleViewTicket(ticket)}
+                  >
                     <td className="p-4 font-mono">#{ticket.number}</td>
                     <td className="p-4">{ticket.client.name}</td>
                     <td className="p-4">{ticket.product.name}</td>
@@ -426,7 +431,7 @@ export function SAV() {
                         </div>
                       </div>
                     </td>
-                    <td className="p-4">
+                    {/* <td className="p-4">
                       <div className="flex items-center justify-center space-x-2">
                         <button
                           onClick={() => handleViewTicket(ticket)}
@@ -436,7 +441,7 @@ export function SAV() {
                           <Eye className="w-4 h-4" />
                         </button>
                       </div>
-                    </td>
+                    </td> */}
                   </tr>
                 ))}
               </tbody>

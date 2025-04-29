@@ -14,6 +14,11 @@ import {
 import { db } from '../lib/firebase';
 
 // Types
+export interface Comment {
+  text: string;
+  date: Date;
+}
+
 export interface Ticket {
   id?: string;
   number: string;
@@ -38,6 +43,7 @@ export interface Ticket {
   };
   installationDate: string;
   lastUpdate?: string;
+  comments?: Comment[]; // Add this line to the existing interface
 }
 
 export interface Installation {
