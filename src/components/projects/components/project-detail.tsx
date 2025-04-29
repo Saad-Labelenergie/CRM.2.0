@@ -13,50 +13,6 @@ import { updateProjectStatus } from '../../../lib/hooks/useProjects';
 
 
 
-const mockSteps = [
-  {
-    id: 1,
-    name: "Chargement du matériel",
-    status: "charger",
-    timestamps: {
-      charger: {
-        date: "2024-02-20",
-        time: "08:00",
-        user: "Jean D."
-      }
-    }
-  },
-  {
-    id: 2,
-    name: "Installation",
-    status: "commencer",
-    timestamps: {
-      charger: {
-        date: "2024-02-20",
-        time: "08:00",
-        user: "Jean D."
-      },
-      commencer: {
-        date: "2024-02-20",
-        time: "09:30",
-        user: "Jean D."
-      }
-    }
-  },
-  {
-    id: 3,
-    name: "Tests et mise en service",
-    status: "commencer",
-    timestamps: {
-      charger: {
-        date: "2024-02-20",
-        time: "08:00",
-        user: "Jean D."
-      }
-    }
-  }
-];
-
 
 
 export function ProjectDetail() {
@@ -66,6 +22,64 @@ export function ProjectDetail() {
   const [showStepHistory, setShowStepHistory] = useState<number[]>([]);
   const [showAllComments, setShowAllComments] = useState(false);
 
+  const [steps, setSteps] = useState<Step[]>([
+    {
+      id: 1,
+      name: 'Chargement',
+      status: 'charger',
+      timestamps: {},
+    },
+    {
+      id: 2,
+      name: 'Arriver sur place',
+      status: 'charger',
+      timestamps: {},
+    },
+    {
+      id: 3,
+      name: 'Photos avant chantier',
+      status: 'charger',
+      timestamps: {},
+    },
+    {
+      id: 4,
+      name: 'Récupération documents client',
+      status: 'charger',
+      timestamps: {},
+    },
+    {
+      id: 5,
+      name: 'Commencer',
+      status: 'charger',
+      timestamps: {},
+    },
+    {
+      id: 6,
+      name: 'Terminé',
+      status: 'charger',
+      timestamps: {},
+    },
+    {
+      id: 7,
+      name: 'Dossier signé',
+      status: 'charger',
+      timestamps: {},
+    },
+  ]);
+  
+  const onStepStatusChange = (stepId: number) => {
+    setSteps((prevSteps) =>
+      prevSteps.map((step) => {
+        if (step.id === stepId) {
+          if (step.status === 'charger') return { ...step, status: 'commencer' };
+          if (step.status === 'commencer') return { ...step, status: 'en_cours' };
+          if (step.status === 'en_cours') return { ...step, status: 'terminer' };
+        }
+        return step;
+      })
+    );
+  };
+  
   
   const project = projects.find(p => p.id === id);
 
@@ -93,9 +107,26 @@ export function ProjectDetail() {
     );
   };
 
-  const handleStepStatusChange = (stepId: number) => {
-    // Logique de changement de statut
+  const handleStepStatusChange = async (stepId: number) => {
+    if (!project?.id) return;
+  
+    // Met à jour localement
+    onStepStatusChange(stepId);
+  
+    // Détermine le nouveau statut global du projet
+    const getNewProjectStatus = (stepId: number): string => {
+      if (stepId === 1) return "charger";
+      if (stepId >= 2 && stepId <= 5) return "en_cours";
+      if (stepId === 7) return "terminer";
+      return "en_cours";
+    };
+  
+    const newStatus = getNewProjectStatus(stepId);
+  
+    // Met à jour sur Firestore
+    await updateProjectStatus(project.id, newStatus);
   };
+  
 
   const handleDocumentToggle = (docId: number) => {
     // Logique de toggle document
@@ -113,18 +144,21 @@ export function ProjectDetail() {
       animate={{ opacity: 1 }}
       className="space-y-8"
     >
-      <ProjectHeader
-        onBack={() => navigate('/projects')}
-        projectName={project.name}
-        clientName={project.client.name}
-      />
+<ProjectHeader
+  onBack={() => navigate('/projects')}
+  projectName={project.name}
+  clientName={project.client.name}
+  status={project.status}
+  onConfirmClick={() => updateProjectStatus(project.id, 'confirmer')}
+/>
 
-      <ProjectSteps
-        steps={mockSteps}
-        showStepHistory={showStepHistory}
-        onToggleHistory={handleToggleHistory}
-        onStepStatusChange={handleStepStatusChange}
-      />
+<ProjectSteps 
+  steps={steps}
+  showStepHistory={showStepHistory}
+  onToggleHistory={handleToggleHistory}
+  onStepStatusChange={handleStepStatusChange}
+  projectId={project.id}
+/>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <ProjectInfo

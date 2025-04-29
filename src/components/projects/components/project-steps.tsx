@@ -10,6 +10,31 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { db } from '../../../lib/firebase';
+import { updateDoc,doc } from 'firebase/firestore';
+
+
+async function updateProjectStatus(projectId: string, newStatus: string) {
+  try {
+    const projectRef = doc(db, "projects", projectId);
+    await updateDoc(projectRef, {
+      status: newStatus,
+      updatedAt: new Date(),
+    });
+    console.log("Statut du projet mis à jour :", newStatus);
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour du statut du projet :", error);
+  }
+}
+
+
+
+const getNewProjectStatus = (stepId: number): string => {
+  if (stepId === 1) return "charger";
+  if (stepId >= 2 && stepId <= 6) return "encours";
+  if (stepId === 7) return "terminer";
+  return "en_cours";
+};
 
 type StepStatus = 'charger' | 'commencer' | 'en_cours' | 'terminer';
 
@@ -36,6 +61,7 @@ interface ProjectStepsProps {
   showStepHistory: number[];
   onToggleHistory: (stepId: number) => void;
   onStepStatusChange: (stepId: number) => void;
+  projectId: string; // Ajout
 }
 
 const getStepIcon = (status: StepStatus) => {
@@ -51,6 +77,13 @@ const getStepIcon = (status: StepStatus) => {
     default:
       return <CheckCircle className="w-4 h-4" />;
   }
+};
+
+const getProjectStatus = (stepId: number) => {
+  if (stepId === 1) return 'charger';
+  if (stepId >= 2 && stepId <= 5) return 'en_cours';
+  if (stepId === 7) return 'terminer';
+  return 'en_cours';
 };
 
 const getStepStyle = (status: StepStatus, isActive: boolean) => {
@@ -72,20 +105,27 @@ const getStepStyle = (status: StepStatus, isActive: boolean) => {
   }
 };
 
-const getStepLabel = (status: StepStatus) => {
-  switch (status) {
-    case 'charger':
-      return 'Matériel chargé';
-    case 'commencer':
-      return 'Arrivée sur place';
-    case 'en_cours':
-      return 'En cours';
-    case 'terminer':
-      return 'Terminé';
+const getStepLabel = (stepId: number) => {
+  switch (stepId) {
+    case 1:
+      return 'Chargement';
+    case 2:
+      return 'Arriver sur place';
+    case 3:
+      return 'Photos avant chantier (6 photos)';
+    case 4:
+      return 'Récupération documents client';
+    case 5:
+      return 'Commencer';
+    case 6:
+      return 'Terminé (12 photos après chantier)';
+    case 7:
+      return 'Dossier signé';
     default:
-      return status;
+      return '';
   }
 };
+
 
 const isStepActive = (steps: Step[], currentStepIndex: number): boolean => {
   if (currentStepIndex === 0) return true;
@@ -93,7 +133,16 @@ const isStepActive = (steps: Step[], currentStepIndex: number): boolean => {
   return previousStep.status === 'terminer';
 };
 
-export function ProjectSteps({ steps, showStepHistory, onToggleHistory, onStepStatusChange }: ProjectStepsProps) {
+export function ProjectSteps({ steps, showStepHistory, onToggleHistory, onStepStatusChange,projectId }: ProjectStepsProps) {
+  
+  const handleStepStatusChange = async (stepId: number) => {
+    // Avancer l'étape ici comme tu fais déjà
+    onStepStatusChange(stepId);
+  
+    // Mettre à jour le statut du projet
+    const newStatus = getNewProjectStatus(stepId);
+    await updateProjectStatus(projectId, newStatus);
+  };
   return (
     <motion.div
       whileHover={{ y: -5 }}
@@ -128,7 +177,7 @@ export function ProjectSteps({ steps, showStepHistory, onToggleHistory, onStepSt
                       {step.name}
                     </div>
                     <div className={`text-sm ${!isActive ? 'text-gray-400 dark:text-gray-500' : 'text-muted-foreground'}`}>
-                      {getStepLabel(step.status)}
+                      {getStepLabel(step.id)}
                       {step.timestamps[step.status] && (
                         <>
                           <span className="mx-2">•</span>
@@ -155,7 +204,7 @@ export function ProjectSteps({ steps, showStepHistory, onToggleHistory, onStepSt
                       <motion.button
                         whileHover={isActive ? { scale: 1.05 } : {}}
                         whileTap={isActive ? { scale: 0.95 } : {}}
-                        onClick={() => isActive && onStepStatusChange(step.id)}
+                        onClick={() => isActive && handleStepStatusChange(step.id)}
                         className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                           !isActive
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800/30 dark:text-gray-500'
