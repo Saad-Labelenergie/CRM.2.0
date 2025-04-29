@@ -385,14 +385,14 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center text-sm text-muted-foreground">
+                {/* <div className="flex items-center text-sm text-muted-foreground">
                   <Clock className="w-4 h-4 mr-2" />
                   <span>Échéance: {project.dueDate || 'Non définie'}</span>
                 </div>
                 <div className="flex items-center text-sm text-muted-foreground">
                   <MapPin className="w-4 h-4 mr-2" />
                   <span>{project.location || 'N/A'}</span>
-                </div>
+                </div> */}
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Users className="w-4 h-4 mr-2" />
                   <span>{project.team} </span>
@@ -495,7 +495,7 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
 
           <td className="p-4">
             <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <motion.button
+              {/* <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={(e) => {
@@ -506,7 +506,7 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
                 title="Voir les détails"
               >
                 <Eye className="w-4 h-4" />
-              </motion.button>
+              </motion.button> */}
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
