@@ -24,7 +24,11 @@ interface Project {
   status?: 'en_attente' | 'charger' | 'en_cours' | 'terminer';
   type?: string;
   appointments?: any[]; // adapte si typé
-  // autres propriétés...
+  documents?: {
+    pieceIdentite: boolean;
+    avisImpot: boolean;
+    taxeFonciere: boolean;
+  };
 }
 
 
@@ -41,6 +45,20 @@ export async function updateProjectStatus(projectId: string, newStatus: string) 
     await updateDoc(projectRef, { status: newStatus });
     console.log(`Statut du projet ${projectId} mis à jour: ${newStatus}`);
     return { id: projectId, status: newStatus };
+  } catch (error) {
+    console.error('Erreur Firestore:', error);
+    throw error;
+  }
+}
+export async function updateProjectDocuments(projectId: string, updatedDocuments: any) {
+  const db = getFirestore();
+  const projectRef = doc(db, 'projects', projectId);
+
+  try {
+    await updateDoc(projectRef, {
+      documents: updatedDocuments
+    });
+    console.log(`Documents du projet ${projectId} mis à jour`, updatedDocuments);
   } catch (error) {
     console.error('Erreur Firestore:', error);
     throw error;

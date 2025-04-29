@@ -187,32 +187,15 @@ export function ProjectDetail() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ProjectDocuments
-          documents={[
-            {
-              id: 1,
-              name: "Devis signé",
-              status: "received",
-              date: "2024-02-15",
-              isDefault: true
-            },
-            {
-              id: 2,
-              name: "Bon de commande",
-              status: "received",
-              date: "2024-02-15",
-              isDefault: true
-            },
-            {
-              id: 3,
-              name: "PV de réception",
-              status: "pending",
-              date: null,
-              isDefault: true
-            }
-          ]}
-          onDocumentToggle={handleDocumentToggle}
-        />
+      <ProjectDocuments
+  projectId={project.id} 
+  documents={project.documents ?? { 
+    pieceIdentite: false,
+    avisImpot: false,
+    taxeFonciere: false
+  }}
+/>
+
 
         <ProjectComments
           projectId={project.id}
