@@ -385,14 +385,14 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center text-sm text-muted-foreground">
+                {/* <div className="flex items-center text-sm text-muted-foreground">
                   <Clock className="w-4 h-4 mr-2" />
                   <span>Échéance: {project.dueDate || 'Non définie'}</span>
                 </div>
                 <div className="flex items-center text-sm text-muted-foreground">
                   <MapPin className="w-4 h-4 mr-2" />
                   <span>{project.location || 'N/A'}</span>
-                </div>
+                </div> */}
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Users className="w-4 h-4 mr-2" />
                   <span>{project.team} </span>
@@ -434,114 +434,100 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
          ) : (
           /* Nouvelle Vue Tableau */
           <div className="overflow-x-auto border rounded-lg">
-          <table className="w-full">
+          <table className="w-full divide-y divide-gray-200">
             <thead>
               <tr className="bg-muted/50 border-b">
-                <th className="text-left p-4 font-medium text-muted-foreground">Numéro</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Client</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Projet</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Équipe</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Échéance</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Statut</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Progression</th>
                 <th className="text-center p-4 font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
-              <AnimatePresence>
-                {filteredProjects.map((project) => (
-                  <motion.tr
-                    key={project.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="border-b last:border-b-0 hover:bg-muted/30 transition-colors"
-                  >
-                    <td className="p-4 font-mono">#{project.id.slice(0, 6)}</td>
-                    <td className="p-4">{project.client.name}</td>
-                    <td className="p-4 font-medium">{project.name}</td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-muted-foreground" />
-                        {project.teamSize ?? 0}
-                      </div>
-                    </td>
-                    <td className="p-4">{project.dueDate || 'Non définie'}</td>
-                    <td className="p-4">
-                      <div className="flex flex-col gap-2">
-                        <div className={`px-2 py-1 rounded-full text-xs inline-flex items-center ${
-                          project.status === 'annuler' ? 'bg-red-100 text-red-800' :
-                          project.status === 'terminer' ? 'bg-green-100 text-green-800' :
-                          project.status === 'encours' ? 'bg-blue-100 text-blue-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {project.status === 'annuler' ? 'Annulé' :
-                           project.status === 'terminer' ? 'Terminé' :
-                           project.status === 'encours' ? 'En cours' :
-                           project.status?.replace('_', ' ')}
-                        </div>
-                        <div className="flex gap-1 mt-1">
-                          {['confirmer', 'placer', 'charger', 'encours', 'terminer', 'annuler'].map((status) => (
-                            <button
-                              key={status}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (status === 'annuler') {
-                                  setCancelProjectId(project.id);
-                                } else {
-                                  // Logique de changement de statut
-                                }
-                              }}
-                              className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                                project.status === status 
-                                  ? status === 'annuler' ? 'bg-red-500 text-white' :
-                                    status === 'terminer' ? 'bg-green-500 text-white' :
-                                    status === 'encours' ? 'bg-blue-500 text-white' :
-                                    'bg-yellow-500 text-white'
-                                  : status === 'annuler' ? 'bg-red-100 hover:bg-red-200' :
-                                    status === 'terminer' ? 'bg-green-100 hover:bg-green-200' :
-                                    status === 'encours' ? 'bg-blue-100 hover:bg-blue-200' :
-                                    'bg-yellow-100 hover:bg-yellow-200'
-                              }`}
-                              title={status.charAt(0).toUpperCase() + status.slice(1)}
-                            >
-                              {project.status === status && <Check className="w-3 h-3" />}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center justify-center space-x-2">
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/projects/${project.id}`);
-                          }}
-                          className="p-1 hover:bg-muted rounded-full"
-                          title="Voir les détails"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </motion.button>
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setCancelProjectId(project.id);
-                          }}
-                          className="p-1 hover:bg-red-100 rounded-full text-red-500"
-                          title="Annuler le projet"
-                        >
-                          <Ban className="w-4 h-4" />
-                        </motion.button>
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))}
-              </AnimatePresence>
-            </tbody>
+  <AnimatePresence>
+    {filteredProjects.map((project) => {
+      const projectProgress = statusProgressMap[project.status || 'confirmer'] ?? 0;
+
+      return (
+        <motion.tr
+          key={project.id}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => navigate(`/projects/${project.id}`)}
+          className="border-b last:border-b-0 hover:bg-accent transition-colors cursor-pointer group"
+        >
+          <td className="p-4 text-sm text-gray-800 group-hover:text-primary">{project.client.name}</td>
+          <td className="p-4 font-semibold text-sm">{project.name}</td>
+          <td className="p-4 text-sm">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              {project.team}
+            </div>
+          </td>
+          <td className="p-4 text-sm">
+            <div
+              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                project.status === 'annuler' ? 'bg-red-100 text-red-800' :
+                project.status === 'terminer' ? 'bg-green-100 text-green-800' :
+                project.status === 'encours' ? 'bg-blue-100 text-blue-800' :
+                'bg-yellow-100 text-yellow-800'
+              }`}
+            >
+              {project.status === 'annuler' ? 'Annulé' :
+                project.status === 'terminer' ? 'Terminé' :
+                project.status === 'encours' ? 'En cours' :
+                project.status?.replace('_', ' ')}
+            </div>
+          </td>
+          {/* ➡️ Nouvelle colonne Progression */}
+          <td className="p-4 w-48">
+            <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${getProgressColor(projectProgress)}`}
+                style={{ width: `${projectProgress}%` }}
+              />
+            </div>
+            <div className="text-xs mt-1 text-center font-medium text-muted-foreground">{projectProgress}%</div>
+          </td>
+
+          <td className="p-4">
+            <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              {/* <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/projects/${project.id}`);
+                }}
+                className="p-1 hover:bg-muted rounded-full"
+                title="Voir les détails"
+              >
+                <Eye className="w-4 h-4" />
+              </motion.button> */}
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCancelProjectId(project.id);
+                }}
+                className="p-1 hover:bg-red-100 rounded-full text-red-500"
+                title="Annuler le projet"
+              >
+                <Ban className="w-4 h-4" />
+              </motion.button>
+            </div>
+          </td>
+        </motion.tr>
+      );
+    })}
+  </AnimatePresence>
+</tbody>
+
+
           </table>
         </div>
         )}
