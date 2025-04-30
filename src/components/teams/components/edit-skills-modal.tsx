@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Check } from 'lucide-react';
+import { getDocs, collection } from 'firebase/firestore';
+import { db } from '../../../lib/firebase'; // ajuste le chemin si besoin
 
 interface EditSkillsModalProps {
   isOpen: boolean;
@@ -10,16 +12,37 @@ interface EditSkillsModalProps {
 }
 
 export function EditSkillsModal({ isOpen, onClose, currentSkills, onSave }: EditSkillsModalProps) {
-  const [skills, setSkills] = useState(currentSkills);
+  const [skills, setSkills] = useState<string[]>(currentSkills);
   const [newSkill, setNewSkill] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
 
-  React.useEffect(() => {
-    setSkills(currentSkills);
-  }, [currentSkills]);
+  // Mettre à jour les skills si currentSkills change
+  useEffect(() => {
+    if (isOpen) {
+      setSkills(currentSkills); // on initialise seulement à l’ouverture
+    }
+  }, [isOpen]);
+
+  // Charger les catégories de produits (expertises possibles)
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, 'products'));
+        const uniqueCategories = Array.from(
+          new Set(snapshot.docs.map(doc => doc.data().category).filter(Boolean))
+        );
+        setCategories(uniqueCategories);
+      } catch (error) {
+        console.error('Erreur lors du chargement des catégories :', error);
+      }
+    };
+
+    if (isOpen) fetchCategories();
+  }, [isOpen]);
 
   const handleAddSkill = () => {
-    if (newSkill.trim() && !skills.includes(newSkill.trim())) {
-      setSkills([...skills, newSkill.trim()]);
+    if (newSkill && !skills.includes(newSkill)) {
+      setSkills([...skills, newSkill]);
       setNewSkill('');
     }
   };
@@ -52,7 +75,7 @@ export function EditSkillsModal({ isOpen, onClose, currentSkills, onSave }: Edit
             className="relative w-full max-w-md bg-card p-6 rounded-xl shadow-xl z-50 border border-border/50 mx-4"
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold">Modifier les compétences</h2>
+              <h2 className="text-xl font-semibold">Modifier les expertises</h2>
               <button
                 onClick={onClose}
                 className="p-2 hover:bg-accent rounded-lg transition-colors"
@@ -64,23 +87,26 @@ export function EditSkillsModal({ isOpen, onClose, currentSkills, onSave }: Edit
               <div className="space-y-4">
                 <div>
                   <label htmlFor="newSkill" className="block text-sm font-medium text-muted-foreground mb-1">
-                    Ajouter une compétence
+                    Ajouter une expertise
                   </label>
                   <div className="flex space-x-2">
-                    <input
-                      type="text"
-                      id="newSkill"
+                    <select
                       value={newSkill}
                       onChange={(e) => setNewSkill(e.target.value)}
                       className="flex-1 px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      placeholder="Nouvelle compétence"
-                    />
+                    >
+                      <option value="">Sélectionner une catégorie</option>
+                      {categories.map((cat) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       type="button"
                       onClick={handleAddSkill}
-                      className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                      disabled={!newSkill}
+                      className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
                     >
                       <Plus className="w-5 h-5" />
                     </motion.button>
@@ -89,7 +115,7 @@ export function EditSkillsModal({ isOpen, onClose, currentSkills, onSave }: Edit
 
                 <div>
                   <label className="block text-sm font-medium text-muted-foreground mb-2">
-                    Compétences actuelles
+                    Expertises assignées
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {skills.map((skill, index) => (

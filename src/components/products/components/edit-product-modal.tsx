@@ -277,7 +277,7 @@ export function EditProductModal({ isOpen, onClose, onSave, product }: EditProdu
                       )}
                     </div>
 
-                    <div>
+                    {/* <div>
                       <label className="block text-sm font-medium text-muted-foreground mb-1">
                         Prix d'achat *
                       </label>
@@ -291,7 +291,7 @@ export function EditProductModal({ isOpen, onClose, onSave, product }: EditProdu
                       {errors.purchasePrice && (
                         <p className="text-destructive text-sm mt-1">{errors.purchasePrice}</p>
                       )}
-                    </div>
+                    </div> */}
                   </div>
                 </div>
 
