@@ -10,7 +10,7 @@ import { ProjectDetailsModal } from '../components/project-details-modal';
 import { ExternalLink, Trash2, Eye, X, AlertTriangle, CalendarDays } from 'lucide-react';
 import { Toast } from '../../ui/toast';
 import { UpdateClientModal } from '../components/change-semain';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs,query,where,updateDoc,doc,increment } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -224,9 +224,31 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
 
   // Correct the function name for deleting appointments
   const confirmDeleteAppointment = async () => {
-    if (appointmentToDelete) {
+    if (appointmentToDelete && selectedAppointment) {
       try {
+        // 🔍 Extraire les noms des produits du titre
+        const productNames = selectedAppointment.title
+        .split(',')
+        .map(name => name.trim())
+        .filter(name => name.length > 0);
+      
+  
+        // 🔁 Pour chaque produit, incrémenter le stock.returned
+        for (const name of productNames) {
+          const q = query(collection(db, 'products'), where('name', '==', name));
+          const snapshot = await getDocs(q);
+          snapshot.forEach(async (docSnap) => {
+            const productRef = doc(db, 'products', docSnap.id);
+            await updateDoc(productRef, {
+              'stock.returned': increment(1),
+              updatedAt: new Date()
+            });
+          });
+        }
+  
+        // 🗑️ Supprimer le rendez-vous
         await deleteAppointment(appointmentToDelete);
+  
         setShowSuccessToast(true);
         setIsDeleteModalOpen(false);
       } catch (error) {

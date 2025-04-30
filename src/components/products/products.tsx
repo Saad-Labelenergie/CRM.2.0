@@ -438,7 +438,7 @@ export function Products() {
                     {product.stock?.reserved || 0} unités
                   </td>
                   <td>
-
+                    {product.stock?.returned || 0} unités
                   </td>
                   {/* <td className="p-4 text-right">
                     {product.purchasePrice?.toFixed(2) || '0.00'} €
