@@ -14,6 +14,7 @@ interface Appointment {
     postalCode: string;
   };
   date: string;
+  installationDate: string;  // Add this line
   time: string;
   team: string | null;
   teamColor?: string;
@@ -74,7 +75,11 @@ interface SchedulingContextType {
   addProject: (project: Project) => Promise<string>;
   updateProject: (projectId: string, updates: Partial<Project>) => Promise<void>;
   toggleTeamActive: (teamId: string) => Promise<void>;
-  updateAppointmentTeam: (appointmentId: string, newTeamName: string) => Promise<void>;
+  updateAppointmentTeam: (
+    appointmentId: string, 
+    newTeamName: string,
+    newDate?: string
+  ) => Promise<void>;
   updateProjectMaterials: (projectId: string, materials: { id: number; name: string; status: 'installed' | 'not_installed'; }[]) => Promise<void>;
   createTeam: (team: Omit<Team, 'id'>) => Promise<string>;
   updateTeamLoad: (teamId: string, currentLoad: number) => Promise<void>;
@@ -167,7 +172,7 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  const updateAppointmentTeam = async (appointmentId: string, newTeamName: string) => {
+  const updateAppointmentTeam = async (appointmentId: string, newTeamName: string, newDate?: string) => {
     try {
       const team = teams.find(t => t.name === newTeamName);
       if (!team) {
@@ -175,14 +180,22 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
         return;
       }
   
-      const appointmentUpdate = {
+      // Define the type for appointmentUpdate
+      const appointmentUpdate: Partial<Appointment> = {
         team: newTeamName,
         teamColor: team.color,
         status: 'attribue' as const
       };
   
+      // Add date to update if provided
+      if (newDate) {
+        appointmentUpdate.date = newDate;
+        appointmentUpdate.installationDate = newDate;
+      }
+  
       await updateAppointment(appointmentId, appointmentUpdate);
   
+      // Update project if exists
       const project = projects.find(p => p.appointments?.some(a => a.id === appointmentId));
       if (project) {
         const updatedAppointments = project.appointments.map(a => {
@@ -200,6 +213,15 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
           appointments: updatedAppointments
         });
       }
+  
+      // Update local state
+      setAppointments(prev => prev.map(app => {
+        if (app.id === appointmentId) {
+          return { ...app, ...appointmentUpdate };
+        }
+        return app;
+      }));
+  
     } catch (error) {
       console.error('Error updating appointment team:', error);
       throw error;

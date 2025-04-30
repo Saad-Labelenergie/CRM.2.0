@@ -27,6 +27,7 @@ const PROJECT_STATUS_COLORS = {
   'placer': '#FFEDD5',    // Placé - orange
   'charger': '#DBEAFE',   // Chargé - blue
   'encours': '#E0E7FF',  // En cours - indigo
+  'in-progress': '#E0E7FF', // Alias pour en_cours
   'terminer': '#DCFCE7',  // Terminé - green
   'annuler': '#FEE2E2',   // Annulé - red
 };
@@ -145,36 +146,40 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
         return appointment;
       });
     });
-
-    console.log(`Updating appointment ${appointmentId} to new date: ${newDate}`);
     setIsChangeSemainModalOpen(false);
   };
 
-  const handleUpdateClientModalDate = (clientData: any) => {
+  const handleUpdateClientModalDate = async (clientData: any) => {
     try {
       if (appointmentToChangeDate && clientData.installationDate) {
-        // Sauvegarde de l'ancienne date pour référence
-        const oldDate = appointmentToChangeDate.date;
+        const team = clientData.team?.name || appointmentToChangeDate.team;
         
-        // Création de l'objet rendez-vous mis à jour
-        const updatedAppointment = {
-          ...appointmentToChangeDate,
-          date: clientData.installationDate,
-          team: clientData.team?.name || appointmentToChangeDate.team,
-        };
+        // Update both team and date at once
+        await updateAppointmentTeam(
+          appointmentToChangeDate.id,
+          team,
+          clientData.installationDate
+        );
         
-        // Mise à jour de l'état local des rendez-vous
-        setAppointmentsState(prev => {
-          // Filtrer le rendez-vous de son ancienne position et l'ajouter à sa nouvelle position
-          const filteredAppointments = prev.filter(app => app.id !== updatedAppointment.id);
-          return [...filteredAppointments, updatedAppointment];
-        });
+        // Update local state
+        setAppointmentsState(prev => prev.map(app => {
+          if (app.id === appointmentToChangeDate.id) {
+            return {
+              ...app,
+              date: clientData.installationDate,
+              installationDate: clientData.installationDate,
+              team: team,
+              teamColor: clientData.team?.color || app.teamColor
+            };
+          }
+          return app;
+        }));
         
-        // Mise à jour du rendez-vous dans le backend
-        updateAppointmentTeam(updatedAppointment.id, updatedAppointment.team);
-        
-        console.log(`Rendez-vous déplacé: de ${oldDate} à ${clientData.installationDate}`);
+        setShowSuccessToast(true);
+        console.log(`Rendez-vous mis à jour - Date: ${clientData.installationDate}, Équipe: ${team}`);
       }
+      
+      setAppointmentToChangeDate(null);
       setIsChangeSemainModalOpen(false);
     } catch (error) {
       console.error('Error updating appointment:', error);
@@ -190,7 +195,6 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
   });
 
   const handleChangeTeam = (appointmentId: string, newTeamName: string) => {
-    console.log(`Changing team for appointment ${appointmentId} to ${newTeamName}`);
     updateAppointmentTeam(appointmentId, newTeamName);
   };
 
@@ -234,7 +238,6 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
       }
     }
   };
-
   return (
     <>
       <div className="min-w-[1200px]">
@@ -558,5 +561,4 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
         )}
       </AnimatePresence>
     </>
-  );
-}
+  );}
