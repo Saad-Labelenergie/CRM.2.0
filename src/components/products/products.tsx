@@ -93,10 +93,25 @@ export function Products() {
       </div>
     );
   }
+
+  //Les données du chart Nombre de produits par marque 
+
+  const brandBarData = Object.entries(
+    products.reduce((acc: Record<string, number>, product) => {
+      const brand = product.brand || 'Inconnu';
+      acc[brand] = (acc[brand] || 0) + 1;
+      return acc;
+    }, {})
+  ).map(([brand, count]) => ({ brand, count }));
+  
+
+  //Les données du chart Stock Dispo par produit 
   const barData = products.map(p => ({
     name: p.name.length > 15 ? p.name.slice(0, 15) + '…' : p.name,
     stock: (p.stock?.current ?? 0) - (p.stock?.reserved ?? 0)
   }));
+
+
   return (
     <motion.div
       variants={containerVariants}
@@ -253,17 +268,40 @@ export function Products() {
  
 </div>
 <div className="mt-12 bg-card rounded-xl shadow-lg border border-border/50 p-6">
-  <h2 className="text-lg font-semibold mb-4">Stock disponible par produit</h2>
-  <ResponsiveContainer width="40%" height={300}>
-    <BarChart data={barData}>
-      <CartesianGrid strokeDasharray="3 3" />
-      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-      <YAxis />
-      <Tooltip />
-      <Bar dataKey="stock" fill="#3B82F6" />
-    </BarChart>
-  </ResponsiveContainer>
+  <div className="flex flex-col lg:flex-row gap-8 justify-between items-start">
+    
+    {/* Chart 1 : Stock disponible par produit */}
+    <div className="flex-1 w-full">
+      <h2 className="text-lg font-semibold mb-4">Stock disponible par produit</h2>
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={barData}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+          <YAxis />
+          <Tooltip />
+          <Bar dataKey="stock" fill="#3B82F6" />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+
+    {/* Chart 2 : Nombre de produits par marque */}
+    <div className="flex-1 w-full">
+      <h2 className="text-lg font-semibold mb-4">Nombre de produits par marque</h2>
+      <ResponsiveContainer width="100%" height={300}>
+  <BarChart data={brandBarData}>
+    <CartesianGrid strokeDasharray="3 3" />
+    <XAxis dataKey="brand" tick= {{ fontSize: 12 }} />
+    <YAxis allowDecimals={false} /> {/* Affiche uniquement des entiers */}
+    <Tooltip />
+    <Bar dataKey="count" fill="#10B981" />
+  </BarChart>
+</ResponsiveContainer>
+
+    </div>
+
+  </div>
 </div>
+
 
 
       <div className="flex flex-col sm:flex-row gap-4">
