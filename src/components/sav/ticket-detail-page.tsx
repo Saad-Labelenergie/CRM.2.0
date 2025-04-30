@@ -18,13 +18,26 @@ import {
   Building2,
   Save
 } from 'lucide-react';
-import { useSAV } from '../../contexts/sav-context';
+import { useSAV } from '../../contexts/sav-context'; 
 
 // Helper function to safely format dates
-const safeFormatDate = (dateValue: string | Date | undefined, formatString: string = 'dd/MM/yyyy'): string => {
+const safeFormatDate = (dateValue: string | Date | { seconds: number, nanoseconds: number } | undefined, formatString: string = 'dd/MM/yyyy'): string => {
   if (!dateValue) return 'Non spécifiée';
   
-  const date = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
+  let date;
+  if (typeof dateValue === 'string') {
+    // Essayer de parser la date à partir d'une chaîne
+    date = new Date(dateValue);
+  } else if (dateValue instanceof Date) {
+    // Si c'est déjà un objet Date
+    date = dateValue;
+  } else if (dateValue && 'seconds' in dateValue) {
+    // Si c'est un Timestamp Firestore
+    date = new Date(dateValue.seconds * 1000);
+  } else {
+    // Cas par défaut
+    date = new Date();
+  }
   
   return isValid(date) ? format(date, formatString) : 'Date invalide';
 };
@@ -36,8 +49,10 @@ export function TicketDetailPage() {
   const [ticket, setTicket] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState('');
-  const [comments, setComments] = useState<{text: string, date: Date}[]>([]);
+  // Modifié pour correspondre au type Comment dans sav-context mais avec author optionnel
+  const [comments, setComments] = useState<{text: string, date: Date, author?: string}[]>([]);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  // Supprimé la ligne avec AuthContext
 
   useEffect(() => {
     if (tickets.length > 0 && ticketId) {
@@ -68,13 +83,26 @@ export function TicketDetailPage() {
     
     const newComment = {
       text: comment,
-      date: new Date()
+      date: new Date(),
+      author: 'Admin'
     };
     
     const updatedComments = [...comments, newComment];
     
     try {
-      await updateTicket(ticket.id, { comments: updatedComments });
+      // Pour Firestore, nous devons convertir les dates en format compatible
+      const firestoreComments = updatedComments.map(c => ({
+        ...c,
+        // Firestore accepte les objets Date directement, il les convertira en Timestamp
+        date: c.date
+      }));
+      
+      await updateTicket(ticket.id, { 
+        comments: firestoreComments,
+        lastUpdate: new Date().toISOString() // Convert to ISO string as expected by the Ticket type
+      });
+      
+      // Mise à jour de l'état local
       setComments(updatedComments);
       setComment('');
       setShowSuccessToast(true);
@@ -83,6 +111,40 @@ export function TicketDetailPage() {
       console.error('Erreur lors de l\'ajout du commentaire:', err);
     }
   };
+
+  // Fix the useEffect for handling Firestore timestamps
+  useEffect(() => {
+    if (tickets.length > 0 && ticketId) {
+      const foundTicket = tickets.find(t => t.id === ticketId);
+      if (foundTicket) {
+        setTicket(foundTicket);
+        
+        // Convertir les dates des commentaires en objets Date
+        const formattedComments = (foundTicket.comments || []).map(comment => {
+          let commentDate;
+          
+          if (typeof comment.date === 'string') {
+            commentDate = new Date(comment.date);
+          } else if (comment.date instanceof Date) {
+            commentDate = comment.date;
+          } else if (comment.date && typeof comment.date === 'object' && 'seconds' in comment.date) {
+            // Timestamp Firestore - add type check to avoid 'seconds' not existing error
+            commentDate = new Date((comment.date as any).seconds * 1000);
+          } else {
+            commentDate = new Date(); // Fallback
+          }
+          
+          return {
+            ...comment,
+            date: commentDate
+          };
+        });
+        
+        setComments(formattedComments);
+      }
+      setLoading(false);
+    }
+  }, [tickets, ticketId]);
 
   const getStatusIcon = () => {
     if (!ticket) return null;
@@ -178,15 +240,66 @@ export function TicketDetailPage() {
         </div>
       </div>
 
-      {/* Titre et numéro de ticket */}
+      {/* Titre et numéro de ticket */}      
       <div className="bg-card p-6 rounded-xl shadow-lg border border-border/50">
-        <h1 className="text-2xl font-bold flex items-center">
-          <Tag className="w-6 h-6 mr-2 text-primary" />
-          Ticket SAV #{ticket.number}
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Créé le {safeFormatDate(ticket.createdAt, 'dd MMMM yyyy à HH:mm')}
-        </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <Tag className="w-6 h-6 mr-2 text-primary" />
+            <div>
+              <h1 className="text-2xl font-bold">Ticket SAV #{ticket.number}</h1>
+              <p className="text-sm text-muted-foreground">
+                Créé le {safeFormatDate(ticket.createdAt, 'dd MMMM yyyy à HH:mm')}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => handleStatusChange('nouveau')}
+              className={`px-3 py-1 rounded-lg flex items-center text-sm ${
+                ticket.status === 'nouveau' 
+                  ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-500 dark:bg-yellow-900/50 dark:text-yellow-400'
+                  : 'bg-muted hover:bg-yellow-100 hover:text-yellow-800 dark:hover:bg-yellow-900/30 dark:hover:text-yellow-400'
+              }`}
+            >
+              <AlertCircle className="w-3 h-3 mr-1" />
+              Nouveau
+            </button>
+            <button
+              onClick={() => handleStatusChange('en_cours')}
+              className={`px-3 py-1 rounded-lg flex items-center text-sm ${
+                ticket.status === 'en_cours' 
+                  ? 'bg-blue-100 text-blue-800 border-2 border-blue-500 dark:bg-blue-900/50 dark:text-blue-400'
+                  : 'bg-muted hover:bg-blue-100 hover:text-blue-800 dark:hover:bg-blue-900/30 dark:hover:text-blue-400'
+              }`}
+            >
+              <Timer className="w-3 h-3 mr-1" />
+              En cours
+            </button>
+            <button
+              onClick={() => handleStatusChange('resolu')}
+              className={`px-3 py-1 rounded-lg flex items-center text-sm ${
+                ticket.status === 'resolu' 
+                  ? 'bg-green-100 text-green-800 border-2 border-green-500 dark:bg-green-900/50 dark:text-green-400'
+                  : 'bg-muted hover:bg-green-100 hover:text-green-800 dark:hover:bg-green-900/30 dark:hover:text-green-400'
+              }`}
+            >
+              <CheckCircle className="w-3 h-3 mr-1" />
+              Résolu
+            </button>
+            <button
+              onClick={() => handleStatusChange('annule')}
+              className={`px-3 py-1 rounded-lg flex items-center text-sm ${
+                ticket.status === 'annule' 
+                  ? 'bg-red-100 text-red-800 border-2 border-red-500 dark:bg-red-900/50 dark:text-red-400'
+                  : 'bg-muted hover:bg-red-100 hover:text-red-800 dark:hover:bg-red-900/30 dark:hover:text-red-400'
+              }`}
+            >
+              <XCircle className="w-3 h-3 mr-1" />
+              Annulé
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Informations principales */}
@@ -320,10 +433,13 @@ export function TicketDetailPage() {
           {comments.length > 0 ? (
             comments.map((comment, index) => (
               <div key={index} className="bg-muted p-4 rounded-lg">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="font-medium">{comment.author || 'Utilisateur'}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {safeFormatDate(comment.date, 'dd/MM/yyyy à HH:mm')}
+                  </span>
+                </div>
                 <p className="whitespace-pre-line">{comment.text}</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {safeFormatDate(comment.date, 'dd/MM/yyyy à HH:mm')}
-                </p>
               </div>
             ))
           ) : (
