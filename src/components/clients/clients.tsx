@@ -555,7 +555,6 @@ export function Clients() {
         <th className="px-6 py-4 hidden lg:table-cell">Email</th>
         <th className="px-6 py-4 hidden md:table-cell">Téléphone</th>
         <th className="px-6 py-4 hidden xl:table-cell">Adresse</th>
-        <th className="px-6 py-4 text-center">Actions</th>
       </tr>
     </thead>
     <tbody className="divide-y divide-border">
