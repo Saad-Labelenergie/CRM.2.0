@@ -10,6 +10,8 @@ import { ProjectDetailsModal } from '../components/project-details-modal';
 import { ExternalLink, Trash2, Eye, X, AlertTriangle, CalendarDays } from 'lucide-react';
 import { Toast } from '../../ui/toast';
 import { UpdateClientModal } from '../components/change-semain';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../../lib/firebase';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const WORKING_HOURS = { start: { hour: 9, minute: 0 }, end: { hour: 18, minute: 0 } };
@@ -18,6 +20,16 @@ interface TeamScheduleViewProps {
   filteredAppointments?: any[];
   filteredTeams?: any[];
 }
+
+// Mapping des statuts de projet vers des couleurs
+const PROJECT_STATUS_COLORS = {
+  'confirmer': '#FEF9C3',  // Confirmé - yellow
+  'placer': '#FFEDD5',    // Placé - orange
+  'charger': '#DBEAFE',   // Chargé - blue
+  'encours': '#E0E7FF',  // En cours - indigo
+  'terminer': '#DCFCE7',  // Terminé - green
+  'annuler': '#FEE2E2',   // Annulé - red
+};
 
 export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamScheduleViewProps) {
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -87,6 +99,28 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
 
   const [isChangeSemainModalOpen, setIsChangeSemainModalOpen] = useState(false);
   const [appointmentToChangeDate, setAppointmentToChangeDate] = useState<any>(null);
+  // Ajouter cet état pour stocker les données des projets
+  const [projectsData, setProjectsData] = useState<Record<string, any>>({});
+  
+  // Ajouter ce useEffect pour récupérer les données des projets
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'projects'));
+        const projects = querySnapshot.docs.reduce((acc, doc) => {
+          const data = doc.data();
+          acc[doc.id] = { id: doc.id, ...data };
+          return acc;
+        }, {} as Record<string, any>);
+        
+        setProjectsData(projects);
+      } catch (error) {
+        console.error('Erreur lors de la récupération des projets:', error);
+      }
+    };
+    
+    fetchProjects();
+  }, []);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
@@ -327,6 +361,35 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                             };
                           }
 
+                          // Déterminer la couleur en fonction du statut du projet
+                          let backgroundColor = `${team.color}1A`; // Couleur par défaut (avec transparence)
+                          
+                          // Rechercher le projet associé par parentId ou par titre/date si parentId est null
+                          const projectId = appointment.parentId;
+                          if (projectId && projectsData[projectId]) {
+                            const projectStatus = projectsData[projectId].status;
+                            // Check if projectStatus is a valid key in PROJECT_STATUS_COLORS
+                            if (projectStatus && 
+                                typeof projectStatus === 'string' && 
+                                Object.keys(PROJECT_STATUS_COLORS).includes(projectStatus)) {
+                              backgroundColor = PROJECT_STATUS_COLORS[projectStatus as keyof typeof PROJECT_STATUS_COLORS];
+                            }
+                          } else {
+                            // Si pas de parentId, chercher un projet correspondant par titre et date
+                            const matchingProject = Object.values(projectsData).find(project => 
+                              project.name === appointment.title && 
+                              project.startDate === appointment.date
+                            );
+                            
+                            if (matchingProject && matchingProject.status) {
+                              const projectStatus = matchingProject.status;
+                              if (typeof projectStatus === 'string' && 
+                                  Object.keys(PROJECT_STATUS_COLORS).includes(projectStatus)) {
+                                backgroundColor = PROJECT_STATUS_COLORS[projectStatus as keyof typeof PROJECT_STATUS_COLORS];
+                              }
+                            }
+                          }
+
                           return (
                             <motion.div
                               key={appointment.id}
@@ -341,7 +404,7 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                               `}
                               style={{
                                 borderColor: team.color || '#ccc',
-                                backgroundColor: `${team.color}1A`,
+                                backgroundColor: backgroundColor,
                                 zIndex: 10 + index,
                                 ...positionStyle,
                               }}

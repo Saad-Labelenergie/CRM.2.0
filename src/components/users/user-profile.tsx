@@ -87,8 +87,8 @@ export function UserProfile() {
             </span>
             
             <button className="mt-4 flex items-center gap-2 text-primary hover:underline">
-              <Edit className="w-4 h-4" />
-              Modifier mon profil
+              {/* <Edit className="w-4 h-4" /> */}
+              {/* Modifier mon profil */}
             </button>
           </div>
         </div>

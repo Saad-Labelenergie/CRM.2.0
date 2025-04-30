@@ -4,6 +4,7 @@ import {
   X,
   Check,
   Building2,
+  Calendar,
   ArrowRight
 } from 'lucide-react';
 import { ContactStep } from '../../clients/components/steps/contact-step';
@@ -221,15 +222,15 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData, teams 
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold flex items-center">
-                  <Building2 className="w-5 h-5 mr-2 text-primary" />
-                  Modifier Dossier
+                  <Calendar className="w-5 h-5 mr-2 text-primary" />
+                  Modifier le rendez-vous
                 </h2>
                 <button onClick={onClose} className="p-2 hover:bg-accent rounded-lg transition-colors">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <StepIndicator currentStep={step} />
+              {/* <StepIndicator currentStep={step} /> */}
 
               <div className="overflow-y-auto flex-1">
                 {step === 'address' && (
@@ -264,17 +265,8 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData, teams 
               </div>
 
               <div className="flex justify-between space-x-2 pt-6">
-                {step !== 'address' && (
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    type="button"
-                    onClick={handleBack}
-                    className="px-4 py-2 rounded-lg bg-accent hover:bg-accent/80 transition-colors"
-                  >
-                    Retour
-                  </motion.button>
-                )}
+               
+                
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
