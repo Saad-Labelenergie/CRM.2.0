@@ -21,13 +21,12 @@ interface TeamScheduleViewProps {
   filteredTeams?: any[];
 }
 
-// Mapping des statuts de projet vers des couleurs
+// Update the PROJECT_STATUS_COLORS mapping
 const PROJECT_STATUS_COLORS = {
   'confirmer': '#FEF9C3',  // Confirmé - yellow
   'placer': '#FFEDD5',    // Placé - orange
   'charger': '#DBEAFE',   // Chargé - blue
   'encours': '#E0E7FF',  // En cours - indigo
-  'in-progress': '#E0E7FF', // Alias pour en_cours
   'terminer': '#DCFCE7',  // Terminé - green
   'annuler': '#FEE2E2',   // Annulé - red
 };
@@ -364,32 +363,32 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                             };
                           }
 
-                          // Déterminer la couleur en fonction du statut du projet
-                          let backgroundColor = `${team.color}1A`; // Couleur par défaut (avec transparence)
+                          // Update the color determination logic
+                          let backgroundColor = `${team.color}1A`; // Default color with transparency
                           
-                          // Rechercher le projet associé par parentId ou par titre/date si parentId est null
-                          const projectId = appointment.parentId;
-                          if (projectId && projectsData[projectId]) {
-                            const projectStatus = projectsData[projectId].status;
-                            // Check if projectStatus is a valid key in PROJECT_STATUS_COLORS
-                            if (projectStatus && 
-                                typeof projectStatus === 'string' && 
-                                Object.keys(PROJECT_STATUS_COLORS).includes(projectStatus)) {
-                              backgroundColor = PROJECT_STATUS_COLORS[projectStatus as keyof typeof PROJECT_STATUS_COLORS];
-                            }
-                          } else {
-                            // Si pas de parentId, chercher un projet correspondant par titre et date
-                            const matchingProject = Object.values(projectsData).find(project => 
-                              project.name === appointment.title && 
-                              project.startDate === appointment.date
-                            );
+                          // Mapper les statuts du projet aux statuts de couleur
+                          const statusMapping: Record<string, string> = {
+                            'encours': 'encours',
+                            'terminer': 'terminer',
+                            'annuler': 'annuler',
+                            'charger': 'charger',
+                            'confirmer': 'confirmer',
+                            'placer': 'placer'
+                          };
+                          
+                          // Rechercher le projet correspondant par titre et date ou par projectId
+                          const matchingProject = Object.values(projectsData).find(project => 
+                            (project.name === appointment.title && project.startDate === appointment.date) ||
+                            project.id === appointment.projectId
+                          );
+                          
+                          if (matchingProject?.status) {
+                            // Convertir le statut du projet au format attendu par PROJECT_STATUS_COLORS
+                            const mappedStatus = statusMapping[matchingProject.status] || matchingProject.status;
                             
-                            if (matchingProject && matchingProject.status) {
-                              const projectStatus = matchingProject.status;
-                              if (typeof projectStatus === 'string' && 
-                                  Object.keys(PROJECT_STATUS_COLORS).includes(projectStatus)) {
-                                backgroundColor = PROJECT_STATUS_COLORS[projectStatus as keyof typeof PROJECT_STATUS_COLORS];
-                              }
+                            if (PROJECT_STATUS_COLORS[mappedStatus as keyof typeof PROJECT_STATUS_COLORS]) {
+                              backgroundColor = PROJECT_STATUS_COLORS[mappedStatus as keyof typeof PROJECT_STATUS_COLORS];
+                              console.log(`Projet trouvé: ${matchingProject.name}, statut: ${matchingProject.status}, couleur: ${backgroundColor}`);
                             }
                           }
 
