@@ -231,9 +231,9 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
       try {
         // 🔍 Extraire les noms des produits du titre
         const productNames = selectedAppointment.title
-        .split(',')
-        .map(name => name.trim())
-        .filter(name => name.length > 0);
+          .split(',')
+          .map((name: string) => name.trim())
+          .filter((name: string) => name.length > 0);
       
   
         // 🔁 Pour chaque produit, incrémenter le stock.returned
