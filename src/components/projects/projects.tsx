@@ -94,8 +94,10 @@ export function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  
+  const uniqueTeams = ['all', ...Array.from(new Set(projects.map(p => p.team)))];
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<string>('all');
+
   const [cancelProjectData, setCancelProjectData] = useState<CancelReason>({ 
     projectId: '', 
     reason: '' 
@@ -114,6 +116,8 @@ export function Projects() {
     setProjects(data);
   };
   
+
+
 // Annuler un projet :
 const handleCancelProject = async () => {
   if (!cancelReason || !cancelProjectId) return;
@@ -232,11 +236,13 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
 };
 
 
-  const filteredProjects = projects.filter(project => {
-    const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) || project.client.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = activeTab === 'all' || (project.status || 'confirmer' || 'placer' || 'charger' ||'encours' || 'terminer' || 'annuler') === activeTab;
-    return matchesSearch && matchesStatus;
-  });
+const filteredProjects = projects.filter(project => {
+  const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) || project.client.name.toLowerCase().includes(searchTerm.toLowerCase());
+  const matchesStatus = activeTab === 'all' || project.status === activeTab;
+  const matchesTeam = selectedTeam === 'all' || project.team === selectedTeam;
+  return matchesSearch && matchesStatus && matchesTeam;
+});
+
 
   return (
     <motion.div
@@ -317,7 +323,7 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
 </div>
 
       {/* Search Bar */}
-      <div className="relative">
+      {/* <div className="relative">
         <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
         <input
           type="text"
@@ -326,7 +332,32 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full pl-12 pr-4 py-3 bg-background border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
         />
-      </div>
+      </div> */}
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+  <div className="flex-1 relative">
+    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+    <input
+      type="text"
+      placeholder="Rechercher un projet..."
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="w-full pl-12 pr-4 py-3 bg-background border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+    />
+  </div>
+
+  {/* Sélecteur d'équipe */}
+  <select
+    value={selectedTeam}
+    onChange={(e) => setSelectedTeam(e.target.value)}
+    className="w-full md:w-64 px-4 py-3 bg-background border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+  >
+    {uniqueTeams.map(team => (
+      <option key={team} value={team}>
+        {team === 'all' ? 'Toutes les équipes' : team}
+      </option>
+    ))}
+  </select>
+</div>
      
 
       {/* Project Cards */}
