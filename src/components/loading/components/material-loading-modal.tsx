@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, Package, CheckCircle, Truck, AlertTriangle } from 'lucide-react';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
+import { updateProjectStatus  } from '../../../lib/hooks/useProjects';
 
 interface Material {
   id: number;
@@ -65,25 +66,29 @@ export function MaterialLoadingModal({ isOpen, onClose, project, onUpdateMateria
   
   // Dans la fonction handleSave, assurons-nous que les données sont correctement formatées
   const handleSave = async () => {
-    // Utiliser projectId s'il existe, sinon utiliser l'ID du projet
     const idToUse = project.projectId || project.id;
     
     if (!idToUse) {
       console.error("ID du projet manquant");
       return;
     }
-    
+  
     setIsLoading(true);
     try {
-      console.log("Saving materials:", materials);
+      // Enregistrement des matériaux
       await onUpdateMaterials(idToUse, materials);
-
-      // OPTIONAL: Save to chargement collection
+  
+      // Détermination du nouveau statut
+      const newStatus = allLoaded ? 'charger' : 'confirmer';
+      
+      // Mise à jour du statut du projet dans Firestore
+      await updateProjectStatus(idToUse, newStatus);
+  
+      // Enregistrement dans la collection "chargement"
       await addLoadingRecord({
         projectId: idToUse,
         projectName: project.name,
         teamId: project.teamId || '',
-        teamName: '', // Fill if you have it
         date: project.date,
         materials: materials.map(m => ({
           id: m.id,
@@ -92,13 +97,13 @@ export function MaterialLoadingModal({ isOpen, onClose, project, onUpdateMateria
           updatedAt: new Date(),
         })),
         documentsSubmitted: false,
-        progress: 0,
-        status: 'pending',
+        progress: allLoaded ? 100 : Math.round((materials.filter(m => m.status === 'loaded').length / materials.length) * 100),
+        status: newStatus,
       });
-
+  
       onClose();
     } catch (error) {
-      console.error("Erreur lors de la mise à jour des matériaux:", error);
+      console.error("Erreur lors de la mise à jour:", error);
     } finally {
       setIsLoading(false);
     }
@@ -150,7 +155,7 @@ export function MaterialLoadingModal({ isOpen, onClose, project, onUpdateMateria
                 <div className="flex items-center">
                   {material.status === 'loaded' ? (
                     <CheckCircle className="w-5 h-5 mr-2" />
-                  ) : (
+                  ) : (   
                     <Package className="w-5 h-5 mr-2" />
                   )}
                   <span>{material.name}</span>

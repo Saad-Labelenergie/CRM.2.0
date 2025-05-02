@@ -4,7 +4,7 @@ import { Users, Truck, Calendar, Award, Clock, PenSquare } from 'lucide-react';
 import { EditSkillsModal } from './edit-skills-modal';
 import { EditContractModal } from './edit-contract-modal';
 import { db } from '../../../lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs,doc,updateDoc,getDoc } from 'firebase/firestore';
 
 
 interface ContractDates {
@@ -33,13 +33,48 @@ export function TeamStats({team}:TeamStatsProps) {
     endDate: null
   });
 
-  const handleSaveSkills = (newSkills: string[]) => {
-    setSkills(newSkills);
+  const handleSaveSkills = async (newSkills: string[]) => {
+    try {
+      setSkills(newSkills); // mise à jour locale immédiate
+  
+      // Mise à jour dans Firestore
+      const teamRef = doc(db, 'teams', team.id); // Assure-toi que l'ID est correct
+      await updateDoc(teamRef, {
+        expertise: newSkills,
+        updatedAt: new Date()
+      });
+  
+      console.log("Expertises mises à jour avec succès !");
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour des expertises :", error);
+    }
   };
-
   const handleSaveContractDates = (newDates: ContractDates) => {
     setContractDates(newDates);
   };
+
+
+  useEffect(() => {
+    const fetchExpertise = async () => {
+      try {
+        const teamRef = doc(db, 'teams', team.id);
+        const teamSnap = await getDoc(teamRef);
+        if (teamSnap.exists()) {
+          const data = teamSnap.data();
+          if (data.expertise) {
+            setSkills(data.expertise);
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération des expertises :", error);
+      }
+    };
+  
+    if (team?.id) {
+      fetchExpertise();
+    }
+  }, [team?.id]);
+
   useEffect(() => {
     const fetchVehicules = async () => {
       try {

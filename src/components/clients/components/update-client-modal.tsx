@@ -13,7 +13,7 @@ import { PlanningStep } from './steps/planning-step';
 import { StepIndicator } from './steps/step-indicator';
 import { Toast } from '../../ui/toast';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
-import { getDocs, collection } from 'firebase/firestore';
+import { getDocs, collection,updateDoc,doc,increment } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 
 interface UpdateClientModalProps {
@@ -29,6 +29,7 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData }: Upda
   const [step, setStep] = useState<Step>('contact');
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
+  
   const [formData, setFormData] = useState({
     contact: {
       firstName: '',
@@ -195,6 +196,31 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData }: Upda
     if (!validateStep()) return;
 
     try {
+
+      const oldIds = initialData.productsIds || [];
+      const newIds = formData.selectedProducts.map(p => p.id);
+      
+      // Produits à retirer (anciens non présents dans la nouvelle sélection)
+      const removedProducts = oldIds.filter(id => !newIds.includes(id));
+      
+      // Produits à ajouter (nouveaux non présents dans l'ancienne sélection)
+      const addedProducts = newIds.filter(id => !oldIds.includes(id));
+      
+      // ❌ Décrémenter pour les produits retirés
+      for (const productId of removedProducts) {
+        await updateDoc(doc(db, 'products', productId), {
+          'stock.reserved': increment(-1),
+          updatedAt: new Date()
+        });
+      }
+      
+      // ✅ Incrémenter pour les produits nouvellement ajoutés
+      for (const productId of addedProducts) {
+        await updateDoc(doc(db, 'products', productId), {
+          'stock.reserved': increment(1),
+          updatedAt: new Date()
+        });
+      }
       const clientData = {
         id: initialData.id,
         name: `${formData.contact.firstName} ${formData.contact.lastName}`,
@@ -273,8 +299,13 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData }: Upda
             status: apt.status as "attribue" | "non_attribue",
           }))
         });
-        
 
+        
+ 
+
+
+
+        
         setShowSuccessToast(true);
         onClose();
       }

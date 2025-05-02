@@ -20,13 +20,19 @@ import {
   ShoppingCart,
   Percent,
   Layers,
-  AlertTriangle
+  AlertTriangle,
+  PieChart,
+  
 } from 'lucide-react';
 import { NewProductModal } from './components/new-product-modal';
 import { ManageFournisseursModal } from './components/manage-fournisseur-modal';
 import { ManageCategoriesModal } from './components/manage-categories-modal';
 import { Toast } from '../ui/toast';
 import { useProducts } from '../../lib/hooks/useProducts';
+import { Bar,BarChart, CartesianGrid, Cell, Legend, Pie, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+
+
+
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -88,6 +94,24 @@ export function Products() {
     );
   }
 
+  //Les données du chart Nombre de produits par marque 
+
+  const brandBarData = Object.entries(
+    products.reduce((acc: Record<string, number>, product) => {
+      const brand = product.brand || 'Inconnu';
+      acc[brand] = (acc[brand] || 0) + 1;
+      return acc;
+    }, {})
+  ).map(([brand, count]) => ({ brand, count }));
+  
+
+  //Les données du chart Stock Dispo par produit 
+  const barData = products.map(p => ({
+    name: p.name.length > 15 ? p.name.slice(0, 15) + '…' : p.name,
+    stock: (p.stock?.current ?? 0) - (p.stock?.reserved ?? 0)
+  }));
+
+
   return (
     <motion.div
       variants={containerVariants}
@@ -131,6 +155,7 @@ export function Products() {
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        
   {/* Carte Nombre total de produits */}
   <motion.div
     whileHover={{ y: -5 }}
@@ -146,6 +171,42 @@ export function Products() {
       </div>
     </div>
   </motion.div>
+  {/* Carte Produits par catégorie */}
+<motion.div
+  whileHover={{ y: -5 }}
+  className="bg-card p-4 rounded-xl border border-border/50 shadow-sm"
+>
+  <div className="flex items-center justify-between">
+    <div>
+      <p className="text-sm text-muted-foreground">Catégories</p>
+      <h3 className="text-2xl font-bold mt-1">
+        {new Set(products.map(p => p.category)).size}
+      </h3>
+    </div>
+    <div className="p-3 bg-violet-100/20 rounded-lg text-violet-500">
+      <Tag className="w-6 h-6" />
+    </div>
+  </div>
+</motion.div>
+
+{/* Carte Marques utilisées */}
+<motion.div
+  whileHover={{ y: -5 }}
+  className="bg-card p-4 rounded-xl border border-border/50 shadow-sm"
+>
+  <div className="flex items-center justify-between">
+    <div>
+      <p className="text-sm text-muted-foreground">Marques</p>
+      <h3 className="text-2xl font-bold mt-1">
+        {new Set(products.map(p => p.brand)).size}
+      </h3>
+    </div>
+    <div className="p-3 bg-cyan-100/20 rounded-lg text-cyan-500">
+      <Star className="w-6 h-6" />
+    </div>
+  </div>
+</motion.div>
+
 
   {/* Carte Valeur totale du stock */}
   {/* <motion.div
@@ -204,7 +265,44 @@ export function Products() {
       </div>
     </div>
   </motion.div>
+ 
 </div>
+<div className="mt-12 bg-card rounded-xl shadow-lg border border-border/50 p-6">
+  <div className="flex flex-col lg:flex-row gap-8 justify-between items-start">
+    
+    {/* Chart 1 : Stock disponible par produit */}
+    <div className="flex-1 w-full">
+      <h2 className="text-lg font-semibold mb-4">Stock disponible par produit</h2>
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={barData}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+          <YAxis />
+          <Tooltip />
+          <Bar dataKey="stock" fill="#3B82F6" />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+
+    {/* Chart 2 : Nombre de produits par marque */}
+    <div className="flex-1 w-full">
+      <h2 className="text-lg font-semibold mb-4">Nombre de produits par marque</h2>
+      <ResponsiveContainer width="100%" height={300}>
+  <BarChart data={brandBarData}>
+    <CartesianGrid strokeDasharray="3 3" />
+    <XAxis dataKey="brand" tick= {{ fontSize: 12 }} />
+    <YAxis allowDecimals={false} /> {/* Affiche uniquement des entiers */}
+    <Tooltip />
+    <Bar dataKey="count" fill="#10B981" />
+  </BarChart>
+</ResponsiveContainer>
+
+    </div>
+
+  </div>
+</div>
+
+
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
@@ -269,10 +367,10 @@ export function Products() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-lg">{product.name}</h3>
-                  <div className="flex items-center mt-1">
+                  {/* <div className="flex items-center mt-1">
                     <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                     <span className="text-sm ml-1 text-muted-foreground">4.8</span>
-                  </div>
+                  </div> */}
                 </div>
                 <ChevronRight className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
@@ -288,10 +386,10 @@ export function Products() {
                   <span className="font-medium">{product.stock?.current || 0} unités</span>
                 </div>
 
-                <div className="flex items-center justify-between text-sm">
+                {/* <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Prix</span>
                   <span className="font-medium">{product.purchasePrice?.toFixed(2) || '0.00'} €</span>
-                </div>
+                </div> */}
               </div>
             </motion.div>
           ))}
@@ -306,9 +404,13 @@ export function Products() {
               <tr className="border-b border-border/50">
                 <th className="text-left p-4 font-medium text-muted-foreground">Produit</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Type</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Stock</th>
-                <th className="text-right p-4 font-medium text-muted-foreground">Prix</th>
-                <th className="text-center p-4 font-medium text-muted-foreground">Actions</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Marque</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Stock Réel</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Stock Réservé</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Stock Retour</th>
+
+                {/* <th className="text-right p-4 font-medium text-muted-foreground">Prix</th> */}
+                {/* <th className="text-center p-4 font-medium text-muted-foreground">Actions</th> */}
               </tr>
             </thead>
             <tbody>
@@ -326,17 +428,26 @@ export function Products() {
                   <td className="p-4">
                     <span className="capitalize">{product.category}</span>
                   </td>
-                  <td className="p-4">
-                    {product.stock?.current || 0} unités
+                  <td>
+                    <span className='p-4 text-right'>{product.brand}</span>
                   </td>
-                  <td className="p-4 text-right">
+                  <td className="p-4">
+                    {(product.stock?.current ?? 0) - (product.stock?.reserved ?? 0)} unités
+                  </td>
+                  <td className='p-4'>
+                    {product.stock?.reserved || 0} unités
+                  </td>
+                  <td>
+                    {product.stock?.returned || 0} unités
+                  </td>
+                  {/* <td className="p-4 text-right">
                     {product.purchasePrice?.toFixed(2) || '0.00'} €
-                  </td>
-                  <td className="p-4">
+                  </td> */}
+                  {/* <td className="p-4">
                     <div className="flex items-center justify-center">
                       <ChevronRight className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                  </td>
+                  </td> */}
                 </motion.tr>
               ))}
             </tbody>

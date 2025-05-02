@@ -219,7 +219,7 @@ export function Teams() {
           <p className="text-muted-foreground mt-1">Gérez vos équipes et leurs assignations</p>
         </div>
         <div className="flex items-center space-x-2">
-          <motion.button
+          {/* <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setIsSkillsModalOpen(true)}
@@ -227,7 +227,7 @@ export function Teams() {
           >
             <Wrench className="w-4 h-4 mr-2" />
             Compétences
-          </motion.button>
+          </motion.button> */}
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}

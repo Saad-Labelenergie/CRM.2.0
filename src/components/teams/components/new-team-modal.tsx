@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, Plus, Users, Truck, Briefcase, Circle } from 'lucide-react';
 import * as Popover from '@radix-ui/react-popover';
+import { db } from '../../../lib/firebase';
+import { getDocs,collection } from 'firebase/firestore';
 
 interface Team {
   name: string;
@@ -31,7 +33,25 @@ const predefinedColors = [
   '#F97316', // Orange
 ];
 
+
 export function NewTeamModal({ isOpen, onClose, onSave }: NewTeamModalProps) {
+  const [categories, setCategories] = useState<string[]>([]);
+
+useEffect(() => {
+  const fetchCategories = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, 'products'));
+      const uniqueCategories = Array.from(
+        new Set(snapshot.docs.map(doc => doc.data().category).filter(Boolean))
+      );
+      setCategories(uniqueCategories);
+    } catch (error) {
+      console.error('Erreur lors du chargement des catégories :', error);
+    }
+  };
+
+  if (isOpen) fetchCategories();
+}, [isOpen]);
   const [formData, setFormData] = useState<Partial<Team>>({
     name: '',
     members: 0,
@@ -191,23 +211,28 @@ export function NewTeamModal({ isOpen, onClose, onSave }: NewTeamModalProps) {
                   Expertises *
                 </label>
                 <div className="flex space-x-2">
-                  <input
-                    type="text"
-                    value={newExpertise}
-                    onChange={(e) => setNewExpertise(e.target.value)}
-                    className="flex-1 px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="Nouvelle expertise"
-                  />
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    type="button"
-                    onClick={handleAddExpertise}
-                    className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </motion.button>
-                </div>
+  <select
+    value={newExpertise}
+    onChange={(e) => setNewExpertise(e.target.value)}
+    className="flex-1 px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+  >
+    <option value="">Sélectionner une catégorie</option>
+    {categories.map((cat) => (
+      <option key={cat} value={cat}>{cat}</option>
+    ))}
+  </select>
+  <motion.button
+    whileHover={{ scale: 1.02 }}
+    whileTap={{ scale: 0.98 }}
+    type="button"
+    onClick={handleAddExpertise}
+    disabled={!newExpertise}
+    className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+  >
+    <Plus className="w-5 h-5" />
+  </motion.button>
+</div>
+
                 <div className="flex flex-wrap gap-2 mt-2">
                   {formData.expertise?.map((exp) => (
                     <span

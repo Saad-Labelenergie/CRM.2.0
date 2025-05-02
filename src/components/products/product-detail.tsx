@@ -200,31 +200,37 @@ export function ProductDetail() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
+                  <div className="text-sm text-muted-foreground">Modèle</div>
+                  <div className="font-medium mt-1">{product.name}</div>
+                </div>
+                <div>
                   <div className="text-sm text-muted-foreground">Marque</div>
                   <div className="font-medium mt-1">{product.brand}</div>
                 </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Modèle</div>
-                  <div className="font-medium mt-1">{product.model}</div>
-                </div>
+
                 <div>
                   <div className="text-sm text-muted-foreground">Catégorie</div>
                   <div className="font-medium mt-1">{product.category}</div>
                 </div>
               </div>
               <div className="space-y-4">
-                <div>
+                {/* <div>
                   <div className="text-sm text-muted-foreground">Prix d'achat</div>
                   <div className="font-medium mt-1">{product.purchasePrice?.toFixed(2)} €</div>
+                </div> */}
+                <div>
+                  <div className="text-sm text-muted-foreground">Stock </div>
+                  <div className="font-medium mt-1">{(product.stock?.current ?? 0)} unités</div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">Stock actuel</div>
-                  <div className="font-medium mt-1">{product.stock?.current || 0} unités</div>
+                  <div className="text-sm text-muted-foreground">Stock réservé</div>
+                  <div className="font-medium mt-1">{product.stock?.reserved || 0} unités</div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">Stock minimum</div>
-                  <div className="font-medium mt-1">{product.stock?.minimum || 0} unités</div>
+                  <div className="text-sm text-muted-foreground">Stock réel</div>
+                  <div className="font-medium mt-1">{(product.stock?.current ?? 0) - (product.stock?.reserved ?? 0)} unités</div>
                 </div>
+
               </div>
             </div>
           </motion.div>

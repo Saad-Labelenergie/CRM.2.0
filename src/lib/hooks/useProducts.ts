@@ -17,6 +17,8 @@ export interface Product {
     current: number;
     minimum: number;
     optimal: number;
+    reserved:number;
+    returned:number;
   };
   certifications: string[];
   specifications: {

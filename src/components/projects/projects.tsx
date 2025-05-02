@@ -47,6 +47,7 @@ interface Project {
   teamSize?: number;
   priority?: string;
   cancellationReason?: string; // Nouveau champ
+  type: string;
 }
 
 const containerVariants = {
@@ -78,9 +79,9 @@ const getProgressColor = (progress: number) => {
 
 
 const tabs = [
-  { id: 'all', label: 'Tous', icon: null, color: 'bg-gray-200 text-gray-800' },
-  { id: 'confirmer', label: 'Confirmé', icon: CheckCircle, color: 'bg-yellow-100 text-yellow-800' },
+  { id: 'all', label: 'Tous', icon: null, color: 'bg-gray-200 text-gray-800' }, 
   { id: 'placer', label: 'Placé', icon: Upload, color: 'bg-orange-100 text-orange-800' },
+  { id: 'confirmer', label: 'Confirmé', icon: CheckCircle, color: 'bg-yellow-100 text-yellow-800' },
   { id: 'charger', label: 'Chargé', icon: Truck, color: 'bg-blue-100 text-blue-800' },
   { id: 'encours', label: 'En cours', icon: Clock, color: 'bg-indigo-100 text-indigo-800' },
   { id: 'terminer', label: 'Terminé', icon: Check, color: 'bg-green-100 text-green-800' },
@@ -253,9 +254,9 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
 >
   {/* Carte Stat */}
   {[
-    { label: 'Tous', value: projects.length, color: 'bg-gray-100 text-gray-800', icon: <List className="w-5 h-5" /> },
-    { label: 'Confirmé', value: projects.filter(p => p.status === 'confirmer').length, color: 'bg-yellow-100 text-yellow-800', icon: <CheckCircle className="w-5 h-5" /> },
+    { label: 'Tous', value: projects.length, color: 'bg-gray-100 text-gray-800', icon: <List className="w-5 h-5" /> }, 
     { label: 'Placé', value: projects.filter(p => p.status === 'placer').length, color: 'bg-orange-100 text-orange-800', icon: <Upload className="w-5 h-5" /> },
+    { label: 'Confirmé', value: projects.filter(p => p.status === 'confirmer').length, color: 'bg-yellow-100 text-yellow-800', icon: <CheckCircle className="w-5 h-5" /> },
     { label: 'Chargé', value: projects.filter(p => p.status === 'charger').length, color: 'bg-blue-100 text-blue-800', icon: <Truck className="w-5 h-5" /> },
     { label: 'En cours', value: projects.filter(p => p.status === 'encours').length, color: 'bg-indigo-100 text-indigo-800', icon: <Clock className="w-5 h-5" /> },
     { label: 'Terminé', value: projects.filter(p => p.status === 'terminer').length, color: 'bg-green-100 text-green-800', icon: <Check className="w-5 h-5" /> },
@@ -359,11 +360,11 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
                 </div>
               </div>
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                project.priority === 'Haute' ? 'bg-orange-100 text-orange-700' :
-                project.priority === 'Urgente' ? 'bg-red-100 text-red-700' :
-                'bg-blue-100 text-blue-700'
+                project.type === 'Maintenance' ? 'bg-orange-100 text-orange-700' :
+                project.type === 'STANDARD' ? 'bg-blue-100 text-blue-700' :
+                'bg-red-100 text-red-700'
               }`}>
-                {project.priority || 'Normale'}
+                {project.type || 'Normale'}
               </span>
             </div>
 

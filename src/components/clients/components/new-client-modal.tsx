@@ -15,7 +15,7 @@ import { PlanningStep } from './steps/planning-step';
 import { StepIndicator } from './steps/step-indicator';
 import { Toast } from '../../ui/toast';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
-import { getDocs, collection } from 'firebase/firestore';
+import { getDocs, collection,doc,updateDoc,increment } from 'firebase/firestore';
 import { db } from '../../../lib/firebase'; // adapte le chemin selon ta structure
 
 interface NewClientModalProps {
@@ -401,6 +401,17 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
         
 
         await addProject(project);
+
+        for (const product of formData.selectedProducts) {
+          const productRef = doc(db, 'products', product.id);
+        
+          await updateDoc(productRef, {
+            // Si `reservedStock` n'existe pas, Firestore initialise à 0 puis incrémente
+            'stock.reserved': increment(product.quantity ?? 1),
+            updatedAt: new Date()
+          });
+        }
+
         
         // Ajouter tous les rendez-vous à la base de données
         for (const appointment of allAppointments) {
@@ -469,13 +480,18 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
                     selectedProducts={formData.selectedProducts}
                     errors={errors}
                     onProductSelect={(product) => {
-                      const isSelected = formData.selectedProducts.some(p => p.id === product.id);
-                      handleFieldUpdate(
-                        'selectedProducts',
-                        isSelected
-                          ? formData.selectedProducts.filter(p => p.id !== product.id)
-                          : [...formData.selectedProducts, product]
-                      );
+                      const existing = formData.selectedProducts.find(p => p.id === product.id);
+                    
+                      if (existing) {
+                        // Augmenter la quantité
+                        const updatedProducts = formData.selectedProducts.map(p =>
+                          p.id === product.id ? { ...p, quantity: p.quantity + 1 } : p
+                        );
+                        handleFieldUpdate('selectedProducts', updatedProducts);
+                      } else {
+                        // Ajouter avec quantité 1
+                        handleFieldUpdate('selectedProducts', [...formData.selectedProducts, { ...product, quantity: 1 }]);
+                      }
                     }}
                   />
                 )}
