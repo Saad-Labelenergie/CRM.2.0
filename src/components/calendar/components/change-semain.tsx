@@ -7,11 +7,7 @@ import {
   Calendar,
   ArrowRight
 } from 'lucide-react';
-import { ContactStep } from '../../clients/components/steps/contact-step';
-import { AddressStep } from '../../clients/components/steps/address-step';
-import { ProductsStep } from '../../clients/components/steps/products-step';
 import { PlanningStep } from '../../clients/components/steps/planning-step';
-import { StepIndicator } from '../../clients/components/steps/step-indicator';
 import { Toast } from '../../ui/toast';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
 import { getDocs, collection } from 'firebase/firestore';
@@ -77,9 +73,13 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData, teams 
   // 📦 Pré-remplir form avec données client et produits associés
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // Dans la fonction UpdateClientModal, nous devons nous assurer que initialData est correctement passé
+  
   useEffect(() => {
     if (!isOpen || !initialData || products.length === 0 || isInitialized) return;
   
+    console.log("Données initiales:", initialData); // Ajout d'un log pour vérifier les données initiales
+    
     const normalizedProducts = (initialData.productsIds || []).map((pid: string) => {
       const match = products.find(p => p.id === pid);
       return match || null;
@@ -92,11 +92,23 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData, teams 
       selectedTeam: initialData.team || null
     });
   
-    setIsInitialized(true); // 💥 empêchera toute réinitialisation future
+    setIsInitialized(true);
   }, [isOpen, initialData, products, isInitialized]);
   
   const handleClose = () => {
     setIsInitialized(false);
+    // Reset form data when closing
+    setFormData({
+      address: {
+        street: '',
+        city: '',
+        postalCode: '',
+        country: 'France',
+      },
+      selectedProducts: [] as any[],
+      installationDate: '',
+      selectedTeam: null as any
+    });
     onClose();
   }
   
@@ -181,12 +193,15 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData, teams 
     if (!validateStep()) return;
 
     try {
-      // Assurez-vous que la date est au format correct (YYYY-MM-DD)
+      console.log("Données du formulaire avant soumission:", formData);
+      
+      // S'assurer que la date est au bon format
       const formattedDate = formData.installationDate;
       
       const updatedData = {
         id: initialData?.id,
         installationDate: formattedDate,
+        date: formattedDate, // Ajouter ce champ
         team: formData.selectedTeam ? {
           id: formData.selectedTeam.id,
           name: formData.selectedTeam.name,
@@ -194,11 +209,12 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData, teams 
         } : null
       };
   
-      onSave(updatedData);
+      console.log("Données finales envoyées à onSave:", updatedData);
+      await onSave(updatedData);
       setShowSuccessToast(true);
       onClose();
     } catch (error) {
-      console.error('Error updating client:', error);
+      console.error('Erreur lors de la mise à jour du client:', error);
     }
   };
 
@@ -212,7 +228,7 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData, teams 
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50"
-              onClick={onClose}
+              onClick={handleClose}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -225,38 +241,53 @@ export function UpdateClientModal({ isOpen, onClose, onSave, initialData, teams 
                   <Calendar className="w-5 h-5 mr-2 text-primary" />
                   Modifier le rendez-vous
                 </h2>
-                <button onClick={onClose} className="p-2 hover:bg-accent rounded-lg transition-colors">
+                <button onClick={handleClose} className="p-2 hover:bg-accent rounded-lg transition-colors">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* <StepIndicator currentStep={step} /> */}
+              {/* Display initial date information */}
+              {initialData && initialData.installationDate && (
+                <div className="mb-4 p-3 bg-muted rounded-lg border border-border">
+                  <div className="flex items-center">
+                    <Calendar className="w-5 h-5 mr-2 text-primary" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Date actuelle du rendez-vous:</p>
+                      <p className="font-medium">
+                        {new Date(initialData.installationDate).toLocaleDateString('fr-FR', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                  {initialData.team && (
+                    <div className="flex items-center mt-2">
+                      <Building2 className="w-5 h-5 mr-2 text-primary" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Équipe assignée:</p>
+                        <div className="flex items-center">
+                          <span 
+                            className="w-3 h-3 rounded-full mr-2" 
+                            style={{ backgroundColor: initialData.team.color || '#888' }}
+                          />
+                          <p className="font-medium">{initialData.team.name}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="overflow-y-auto flex-1">
-                {step === 'address' && (
-                  <AddressStep formData={formData} errors={errors} onUpdate={handleFieldUpdate} />
-                )}
-                {step === 'products' && (
-                  <ProductsStep
-                    products={products}
-                    selectedProducts={formData.selectedProducts}
-                    errors={errors}
-                    onProductSelect={(product) => {
-                      const isSelected = formData.selectedProducts.some(p => p.id === product.id);
-                      handleFieldUpdate(
-                        'selectedProducts',
-                        isSelected
-                          ? formData.selectedProducts.filter(p => p.id !== product.id)
-                          : [...formData.selectedProducts, product]
-                      );
-                    }}
-                  />
-                )}
                 {step === 'planning' && (
                   <PlanningStep
                     selectedProducts={formData.selectedProducts}
                     selectedTeam={formData.selectedTeam}
                     installationDate={formData.installationDate}
+                    initialDate={initialData?.date || initialData?.installationDate} // Utilisons date ou installationDate
                     errors={errors}
                     onTeamSelect={(team) => handleFieldUpdate('selectedTeam', team)}
                     onDateChange={(date) => handleFieldUpdate('installationDate', date)}

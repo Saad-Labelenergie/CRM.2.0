@@ -27,6 +27,8 @@ import { X, Mail, Phone, Calendar, Shield } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { auth } from '../../lib/firebase'; 
 import { NotificationPopup } from '../Notification/NotificationPopup';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 
 const navigation = [
   { name: 'Tableau de bord', href: '/', icon: LayoutDashboard, roles: ['administrateur', 'technicien', 'manager'] },
@@ -72,8 +74,30 @@ React.useEffect(() => {
 
   const handleLogout = async () => {
     try {
+      // Enregistrer l'activité de déconnexion avant de se déconnecter
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      if (currentUser?.id) {
+        try {
+          const activityData = {
+            userId: currentUser.id,
+            userName: currentUser.name,
+            userRole: currentUser.role,
+            timestamp: new Date(),
+            action: 'Déconnexion',
+            deviceInfo: navigator.userAgent
+          };
+          
+          await addDoc(collection(db, 'loginActivities'), activityData);
+          console.log("Déconnexion enregistrée avec succès");
+        } catch (error) {
+          console.error("Erreur lors de l'enregistrement de la déconnexion:", error);
+        }
+      }
+      
+      // Procéder à la déconnexion
       await auth.signOut();
       localStorage.removeItem('currentUser');
+      sessionStorage.removeItem('sessionActive'); // Réinitialiser l'état de la session
       navigate('/login');
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);

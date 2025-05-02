@@ -21,7 +21,7 @@ interface TeamScheduleViewProps {
   filteredTeams?: any[];
 }
 
-// Mapping des statuts de projet vers des couleurs
+// Update the PROJECT_STATUS_COLORS mapping
 const PROJECT_STATUS_COLORS = {
   'confirmer': '#FEF9C3',  // Confirmé - yellow
   'placer': '#FFEDD5',    // Placé - orange
@@ -145,36 +145,40 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
         return appointment;
       });
     });
-
-    console.log(`Updating appointment ${appointmentId} to new date: ${newDate}`);
     setIsChangeSemainModalOpen(false);
   };
 
-  const handleUpdateClientModalDate = (clientData: any) => {
+  const handleUpdateClientModalDate = async (clientData: any) => {
     try {
       if (appointmentToChangeDate && clientData.installationDate) {
-        // Sauvegarde de l'ancienne date pour référence
-        const oldDate = appointmentToChangeDate.date;
+        const team = clientData.team?.name || appointmentToChangeDate.team;
         
-        // Création de l'objet rendez-vous mis à jour
-        const updatedAppointment = {
-          ...appointmentToChangeDate,
-          date: clientData.installationDate,
-          team: clientData.team?.name || appointmentToChangeDate.team,
-        };
+        // Update both team and date at once
+        await updateAppointmentTeam(
+          appointmentToChangeDate.id,
+          team,
+          clientData.installationDate
+        );
         
-        // Mise à jour de l'état local des rendez-vous
-        setAppointmentsState(prev => {
-          // Filtrer le rendez-vous de son ancienne position et l'ajouter à sa nouvelle position
-          const filteredAppointments = prev.filter(app => app.id !== updatedAppointment.id);
-          return [...filteredAppointments, updatedAppointment];
-        });
+        // Update local state
+        setAppointmentsState(prev => prev.map(app => {
+          if (app.id === appointmentToChangeDate.id) {
+            return {
+              ...app,
+              date: clientData.installationDate,
+              installationDate: clientData.installationDate,
+              team: team,
+              teamColor: clientData.team?.color || app.teamColor
+            };
+          }
+          return app;
+        }));
         
-        // Mise à jour du rendez-vous dans le backend
-        updateAppointmentTeam(updatedAppointment.id, updatedAppointment.team);
-        
-        console.log(`Rendez-vous déplacé: de ${oldDate} à ${clientData.installationDate}`);
+        setShowSuccessToast(true);
+        console.log(`Rendez-vous mis à jour - Date: ${clientData.installationDate}, Équipe: ${team}`);
       }
+      
+      setAppointmentToChangeDate(null);
       setIsChangeSemainModalOpen(false);
     } catch (error) {
       console.error('Error updating appointment:', error);
@@ -190,7 +194,6 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
   });
 
   const handleChangeTeam = (appointmentId: string, newTeamName: string) => {
-    console.log(`Changing team for appointment ${appointmentId} to ${newTeamName}`);
     updateAppointmentTeam(appointmentId, newTeamName);
   };
 
@@ -256,7 +259,6 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
       }
     }
   };
-
   return (
     <>
       <div className="min-w-[1200px]">
@@ -383,32 +385,32 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                             };
                           }
 
-                          // Déterminer la couleur en fonction du statut du projet
-                          let backgroundColor = `${team.color}1A`; // Couleur par défaut (avec transparence)
+                          // Update the color determination logic
+                          let backgroundColor = `${team.color}1A`; // Default color with transparency
                           
-                          // Rechercher le projet associé par parentId ou par titre/date si parentId est null
-                          const projectId = appointment.parentId;
-                          if (projectId && projectsData[projectId]) {
-                            const projectStatus = projectsData[projectId].status;
-                            // Check if projectStatus is a valid key in PROJECT_STATUS_COLORS
-                            if (projectStatus && 
-                                typeof projectStatus === 'string' && 
-                                Object.keys(PROJECT_STATUS_COLORS).includes(projectStatus)) {
-                              backgroundColor = PROJECT_STATUS_COLORS[projectStatus as keyof typeof PROJECT_STATUS_COLORS];
-                            }
-                          } else {
-                            // Si pas de parentId, chercher un projet correspondant par titre et date
-                            const matchingProject = Object.values(projectsData).find(project => 
-                              project.name === appointment.title && 
-                              project.startDate === appointment.date
-                            );
+                          // Mapper les statuts du projet aux statuts de couleur
+                          const statusMapping: Record<string, string> = {
+                            'encours': 'encours',
+                            'terminer': 'terminer',
+                            'annuler': 'annuler',
+                            'charger': 'charger',
+                            'confirmer': 'confirmer',
+                            'placer': 'placer'
+                          };
+                          
+                          // Rechercher le projet correspondant par titre et date ou par projectId
+                          const matchingProject = Object.values(projectsData).find(project => 
+                            (project.name === appointment.title && project.startDate === appointment.date) ||
+                            project.id === appointment.projectId
+                          );
+                          
+                          if (matchingProject?.status) {
+                            // Convertir le statut du projet au format attendu par PROJECT_STATUS_COLORS
+                            const mappedStatus = statusMapping[matchingProject.status] || matchingProject.status;
                             
-                            if (matchingProject && matchingProject.status) {
-                              const projectStatus = matchingProject.status;
-                              if (typeof projectStatus === 'string' && 
-                                  Object.keys(PROJECT_STATUS_COLORS).includes(projectStatus)) {
-                                backgroundColor = PROJECT_STATUS_COLORS[projectStatus as keyof typeof PROJECT_STATUS_COLORS];
-                              }
+                            if (PROJECT_STATUS_COLORS[mappedStatus as keyof typeof PROJECT_STATUS_COLORS]) {
+                              backgroundColor = PROJECT_STATUS_COLORS[mappedStatus as keyof typeof PROJECT_STATUS_COLORS];
+                              console.log(`Projet trouvé: ${matchingProject.name}, statut: ${matchingProject.status}, couleur: ${backgroundColor}`);
                             }
                           }
 
@@ -580,5 +582,4 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
         )}
       </AnimatePresence>
     </>
-  );
-}
+  );}
