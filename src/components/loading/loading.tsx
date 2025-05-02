@@ -279,12 +279,12 @@ export function Loading() {
         </div>
         <div className="bg-accent/50 rounded-xl p-4 flex flex-col items-center">
           <Scale className="w-6 h-6 text-green-500 mb-2" />
-          <span className="text-lg font-bold">{avgProgress}%</span>
+          {/* <span className="text-lg font-bold">{avgProgress}%</span> */}
           <span className="text-sm text-muted-foreground">Progression moyenne</span>
         </div>
         <div className="bg-accent/50 rounded-xl p-4 flex flex-col items-center">
           <Package className="w-6 h-6 text-amber-500 mb-2" />
-          <span className="text-lg font-bold">{totalMaterialsToLoad}</span>
+          {/* <span className="text-lg font-bold">{totalMaterialsToLoad}</span> */}
           <span className="text-sm text-muted-foreground">Matériels à charger</span>
         </div>
       </div>
@@ -341,7 +341,7 @@ export function Loading() {
                     <Scale className="w-4 h-4 text-muted-foreground mr-1" />
                     <span className="text-sm text-muted-foreground">
                       Progression : {calculateTeamProgress(team)}%
-                    </span>
+                    </span> 
                     <div className="ml-2 w-16 h-2 bg-secondary rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
@@ -354,6 +354,7 @@ export function Loading() {
                         style={{ width: `${calculateTeamProgress(team)}%` }}
                       />
                     </div>
+                   
                     {/* Afficher le nombre de matériels à charger */}
                     {countMaterialsToLoad(team) > 0 && (
                       <span className="ml-3 text-xs px-2 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full flex items-center">
