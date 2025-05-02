@@ -43,6 +43,8 @@ export function UserProfile() {
   const [showAllUsers, setShowAllUsers] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterAction, setFilterAction] = useState('');
   
   // Fonction pour récupérer les activités
   const fetchLoginActivities = async () => {
@@ -71,6 +73,21 @@ export function UserProfile() {
           const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp);
           return dateB.getTime() - dateA.getTime();
         });
+        
+        // Mettre à jour les informations de dernière connexion si nécessaire
+        if (activities.length > 0 && activities[0].action === 'Connexion') {
+          const lastLoginTimestamp = activities[0].timestamp?.toDate ? 
+            activities[0].timestamp.toDate() : 
+            new Date(activities[0].timestamp);
+          
+          // Mettre à jour l'objet currentUser dans le localStorage
+          const updatedUser = {
+            ...currentUser,
+            lastLogin: lastLoginTimestamp
+          };
+          
+          localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        }
         
         // Limiter les résultats
         setLoginActivities(activities.slice(0, showAllUsers ? 20 : 10));
@@ -198,8 +215,57 @@ export function UserProfile() {
     }
   };
 
+  // Fonction pour vérifier et compléter les données utilisateur
+  const checkAndUpdateUserData = async () => {
+    try {
+      if (currentUser?.id) {
+        // Vérifier si les dates sont manquantes
+        let needsUpdate = false;
+        const updatedUser = { ...currentUser };
+        
+        // Si la date de création est manquante, utiliser la date actuelle
+        if (!currentUser.createdAt) {
+          updatedUser.createdAt = new Date().toISOString();
+          needsUpdate = true;
+        }
+        
+        // Si la dernière connexion est manquante, utiliser la date actuelle
+        if (!currentUser.lastLogin) {
+          updatedUser.lastLogin = new Date().toISOString();
+          needsUpdate = true;
+        }
+        
+        // Mettre à jour le localStorage si nécessaire
+        if (needsUpdate) {
+          localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+          console.log("Données utilisateur mises à jour avec des valeurs par défaut pour les dates manquantes");
+        }
+      }
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour des données utilisateur:", error);
+    }
+  };
+
+  // Fonction pour filtrer les activités
+  const filteredActivities = loginActivities.filter(activity => {
+    const matchesSearch = searchTerm === '' || 
+      activity.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      activity.action?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (activity.deviceInfo && activity.deviceInfo.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesFilter = filterAction === '' || activity.action === filterAction;
+    
+    return matchesSearch && matchesFilter;
+  });
+  
+  // Obtenir les actions uniques pour le filtre
+  const uniqueActions = Array.from(new Set(loginActivities.map(activity => activity.action)));
+
   // Effet pour récupérer les activités de connexion depuis la base de données
   useEffect(() => {
+    // Vérifier et mettre à jour les données utilisateur si nécessaire
+    checkAndUpdateUserData();
+    
     // Récupérer les activités une seule fois au chargement
     fetchLoginActivities();
     
@@ -253,7 +319,7 @@ export function UserProfile() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="max- mx-auto"
+      className="max mx-auto"
     >
       {/* Header with back button */}
       <div className="flex items-center mb-8">
@@ -296,11 +362,14 @@ export function UserProfile() {
             </div>
             
             <p className="text-muted-foreground max-w-xl">
-              Membre de l'équipe depuis {currentUser.createdAt ? new Date(currentUser.createdAt).toLocaleDateString('fr-FR', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-              }) : 'Non disponible'}
+              Membre de l'équipe depuis {
+                currentUser.createdAt && !isNaN(new Date(currentUser.createdAt).getTime()) ? 
+                  new Date(currentUser.createdAt).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  }) : 'Non disponible'
+              }
             </p>
           </div>
           
@@ -419,7 +488,7 @@ export function UserProfile() {
               <div>
                 <p className="text-sm text-muted-foreground">Date de création</p>
                 <p className="font-medium">
-                  {currentUser.createdAt ? 
+                  {currentUser.createdAt && !isNaN(new Date(currentUser.createdAt).getTime()) ? 
                     new Date(currentUser.createdAt).toLocaleDateString('fr-FR', {
                       day: 'numeric',
                       month: 'long',
@@ -434,7 +503,7 @@ export function UserProfile() {
               <div>
                 <p className="text-sm text-muted-foreground">Dernière connexion</p>
                 <p className="font-medium">
-                  {currentUser.lastLogin ? 
+                  {currentUser.lastLogin && !isNaN(new Date(currentUser.lastLogin).getTime()) ? 
                     new Date(currentUser.lastLogin).toLocaleDateString('fr-FR', {
                       day: 'numeric',
                       month: 'long',
@@ -493,10 +562,51 @@ export function UserProfile() {
             </div>
           </div>
           
-          {loginActivities.length > 0 ? (
+          {/* Search and filter controls */}
+          <div className="mb-6 flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                placeholder="Rechercher par nom, action ou appareil..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1); // Reset to first page on search
+                }}
+                className="w-full px-4 py-2 pl-10 rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            
+            <div className="w-full sm:w-64">
+              <select
+                value={filterAction}
+                onChange={(e) => {
+                  setFilterAction(e.target.value);
+                  setCurrentPage(1); // Reset to first page on filter change
+                }}
+                className="w-full px-4 py-2 rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+              >
+                <option value="">Toutes les actions</option>
+                {uniqueActions.map(action => (
+                  <option key={action} value={action}>{action}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          {filteredActivities.length > 0 ? (
             <>
               <div className="space-y-4">
-                {loginActivities.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((activity) => {
+                {filteredActivities.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((activity) => {
                   // Gérer les différents formats de timestamp
                   const timestamp = activity.timestamp?.toDate ? 
                     activity.timestamp.toDate() : 
@@ -553,7 +663,7 @@ export function UserProfile() {
                 
                 <div className="flex items-center">
                   <span className="mr-4">
-                    Affichage de {Math.min((currentPage - 1) * itemsPerPage + 1, loginActivities.length)} à {Math.min(currentPage * itemsPerPage, loginActivities.length)} sur {loginActivities.length}
+                    Affichage de {Math.min((currentPage - 1) * itemsPerPage + 1, filteredActivities.length)} à {Math.min(currentPage * itemsPerPage, filteredActivities.length)} sur {filteredActivities.length}
                   </span>
                   
                   <div className="flex items-center">
@@ -565,13 +675,13 @@ export function UserProfile() {
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                     
-                    {Array.from({ length: Math.min(3, Math.ceil(loginActivities.length / itemsPerPage)) }, (_, i) => {
+                    {Array.from({ length: Math.min(3, Math.ceil(filteredActivities.length / itemsPerPage)) }, (_, i) => {
                       // Show pages around current page
                       let pageToShow = i + 1;
-                      if (currentPage > 2 && Math.ceil(loginActivities.length / itemsPerPage) > 3) {
+                      if (currentPage > 2 && Math.ceil(filteredActivities.length / itemsPerPage) > 3) {
                         pageToShow = currentPage - 1 + i;
-                        if (pageToShow > Math.ceil(loginActivities.length / itemsPerPage)) {
-                          pageToShow = Math.ceil(loginActivities.length / itemsPerPage) - (2 - i);
+                        if (pageToShow > Math.ceil(filteredActivities.length / itemsPerPage)) {
+                          pageToShow = Math.ceil(filteredActivities.length / itemsPerPage) - (2 - i);
                         }
                       }
                       
@@ -591,8 +701,8 @@ export function UserProfile() {
                     })}
                     
                     <button
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(loginActivities.length / itemsPerPage)))}
-                      disabled={currentPage === Math.ceil(loginActivities.length / itemsPerPage)}
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredActivities.length / itemsPerPage)))}
+                      disabled={currentPage === Math.ceil(filteredActivities.length / itemsPerPage)}
                       className="p-1 rounded-md hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <ChevronRight className="w-5 h-5" />
@@ -608,6 +718,5 @@ export function UserProfile() {
           )}
         </motion.div>
       )}
-          </motion.div>
-  );
-}
+    </motion.div>
+  );}
