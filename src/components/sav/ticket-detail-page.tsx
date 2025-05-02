@@ -367,61 +367,6 @@ export function TicketDetailPage() {
         </h2>
         <p className="whitespace-pre-line">{ticket.description}</p>
       </div>
-
-      {/* Gestion du statut */}
-      <div className="bg-card p-6 rounded-xl shadow-lg border border-border/50">
-        <h2 className="text-xl font-semibold mb-4 flex items-center">
-          <Clock className="w-5 h-5 mr-2 text-primary" />
-          Statut du ticket
-        </h2>
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={() => handleStatusChange('nouveau')}
-            className={`px-4 py-2 rounded-lg flex items-center ${
-              ticket.status === 'nouveau' 
-                ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-500 dark:bg-yellow-900/50 dark:text-yellow-400'
-                : 'bg-muted hover:bg-yellow-100 hover:text-yellow-800 dark:hover:bg-yellow-900/30 dark:hover:text-yellow-400'
-            }`}
-          >
-            <AlertCircle className="w-4 h-4 mr-2" />
-            Nouveau
-          </button>
-          <button
-            onClick={() => handleStatusChange('en_cours')}
-            className={`px-4 py-2 rounded-lg flex items-center ${
-              ticket.status === 'en_cours' 
-                ? 'bg-blue-100 text-blue-800 border-2 border-blue-500 dark:bg-blue-900/50 dark:text-blue-400'
-                : 'bg-muted hover:bg-blue-100 hover:text-blue-800 dark:hover:bg-blue-900/30 dark:hover:text-blue-400'
-            }`}
-          >
-            <Timer className="w-4 h-4 mr-2" />
-            En cours
-          </button>
-          <button
-            onClick={() => handleStatusChange('resolu')}
-            className={`px-4 py-2 rounded-lg flex items-center ${
-              ticket.status === 'resolu' 
-                ? 'bg-green-100 text-green-800 border-2 border-green-500 dark:bg-green-900/50 dark:text-green-400'
-                : 'bg-muted hover:bg-green-100 hover:text-green-800 dark:hover:bg-green-900/30 dark:hover:text-green-400'
-            }`}
-          >
-            <CheckCircle className="w-4 h-4 mr-2" />
-            Résolu
-          </button>
-          <button
-            onClick={() => handleStatusChange('annule')}
-            className={`px-4 py-2 rounded-lg flex items-center ${
-              ticket.status === 'annule' 
-                ? 'bg-red-100 text-red-800 border-2 border-red-500 dark:bg-red-900/50 dark:text-red-400'
-                : 'bg-muted hover:bg-red-100 hover:text-red-800 dark:hover:bg-red-900/30 dark:hover:text-red-400'
-            }`}
-          >
-            <XCircle className="w-4 h-4 mr-2" />
-            Annulé
-          </button>
-        </div>
-      </div>
-
       {/* Commentaires */}
       <div className="bg-card p-6 rounded-xl shadow-lg border border-border/50">
         <h2 className="text-xl font-semibold mb-4 flex items-center">
