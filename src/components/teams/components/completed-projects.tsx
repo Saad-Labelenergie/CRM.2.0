@@ -21,6 +21,11 @@ interface Project {
   team?: string | null;
 }
 
+interface Team {
+  id: string;
+  name: string;
+}
+
 interface CompletedProjectsProps {
   teamID: string;
 }
@@ -32,13 +37,15 @@ export function CompletedProjects({ teamID }: CompletedProjectsProps) {
   const [showAll, setShowAll] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [projectToRemove, setProjectToRemove] = useState<Project | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0); // NEW
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const { data: projects, loading } = useFirebase<Project>('projects', {
-    conditions: [{ field: 'team', operator: '==', value: teamID }],
+    conditions: [{ field: 'teamId', operator: '==', value: teamID }],
     orderByField: 'startDate',
-    key: refreshKey // NEW: if your hook uses a key
+    key: refreshKey
   });
+
+  const { data: teams } = useFirebase<Team>('teams');
 
   const fetchAvailableProjects = async () => {
     try {
@@ -55,12 +62,16 @@ export function CompletedProjects({ teamID }: CompletedProjectsProps) {
     }
   };
 
-  const refreshProjects = () => setRefreshKey((prev) => prev + 1); // NEW
+  const refreshProjects = () => setRefreshKey((prev) => prev + 1);
 
   const handleAddProjectToTeam = async (project: Project) => {
+    const team = teams?.find(t => t.id === teamID);
+    const teamName = team?.name ?? 'Équipe inconnue';
+
     try {
       await updateDoc(doc(db, 'projects', project.id), {
-        team: teamID,
+        teamId: teamID,
+        teamName: teamName,
         updatedAt: new Date()
       });
 
@@ -69,7 +80,7 @@ export function CompletedProjects({ teamID }: CompletedProjectsProps) {
       });
 
       setIsAddModalOpen(false);
-      refreshProjects(); // NEW
+      refreshProjects();
     } catch (error) {
       console.error('Erreur assignation chantier :', error);
     }
@@ -78,7 +89,8 @@ export function CompletedProjects({ teamID }: CompletedProjectsProps) {
   const handleRemoveProjectFromTeam = async (project: Project) => {
     try {
       await updateDoc(doc(db, 'projects', project.id), {
-        team: null,
+        teamId: null,
+        teamName: null,
         updatedAt: new Date()
       });
 
@@ -87,14 +99,11 @@ export function CompletedProjects({ teamID }: CompletedProjectsProps) {
       });
 
       setProjectToRemove(null);
-      refreshProjects(); // NEW
+      refreshProjects();
     } catch (error) {
       console.error('Erreur dissociation chantier :', error);
     }
   };
-
-
-
 
   const filteredProjects = projects.filter(project => {
     const search = searchTerm.toLowerCase();
@@ -110,6 +119,7 @@ export function CompletedProjects({ teamID }: CompletedProjectsProps) {
 
   const displayedProjects = showAll ? filteredProjects : filteredProjects.slice(0, 3);
   const projectTypes = Array.from(new Set(projects.map(p => p.type)));
+
 
   return (
     <motion.div className="bg-card p-6 rounded-xl shadow-lg border border-border/50">
