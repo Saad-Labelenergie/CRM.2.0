@@ -94,8 +94,10 @@ export function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  
+  const uniqueTeams = ['all', ...Array.from(new Set(projects.map(p => p.team)))];
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<string>('all');
+
   const [cancelProjectData, setCancelProjectData] = useState<CancelReason>({ 
     projectId: '', 
     reason: '' 
@@ -114,6 +116,8 @@ export function Projects() {
     setProjects(data);
   };
   
+
+
 // Annuler un projet :
 const handleCancelProject = async () => {
   if (!cancelReason || !cancelProjectId) return;
@@ -232,11 +236,13 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
 };
 
 
-  const filteredProjects = projects.filter(project => {
-    const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) || project.client.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = activeTab === 'all' || (project.status || 'confirmer' || 'placer' || 'charger' ||'encours' || 'terminer' || 'annuler') === activeTab;
-    return matchesSearch && matchesStatus;
-  });
+const filteredProjects = projects.filter(project => {
+  const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) || project.client.name.toLowerCase().includes(searchTerm.toLowerCase());
+  const matchesStatus = activeTab === 'all' || project.status === activeTab;
+  const matchesTeam = selectedTeam === 'all' || project.team === selectedTeam;
+  return matchesSearch && matchesStatus && matchesTeam;
+});
+
 
   return (
     <motion.div
@@ -254,13 +260,13 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
 >
   {/* Carte Stat */}
   {[
-    { label: 'Tous', value: projects.length, color: 'bg-gray-100 text-gray-800', icon: <List className="w-5 h-5" /> }, 
-    { label: 'Placé', value: projects.filter(p => p.status === 'placer').length, color: 'bg-orange-100 text-orange-800', icon: <Upload className="w-5 h-5" /> },
-    { label: 'Confirmé', value: projects.filter(p => p.status === 'confirmer').length, color: 'bg-yellow-100 text-yellow-800', icon: <CheckCircle className="w-5 h-5" /> },
-    { label: 'Chargé', value: projects.filter(p => p.status === 'charger').length, color: 'bg-blue-100 text-blue-800', icon: <Truck className="w-5 h-5" /> },
-    { label: 'En cours', value: projects.filter(p => p.status === 'encours').length, color: 'bg-indigo-100 text-indigo-800', icon: <Clock className="w-5 h-5" /> },
-    { label: 'Terminé', value: projects.filter(p => p.status === 'terminer').length, color: 'bg-green-100 text-green-800', icon: <Check className="w-5 h-5" /> },
-    { label: 'Annulé', value: projects.filter(p => p.status === 'annuler').length, color: 'bg-red-100 text-red-800', icon: <Ban className="w-5 h-5" /> },
+    { label: 'Tous', value: projects.length, color: 'bg-black text-white', icon: <List className="w-5 h-5" /> }, 
+    { label: 'Placé', value: projects.filter(p => p.status === 'placer').length, color: 'bg-[#e0f7ff] text-white', icon: <Upload className="w-5 h-5" /> },
+    { label: 'Confirmé', value: projects.filter(p => p.status === 'confirmer').length, color: 'bg-[#E67C73] text-white', icon: <CheckCircle className="w-5 h-5" /> },
+    { label: 'Chargé', value: projects.filter(p => p.status === 'charger').length, color: 'bg-[#3F51B5] text-white', icon: <Truck className="w-5 h-5" /> },
+    { label: 'En cours', value: projects.filter(p => p.status === 'encours').length, color: 'bg-[#8E24AA] text-white', icon: <Clock className="w-5 h-5" /> },
+    { label: 'Terminé', value: projects.filter(p => p.status === 'terminer').length, color: 'bg-[#33B679] text-white', icon: <Check className="w-5 h-5" /> },
+    { label: 'Annulé', value: projects.filter(p => p.status === 'annuler').length, color: 'bg-[#D50000] text-white', icon: <Ban className="w-5 h-5" /> },
   ].map((stat, index) => (
     <motion.div
       key={index}
@@ -317,7 +323,7 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
 </div>
 
       {/* Search Bar */}
-      <div className="relative">
+      {/* <div className="relative">
         <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
         <input
           type="text"
@@ -326,7 +332,32 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full pl-12 pr-4 py-3 bg-background border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
         />
-      </div>
+      </div> */}
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+  <div className="flex-1 relative">
+    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+    <input
+      type="text"
+      placeholder="Rechercher un projet..."
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="w-full pl-12 pr-4 py-3 bg-background border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+    />
+  </div>
+
+  {/* Sélecteur d'équipe */}
+  <select
+    value={selectedTeam}
+    onChange={(e) => setSelectedTeam(e.target.value)}
+    className="w-full md:w-64 px-4 py-3 bg-background border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+  >
+    {uniqueTeams.map(team => (
+      <option key={team} value={team}>
+        {team === 'all' ? 'Toutes les équipes' : team}
+      </option>
+    ))}
+  </select>
+</div>
      
 
       {/* Project Cards */}

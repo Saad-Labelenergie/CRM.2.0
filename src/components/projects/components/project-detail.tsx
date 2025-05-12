@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ProjectHeader } from './project-header';
@@ -10,8 +10,9 @@ import { ProjectComments } from './project-comments';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
 import { useProjects } from '../../../lib/hooks/useProjects';
 import { updateProjectStatus } from '../../../lib/hooks/useProjects';
-
-
+import { doc,updateDoc } from 'firebase/firestore';
+import { db } from '../../../lib/firebase';
+import { updateProjectSteps } from '../../../lib/hooks/useProjects';
 
 
 
@@ -22,63 +23,34 @@ export function ProjectDetail() {
   const [showStepHistory, setShowStepHistory] = useState<number[]>([]);
   const [showAllComments, setShowAllComments] = useState(false);
 
-  const [steps, setSteps] = useState<Step[]>([
-    {
-      id: 1,
-      name: 'Chargement',
-      status: 'charger',
-      timestamps: {},
-    },
-    {
-      id: 2,
-      name: 'Arriver sur place',
-      status: 'charger',
-      timestamps: {},
-    },
-    {
-      id: 3,
-      name: 'Photos avant chantier',
-      status: 'charger',
-      timestamps: {},
-    },
-    {
-      id: 4,
-      name: 'Récupération documents client',
-      status: 'charger',
-      timestamps: {},
-    },
-    {
-      id: 5,
-      name: 'Commencer',
-      status: 'charger',
-      timestamps: {},
-    },
-    {
-      id: 6,
-      name: 'Terminé',
-      status: 'charger',
-      timestamps: {},
-    },
-    {
-      id: 7,
-      name: 'Dossier signé',
-      status: 'charger',
-      timestamps: {},
-    },
-  ]);
+  const defaultSteps: Step[] = [
+    { id: 2, name: "Arriver sur place", status: 'en_attente', timestamps: {} },
+    { id: 3, name: "Photos avant chantier", status: 'en_attente', timestamps: {} },
+    { id: 4, name: "Récupération documents client", status: 'en_attente', timestamps: {} },
+    { id: 5, name: "Commencer", status: 'en_attente', timestamps: {} },
+    { id: 6, name: "Terminé", status: 'en_attente', timestamps: {} },
+    { id: 7, name: "Dossier signé", status: 'en_attente', timestamps: {} },
+  ];
   
-  const onStepStatusChange = (stepId: number) => {
-    setSteps((prevSteps) =>
-      prevSteps.map((step) => {
-        if (step.id === stepId) {
-          if (step.status === 'charger') return { ...step, status: 'commencer' };
-          if (step.status === 'commencer') return { ...step, status: 'en_cours' };
-          if (step.status === 'en_cours') return { ...step, status: 'terminer' };
-        }
-        return step;
-      })
-    );
+  const [steps, setSteps] = useState<Step[]>(defaultSteps);
+
+  useEffect(() => {
+    const projectFromStore = projects.find(p => p.id === id);
+    if (projectFromStore?.steps && projectFromStore.steps.length > 0) {
+      setSteps(projectFromStore.steps);
+    }
+  }, [projects, id]);
+  
+  //Changement fait - a voir apres
+  const onStepStatusChange = (stepId: number, updatedSteps: Step[]) => {
+    console.log("📤 Sauvegarde des steps dans Firestore", updatedSteps);
+    setSteps(updatedSteps);
+  
+    if (project?.id) {
+      updateProjectSteps(project.id, updatedSteps);
+    }
   };
+  
   
   
   const project = projects.find(p => p.id === id);
@@ -112,13 +84,16 @@ export function ProjectDetail() {
   
     // Met à jour localement
     onStepStatusChange(stepId);
-  
+    
+
+    // Corection a voir apres
     // Détermine le nouveau statut global du projet
     const getNewProjectStatus = (stepId: number): string => {
-      if (stepId === 1) return "charger";
-      if (stepId >= 2 && stepId <= 5) return "en_cours";
-      if (stepId === 7) return "terminer";
-      return "en_cours";
+      const completedSteps = steps.filter(s => s.status === 'valide').length;
+      
+      if (completedSteps === steps.length) return 'termine';
+      if (completedSteps > 0) return 'en_cours';
+      return 'charge';
     };
   
     const newStatus = getNewProjectStatus(stepId);
@@ -156,7 +131,8 @@ export function ProjectDetail() {
   steps={steps}
   showStepHistory={showStepHistory}
   onToggleHistory={handleToggleHistory}
-  onStepStatusChange={handleStepStatusChange}
+  onStepStatusChange={onStepStatusChange}
+
   projectId={project.id}
 />
 
