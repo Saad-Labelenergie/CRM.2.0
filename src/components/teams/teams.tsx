@@ -59,6 +59,7 @@ export function Teams() {
   const [isNewTeamModalOpen, setIsNewTeamModalOpen] = useState(false);
   const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  
   const [toggleModalData, setToggleModalData] = useState<{
     isOpen: boolean;
     teamId: string;
@@ -266,101 +267,112 @@ export function Teams() {
           variants={containerVariants}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          {filteredTeams.map((team) => (
-            <motion.div
-              key={team.id}
-              variants={itemVariants}
-              whileHover={{ y: -5 }}
-              className="bg-card rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-border/50"
+{filteredTeams.map((team) => {
+  const isAvailable = team.schedule?.some((s) =>
+    s.slots?.some((slot) => slot.isAvailable)
+  );
+
+  const membersCount = team.members?.length ?? 0;
+  const projectsCount = team.projects?.length ?? 0;
+  const isAssigned = projectsCount > 0;
+
+  return (
+    <motion.div
+      key={team.id}
+      variants={itemVariants}
+      whileHover={{ y: -5 }}
+      className="bg-card rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-border/50"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center relative">
+            <Users className="w-7 h-7 text-primary" />
+            <div 
+              className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-background"
+              style={{ backgroundColor: team.color }}
+            />
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold">{team.name}</h3>
+            <div className="flex items-center mt-1">
+              <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+              <span className="text-sm ml-1 text-muted-foreground">4.8</span>
+            </div>
+          </div>
+        </div>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleToggleTeam(team.id, team.name, team.isActive);
+          }}
+          className={`p-2 rounded-lg transition-colors ${
+            team.isActive 
+              ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50'
+              : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50'
+          }`}
+        >
+          <Power className="w-5 h-5" />
+        </motion.button>
+      </div>
+
+      <div className="mt-6 space-y-4 relative group">
+        <button
+          onClick={() => navigate(`/teams/${team.id}`)}
+          className="absolute inset-0 z-0 rounded-xl focus:outline-none"
+          aria-label={`Voir les détails de ${team.name}`}
+        />
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center text-muted-foreground">
+            <Users className="w-4 h-4 mr-2" />
+            <span>{membersCount} membres</span>
+          </div>
+          <div className="flex items-center text-muted-foreground">
+            <Briefcase className="w-4 h-4 mr-2" />
+            <span>{projectsCount} projets actifs</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center text-muted-foreground">
+            <Calendar className="w-4 h-4 mr-2" />
+            <span>{isAvailable ? 'Disponible' : 'Indisponible'}</span>
+          </div>
+          <div className="flex items-center text-muted-foreground">
+            <Truck className="w-4 h-4 mr-2" />
+            <span>{isAssigned ? 'Assigné' : 'Non assigné'}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mt-4">
+          {team.expertise.map((skill, index) => (
+            <span
+              key={index}
+              className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center relative">
-                    <Users className="w-7 h-7 text-primary" />
-                    <div 
-                      className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-background"
-                      style={{ backgroundColor: team.color }}
-                    />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold">{team.name}</h3>
-                    <div className="flex items-center mt-1">
-                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                      <span className="text-sm ml-1 text-muted-foreground">4.8</span>
-                    </div>
-                  </div>
-                </div>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleToggleTeam(team.id, team.name, team.isActive);
-                  }}
-                  className={`p-2 rounded-lg transition-colors ${
-                    team.isActive 
-                      ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50'
-                      : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50'
-                  }`}
-                >
-                  <Power className="w-5 h-5" />
-                </motion.button>
-              </div>
-
-              <div className="mt-6 space-y-4 relative group">
-  <button
-    onClick={() => navigate(`/teams/${team.id}`)}
-    className="absolute inset-0 z-0 rounded-xl focus:outline-none"
-    aria-label={`Voir les détails de ${team.name}`}
-  />
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center text-muted-foreground">
-                    <Users className="w-4 h-4 mr-2" />
-                    <span>0 membres</span>
-                  </div>
-                  <div className="flex items-center text-muted-foreground">
-                    <Briefcase className="w-4 h-4 mr-2" />
-                    <span>0 projets actifs</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center text-muted-foreground">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    <span>Disponible</span>
-                  </div>
-                  <div className="flex items-center text-muted-foreground">
-                    <Truck className="w-4 h-4 mr-2" />
-                    <span>Non assigné</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {team.expertise.map((skill, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-border/50">
-                  <div className="text-sm text-muted-foreground">
-                    Aucun membre assigné
-                  </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    team.isActive 
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                  }`}>
-                    {team.isActive ? 'Actif' : 'Inactif'}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
+              {skill}
+            </span>
           ))}
+        </div>
+
+        <div className="flex items-center justify-between pt-4 border-t border-border/50">
+          <div className="text-sm text-muted-foreground">
+            {membersCount > 0 ? `${membersCount} membre(s) assigné(s)` : 'Aucun membre assigné'}
+          </div>
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+            team.isActive 
+              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+          }`}>
+            {team.isActive ? 'Actif' : 'Inactif'}
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+})}
+
         </motion.div>
       )}
 
