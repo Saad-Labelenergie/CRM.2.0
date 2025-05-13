@@ -43,17 +43,6 @@ const itemVariants = {
   }
 };
 
-const maintenanceData = {
-  total: 156,
-  completed: 142,
-  pending: 14,
-  nextDue: '2024-03-15',
-  monthlyStats: [
-    { month: 'Jan', count: 48 },
-    { month: 'Fév', count: 52 },
-    { month: 'Mar', count: 56 }
-  ]
-};
 export interface MaintenanceRecord {
   id: string;
   clientId: string;
@@ -85,11 +74,60 @@ export function Maintenance() {
     pending: 0,
     nextDue: null as string | null
   });
+  const [monthlyStats, setMonthlyStats] = useState({
+    total: [] as number[],
+    completed: [] as number[],
+    pending: [] as number[]
+  });
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedMaintenance, setSelectedMaintenance] = useState<MaintenanceRecord | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  
+  // Fonction pour générer les données mensuelles pour les graphiques
+  const generateMonthlyData = (records: MaintenanceRecord[]) => {
+    const last6Months = Array.from({length: 6}, (_, i) => {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      return date;
+    }).reverse();
+
+    return {
+      total: last6Months.map(month => 
+        records.filter(record => new Date(record.createdAt).getMonth() === month.getMonth()).length
+      ),
+      completed: last6Months.map(month => 
+        records.filter(record => 
+          record.status === 'completed' && 
+          new Date(record.lastMaintenance).getMonth() === month.getMonth()
+        ).length
+      ),
+      pending: last6Months.map(month => 
+        records.filter(record => 
+          (record.status === 'upcoming' || record.status === 'pending') && 
+          new Date(record.nextMaintenance).getMonth() === month.getMonth()
+        ).length
+      )
+    };
+  };
+
+  // Fonction pour générer le chemin SVG pour les graphiques
+  const generateChartPath = (data: number[], type: 'fill' | 'line') => {
+    if (!data.length) return '';
+    
+    const max = Math.max(...data, 1);
+    const points = data.map((val, i) => ({
+      x: (i * (100 / (data.length - 1))),
+      y: 30 - ((val / max) * 20)
+    }));
+    
+    if (type === 'fill') {
+      return `M0,30 L0,${points[0].y} ${points.map(p => `L${p.x},${p.y}`).join(' ')} L100,${points[points.length-1].y} L100,30 Z`;
+    }
+    
+    return `M0,${points[0].y} ${points.map(p => `L${p.x},${p.y}`).join(' ')}`;
+  };
   
   const handleDownloadContract = async (e: React.MouseEvent, maintenance: MaintenanceRecord) => {
     e.stopPropagation();
@@ -112,7 +150,6 @@ export function Maintenance() {
     }
   };
   
-  // Ajouter cette fonction après handleDownloadContract
   const handleViewContract = async (e: React.MouseEvent, maintenance: MaintenanceRecord) => {
     e.stopPropagation();
     e.preventDefault();
@@ -138,6 +175,7 @@ export function Maintenance() {
       alert('Erreur lors de la génération du contrat. Veuillez réessayer.');
     }
   };
+  
   useEffect(() => {
     const maintenanceRef = collection(db, 'maintenances');
     const unsubscribe = onSnapshot(maintenanceRef, (snapshot) => {
@@ -146,6 +184,7 @@ export function Maintenance() {
         ...doc.data()
       })) as MaintenanceRecord[]; 
       setMaintenanceRecords(maintenances);
+      
       const stats = maintenances.reduce((acc, maintenance: MaintenanceRecord) => {
         acc.total++;
         if (maintenance.status === 'completed') acc.completed++;
@@ -157,9 +196,13 @@ export function Maintenance() {
       }, { total: 0, completed: 0, pending: 0, nextDue: null as string | null });
   
       setMaintenanceStats(stats);
+      
+      // Générer les données mensuelles pour les graphiques
+      setMonthlyStats(generateMonthlyData(maintenances));
     });
     return () => unsubscribe();
   }, []);
+  
   const filteredRecords = maintenanceRecords.filter(record => {
     const matchesSearch = 
       record.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -167,6 +210,7 @@ export function Maintenance() {
     const matchesType = !selectedType || record.type.toLowerCase() === selectedType.toLowerCase();
     return matchesSearch && matchesType;
   });
+  
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
@@ -179,6 +223,7 @@ export function Maintenance() {
         return 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400';
     }
   };
+  
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'completed':
@@ -191,19 +236,23 @@ export function Maintenance() {
         return status;
     }
   };
+  
   const handleSaveMaintenance = (maintenanceData: any) => {
     console.log('Nouvelle maintenance:', maintenanceData);
     setShowSuccessToast(true);
   };
+  
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredRecords.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  
   const handleMaintenanceClick = (maintenance: MaintenanceRecord) => {
     setSelectedMaintenance(maintenance);
     setIsDetailModalOpen(true);
   };
+  
   return (
     <motion.div
       variants={containerVariants}
@@ -217,7 +266,6 @@ export function Maintenance() {
           <p className="text-muted-foreground mt-1">Gérez les maintenances préventives et correctives</p>
         </div>
         <div className="flex items-center space-x-3">
-          {/* Add view mode toggle */}
           <div className="flex items-center bg-card rounded-xl border border-border/50 p-1">
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -269,6 +317,20 @@ export function Maintenance() {
               <Tool className="w-6 h-6 text-primary" />
             </div>
           </div>
+          <div className="h-10 w-full mt-2">
+            <svg className="w-full h-full" viewBox="0 0 100 30" preserveAspectRatio="none">
+              <path 
+                d={generateChartPath(monthlyStats.total, 'fill')}
+                fill="rgba(124, 58, 237, 0.2)" 
+              />
+              <path 
+                d={generateChartPath(monthlyStats.total, 'line')}
+                fill="none" 
+                stroke="rgb(124, 58, 237)" 
+                strokeWidth="2" 
+              />
+            </svg>
+          </div>
         </motion.div>
 
         <motion.div variants={itemVariants} className="bg-card rounded-xl p-6 shadow-lg border border-border/50">
@@ -281,6 +343,20 @@ export function Maintenance() {
               <CheckCircle className="w-6 h-6 text-green-500" />
             </div>
           </div>
+          <div className="h-10 w-full mt-2">
+            <svg className="w-full h-full" viewBox="0 0 100 30" preserveAspectRatio="none">
+              <path 
+                d={generateChartPath(monthlyStats.completed, 'fill')}
+                fill="rgba(34, 197, 94, 0.2)" 
+              />
+              <path 
+                d={generateChartPath(monthlyStats.completed, 'line')}
+                fill="none" 
+                stroke="rgb(34, 197, 94)" 
+                strokeWidth="2" 
+              />
+            </svg>
+          </div>
         </motion.div>
 
         <motion.div variants={itemVariants} className="bg-card rounded-xl p-6 shadow-lg border border-border/50">
@@ -292,6 +368,20 @@ export function Maintenance() {
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
               <AlertTriangle className="w-6 h-6 text-orange-500" />
             </div>
+          </div>
+          <div className="h-10 w-full mt-2">
+            <svg className="w-full h-full" viewBox="0 0 100 30" preserveAspectRatio="none">
+              <path 
+                d={generateChartPath(monthlyStats.pending, 'fill')}
+                fill="rgba(249, 115, 22, 0.2)" 
+              />
+              <path 
+                d={generateChartPath(monthlyStats.pending, 'line')}
+                fill="none" 
+                stroke="rgb(249, 115, 22)" 
+                strokeWidth="2" 
+              />
+            </svg>
           </div>
         </motion.div>
 
@@ -332,7 +422,6 @@ export function Maintenance() {
         </select>
       </div>
 
-      {/* Conditional rendering based on view mode */}
       {viewMode === 'list' ? (
         <motion.div
           variants={containerVariants}
@@ -366,7 +455,6 @@ export function Maintenance() {
                     className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors group cursor-pointer"
                     onClick={() => handleMaintenanceClick(record)}
                   >
-                    {/* ... existing cells for Client, Equipment, Type, Dates, Team, Status ... */}
                     <td className="p-4">
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -378,11 +466,10 @@ export function Maintenance() {
                     <td className="p-4">{record.equipmentName}</td>
                     <td className="p-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        record.type === 'preventif' // Use lowercase 'preventif' as stored in DB
+                        record.type === 'preventif'
                           ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                           : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
                       }`}>
-                        {/* Capitalize type for display */}
                         {record.type.charAt(0).toUpperCase() + record.type.slice(1)}
                       </span>
                     </td>
@@ -405,7 +492,6 @@ export function Maintenance() {
                         </span>
                       </div>
                     </td>
-                    {/* Add new cell for Contract link/button */}
                     <td className="p-4 text-center">
                       {record.contractId ? (
                         <Link
@@ -441,7 +527,6 @@ export function Maintenance() {
             </tbody>
           </table>
           
-          {/* Déplacement de la pagination en bas du tableau */}
           <div className="p-4 border-t border-border/50 flex justify-between items-center">
             <div className="text-sm text-muted-foreground">
               Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, filteredRecords.length)} sur {filteredRecords.length} maintenances
@@ -552,7 +637,6 @@ export function Maintenance() {
         onSave={handleSaveMaintenance}
       />
 
-      {/* Ajouter le modal de détails */}
       <MaintenanceDetailModal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}

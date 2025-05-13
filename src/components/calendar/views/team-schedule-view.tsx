@@ -23,12 +23,13 @@ interface TeamScheduleViewProps {
 
 // Update the PROJECT_STATUS_COLORS mapping
 const PROJECT_STATUS_COLORS = {
-  'confirmer': '#FEF9C3',  // Confirmé - yellow
-  'placer': '#FFEDD5',    // Placé - orange
-  'charger': '#DBEAFE',   // Chargé - blue
-  'encours': '#E0E7FF',  // En cours - indigo
-  'terminer': '#DCFCE7',  // Terminé - green
-  'annuler': '#FEE2E2',   // Annulé - red
+  'confirmer': '#E67C73',  // Confirmé - yellow
+  'placer': '#039BE5',    // Placé - orange
+  'charger': '#3F51B5',   // Chargé - blue
+  'encours': '#8E24AA',  // En cours - indigo
+  'terminer': '#33B679',  // Terminé - green
+  'annuler': '#D50000',   // Annulé - red
+  'attribue': '#039BE5',
 };
 
 export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamScheduleViewProps) {
@@ -395,7 +396,8 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                             'annuler': 'annuler',
                             'charger': 'charger',
                             'confirmer': 'confirmer',
-                            'placer': 'placer'
+                            'placer': 'placer',
+                            'attribue': 'attribue',
                           };
                           
                           // Rechercher le projet correspondant par titre et date ou par projectId
@@ -424,7 +426,7 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                               className={`
                                 absolute rounded-lg p-2 cursor-pointer 
                                 shadow-sm hover:shadow-md transition-shadow duration-200 
-                                border-l-4 group
+                                border-l-4 group text-white
                               `}
                               style={{
                                 borderColor: team.color || '#ccc',
@@ -437,7 +439,7 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                                 {appointment.client.name}
                               </div>
                               {appointment.title && (
-                                <div className="text-xs font-medium mt-1 text-primary">
+                                <div className="text-xs font-medium mt-1 text-white">
                                   {appointment.title}
                                 </div>
                               )}

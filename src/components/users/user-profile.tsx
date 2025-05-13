@@ -54,10 +54,9 @@ export function UserProfile() {
         // Récupérer les activités de connexion depuis Firestore
         const activitiesRef = collection(db, 'loginActivities');
         
-        // Utiliser directement l'approche de fallback pour éviter les erreurs d'index
-        // jusqu'à ce que l'index soit créé dans Firebase
+        // Modifier la requête pour afficher toutes les activités sans filtrer par action
         const simpleQuery = showAllUsers && userRole === "Administrateur"
-          ? query(activitiesRef, limit(50))
+          ? query(activitiesRef, limit(100))  // Augmenter la limite pour récupérer plus d'activités
           : query(activitiesRef, where('userId', '==', currentUser.id), limit(20));
         
         const querySnapshot = await getDocs(simpleQuery);
@@ -66,6 +65,10 @@ export function UserProfile() {
         querySnapshot.forEach((doc) => {
           activities.push({ id: doc.id, ...doc.data() } as LoginActivity);
         });
+        
+        // Vérifier si des activités ont été récupérées
+        console.log(`Activités récupérées: ${activities.length}`, 
+          activities.map(a => `${a.userName} - ${a.action}`));
         
         // Trier manuellement par date décroissante
         activities.sort((a, b) => {
@@ -89,8 +92,8 @@ export function UserProfile() {
           localStorage.setItem('currentUser', JSON.stringify(updatedUser));
         }
         
-        // Limiter les résultats
-        setLoginActivities(activities.slice(0, showAllUsers ? 20 : 10));
+        // Afficher toutes les activités sans limitation pour l'administrateur
+        setLoginActivities(showAllUsers ? activities : activities.slice(0, 10));
       }
     } catch (error) {
       console.error("Erreur lors de la récupération des activités de connexion:", error);
@@ -319,7 +322,7 @@ export function UserProfile() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="max mx-auto"
+      className="max-w-7xl mx-auto"
     >
       {/* Header with back button */}
       <div className="flex items-center mb-8">
@@ -719,4 +722,5 @@ export function UserProfile() {
         </motion.div>
       )}
     </motion.div>
-  );}
+  );
+}
