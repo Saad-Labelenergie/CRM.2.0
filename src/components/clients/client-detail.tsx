@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Pencil } from 'lucide-react';
 import EditContactModal from './components/EditContactModal';
 import EditAddressModal from './components/EditAdressModal';
+import EditTagModal from './components/EditTagModal';
 import { UpdateClientModal } from './components/update-client-modal';
 import { useProducts } from '../../lib/hooks/useProducts';
 import { useAppointments } from '../../lib/hooks/useAppointments';
@@ -67,6 +68,7 @@ export function ClientDetail() {
   const { tickets } = useSAV();
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false)
+  const [isTagModalOpen, setIsTagModalOpen] = useState(false)
 
 
 
@@ -522,17 +524,22 @@ const handleDeleteClient = async (clientId: string) => {
           </motion.div>
 
           {client.tag && (
-            <motion.div
-              whileHover={{ y: -5 }}
-              className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
-            >
-              <h2 className="text-xl font-semibold mb-6 flex items-center">
-                <Tag className="w-5 h-5 mr-2 text-purple-500" />
-                Étiquette
-              </h2>
-              <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm inline-block">
-                {client.tag}
-              </div>
+  <motion.div
+    whileHover={{ y: -5 }}
+    className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
+  >
+    <div className="flex justify-between items-center mb-6">
+      <h2 className="text-xl font-semibold flex items-center">
+        <Tag className="w-5 h-5 mr-2 text-purple-500" />
+        Étiquette
+      </h2>
+      <button onClick={() => setIsTagModalOpen(true)} title="Modifier l'étiquette">
+        <Pencil className="w-5 h-5 text-muted-foreground hover:text-primary transition" />
+      </button>
+    </div>
+    <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm inline-block">
+      {client.tag}
+    </div>
             </motion.div>
             
           )}
@@ -639,6 +646,13 @@ const handleDeleteClient = async (clientId: string) => {
       onClose={() => setIsAddressModalOpen(false)}
     />
   )}
+      {isTagModalOpen && (
+      <EditTagModal
+        clientId={client.id}
+        currentTag={client.tag}
+        onClose={() => setIsTagModalOpen(false)}
+      />
+    )}
     </motion.div>
   );
 }
