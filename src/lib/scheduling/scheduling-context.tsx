@@ -394,10 +394,6 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
     throw error;
   }
 };
-
-  // Supprimez tout le bloc du SchedulingProvider imbriqué qui commence par:
-  // const SchedulingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // et se termine par le return et le JSX à l'intérieur
   
   return (
     <SchedulingContext.Provider value={{
@@ -493,4 +489,47 @@ const getLoadingRecords = async (teamId?: string): Promise<LoadingRecord[]> => {
     id: doc.id,
     ...doc.data(),
   })) as LoadingRecord[];
+};
+
+
+// Ajouter cette fonction dans votre contexte
+const getProjectIdByAppointmentId = async (appointmentId: string) => {
+  try {
+    // Rechercher dans la collection projects un document qui a le même ID que l'appointment
+    // ou qui a une référence à cet appointment
+    const projectsRef = collection(db, 'projects');
+    const q = query(projectsRef, where('appointmentId', '==', appointmentId));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      // Retourner l'ID du premier projet trouvé
+      return querySnapshot.docs[0].id;
+    }
+    
+    // Si aucun projet n'est trouvé avec appointmentId, essayer de chercher par nom/titre
+    // Cette partie est optionnelle et dépend de votre structure de données
+    const appointmentRef = doc(db, 'appointments', appointmentId);
+    const appointmentSnap = await getDoc(appointmentRef);
+    
+    if (appointmentSnap.exists()) {
+      const appointmentData = appointmentSnap.data();
+      const q2 = query(projectsRef, where('name', '==', appointmentData.title));
+      const querySnapshot2 = await getDocs(q2);
+      
+      if (!querySnapshot2.empty) {
+        return querySnapshot2.docs[0].id;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Erreur lors de la recherche du projet:", error);
+    return null;
+  }
+};
+
+// Ajouter cette fonction à votre contexte
+const contextValue = {
+  // ... autres valeurs existantes
+  getProjectIdByAppointmentId,
 };

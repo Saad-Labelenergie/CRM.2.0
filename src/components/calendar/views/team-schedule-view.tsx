@@ -54,33 +54,6 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
     setIsDeleteModalOpen(true);
   };
 
-  useEffect(() => {
-    const updateCurrentTime = () => {
-      const now = new Date();
-      const parisTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
-      setCurrentTime(parisTime);
-    };
-    
-    // Supprimer ces définitions de fonctions d'ici
-    
-    updateCurrentTime();
-    const interval = setInterval(updateCurrentTime, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const calculateTimePosition = (day: Date) => {
-    if (!isToday(day)) return null;
-    const startOfWorkDay = new Date(day);
-    startOfWorkDay.setHours(WORKING_HOURS.start.hour, WORKING_HOURS.start.minute, 0);
-    const endOfWorkDay = new Date(day);
-    endOfWorkDay.setHours(WORKING_HOURS.end.hour, WORKING_HOURS.end.minute, 0);
-    const totalWorkMinutes = differenceInMinutes(endOfWorkDay, startOfWorkDay);
-    const minutesSinceStart = differenceInMinutes(currentTime, startOfWorkDay);
-    if (minutesSinceStart < 0) return 0;
-    if (minutesSinceStart > totalWorkMinutes) return 1;
-    return minutesSinceStart / totalWorkMinutes;
-  };
-
   const { currentDate, selectedTeams } = useCalendarStore();
   const { appointments, teams, updateAppointmentTeam, deleteAppointment } = useScheduling();
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
@@ -89,6 +62,8 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [appointmentToDelete, setAppointmentToDelete] = useState<string | null>(null);
+  const [projectsData, setProjectsData] = useState<Record<string, any>>({});
+  const [appointmentsState, setAppointmentsState] = useState<any[]>(appointments);
 
   const [changeWeekTeamData, setChangeWeekTeamData] = useState<{
     isOpen: boolean;
@@ -100,8 +75,50 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
 
   const [isChangeSemainModalOpen, setIsChangeSemainModalOpen] = useState(false);
   const [appointmentToChangeDate, setAppointmentToChangeDate] = useState<any>(null);
-  // Ajouter cet état pour stocker les données des projets
-  const [projectsData, setProjectsData] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    const updateCurrentTime = () => {
+      const now = new Date();
+      const parisTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+      setCurrentTime(parisTime);
+    };
+    
+    updateCurrentTime();
+    const interval = setInterval(updateCurrentTime, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Add this useEffect for listening to project status updates
+  useEffect(() => {
+    const handleProjectStatusUpdate = (event: CustomEvent) => {
+      const { projectId, appointmentId, status } = event.detail;
+      
+      // Mettre à jour les données du projet localement
+      setProjectsData(prev => {
+        const updated = { ...prev };
+        if (updated[projectId]) {
+          updated[projectId] = { ...updated[projectId], status };
+        }
+        return updated;
+      });
+      
+      // Mettre à jour l'état des rendez-vous si nécessaire
+      setAppointmentsState(prev => prev.map(app => {
+        if (app.id === appointmentId) {
+          return { ...app, status };
+        }
+        return app;
+      }));
+    };
+    
+    // Ajouter l'écouteur d'événement
+    window.addEventListener('project-status-updated', handleProjectStatusUpdate as EventListener);
+    
+    // Nettoyer l'écouteur d'événement
+    return () => {
+      window.removeEventListener('project-status-updated', handleProjectStatusUpdate as EventListener);
+    };
+  }, []);
   
   // Ajouter ce useEffect pour récupérer les données des projets
   useEffect(() => {
@@ -123,6 +140,19 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
     fetchProjects();
   }, []);
 
+  const calculateTimePosition = (day: Date) => {
+    if (!isToday(day)) return null;
+    const startOfWorkDay = new Date(day);
+    startOfWorkDay.setHours(WORKING_HOURS.start.hour, WORKING_HOURS.start.minute, 0);
+    const endOfWorkDay = new Date(day);
+    endOfWorkDay.setHours(WORKING_HOURS.end.hour, WORKING_HOURS.end.minute, 0);
+    const totalWorkMinutes = differenceInMinutes(endOfWorkDay, startOfWorkDay);
+    const minutesSinceStart = differenceInMinutes(currentTime, startOfWorkDay);
+    if (minutesSinceStart < 0) return 0;
+    if (minutesSinceStart > totalWorkMinutes) return 1;
+    return minutesSinceStart / totalWorkMinutes;
+  };
+
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
@@ -134,8 +164,6 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
     (selectedTeams.length > 0
       ? activeTeams.filter(team => selectedTeams.includes(team.id))
       : activeTeams);
-
-  const [appointmentsState, setAppointmentsState] = useState<any[]>(appointments);
 
   const handleChangeAppointmentDate = (appointmentId: string, newDate: string) => {
     setAppointmentsState(prevAppointments => {
@@ -154,6 +182,9 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
       if (appointmentToChangeDate && clientData.installationDate) {
         const team = clientData.team?.name || appointmentToChangeDate.team;
         
+        // Preserve the current status
+        const currentStatus = appointmentToChangeDate.status;
+        
         // Update both team and date at once
         await updateAppointmentTeam(
           appointmentToChangeDate.id,
@@ -169,14 +200,15 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
               date: clientData.installationDate,
               installationDate: clientData.installationDate,
               team: team,
-              teamColor: clientData.team?.color || app.teamColor
+              teamColor: clientData.team?.color || app.teamColor,
+              status: currentStatus // Ensure status is preserved
             };
           }
           return app;
         }));
         
         setShowSuccessToast(true);
-        console.log(`Rendez-vous mis à jour - Date: ${clientData.installationDate}, Équipe: ${team}`);
+        console.log(`Rendez-vous mis à jour - Date: ${clientData.installationDate}, Équipe: ${team}, Statut: ${currentStatus}`);
       }
       
       setAppointmentToChangeDate(null);
@@ -260,6 +292,7 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
       }
     }
   };
+
   return (
     <>
       <div className="min-w-[1200px]">
@@ -406,14 +439,23 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                             project.id === appointment.projectId
                           );
                           
-                          if (matchingProject?.status) {
-                            // Convertir le statut du projet au format attendu par PROJECT_STATUS_COLORS
-                            const mappedStatus = statusMapping[matchingProject.status] || matchingProject.status;
-                            
-                            if (PROJECT_STATUS_COLORS[mappedStatus as keyof typeof PROJECT_STATUS_COLORS]) {
-                              backgroundColor = PROJECT_STATUS_COLORS[mappedStatus as keyof typeof PROJECT_STATUS_COLORS];
-                              console.log(`Projet trouvé: ${matchingProject.name}, statut: ${matchingProject.status}, couleur: ${backgroundColor}`);
+                          // Vérifier d'abord le statut de l'appointment
+                          let statusToUse = appointment.status;
+                          
+                          // Si un projet correspondant est trouvé, utiliser son statut ou celui de son premier produit
+                          if (matchingProject) {
+                            if (matchingProject.products && matchingProject.products.length > 0 && matchingProject.products[0].status) {
+                              statusToUse = matchingProject.products[0].status;
+                            } else if (matchingProject.status) {
+                              statusToUse = matchingProject.status;
                             }
+                          }
+                          
+                          // Mapper le statut et appliquer la couleur
+                          const mappedStatus = statusMapping[statusToUse] || statusToUse;
+                          if (PROJECT_STATUS_COLORS[mappedStatus as keyof typeof PROJECT_STATUS_COLORS]) {
+                            backgroundColor = PROJECT_STATUS_COLORS[mappedStatus as keyof typeof PROJECT_STATUS_COLORS];
+                            console.log(`Rendez-vous: ${appointment.title}, statut utilisé: ${statusToUse}, couleur: ${backgroundColor}`);
                           }
 
                           return (
@@ -584,4 +626,5 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
         )}
       </AnimatePresence>
     </>
-  );}
+  );
+};

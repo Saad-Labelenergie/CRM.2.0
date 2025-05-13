@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -13,13 +13,49 @@ import {
   Phone,
   Mail,
   AlertCircle,
-  ArrowRight
+  ArrowRight,
+  Check
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useState } from 'react';
 import { UpdateClientModal } from './change-semain';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
+import { updateProjectStatus } from '../../../lib/hooks/useProjects';
+import { doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../../lib/firebase';
+
+// Définir les couleurs de statut comme dans team-schedule-view.tsx
+const PROJECT_STATUS_COLORS = {
+  'confirmer': '#E67C73',  // Confirmé - rouge clair
+  'placer': '#039BE5',     // Placé - bleu clair
+  'charger': '#3F51B5',    // Chargé - bleu indigo
+  'encours': '#8E24AA',    // En cours - violet
+  'terminer': '#33B679',   // Terminé - vert
+  'annuler': '#D50000',    // Annulé - rouge vif
+  'attribue': '#039BE5',   // Attribué - bleu clair
+};
+
+// Mappage des statuts pour standardisation
+const STATUS_MAPPING: Record<string, string> = {
+  'encours': 'encours',
+  'terminer': 'terminer',
+  'annuler': 'annuler',
+  'charger': 'charger',
+  'confirmer': 'confirmer',
+  'placer': 'placer',
+  'attribue': 'attribue',
+};
+
+// Traduction des statuts pour l'affichage
+const STATUS_DISPLAY_NAMES: Record<string, string> = {
+  'encours': 'En cours',
+  'terminer': 'Terminé',
+  'annuler': 'Annulé',
+  'charger': 'Chargé',
+  'confirmer': 'Confirmé',
+  'placer': 'Placé',
+  'attribue': 'Attribué',
+};
 
 interface ProjectDetailsModalProps {
   isOpen: boolean;
@@ -32,7 +68,7 @@ interface ProjectDetailsModalProps {
       name: string;
       postalCode: string;
     };
-    contact?: { // Move contact to the root level
+    contact?: {
       email: string;
       phone: string;
       firstName: string;
@@ -56,8 +92,64 @@ export function ProjectDetailsModal({ isOpen, onClose, appointment }: ProjectDet
   const navigate = useNavigate();
   const [isChangeDateModalOpen, setIsChangeDateModalOpen] = useState(false);
   const { updateAppointmentTeam } = useScheduling();
+  const [associatedProject, setAssociatedProject] = useState<any>(null);
+  
+  useEffect(() => {
+    // Rechercher le projet associé lorsque le rendez-vous change
+    const fetchAssociatedProject = async () => {
+      if (!appointment) return;
+      
+      try {
+        const projectsRef = collection(db, 'projects');
+        const q = query(projectsRef, where('name', '==', appointment.title));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const projectData = querySnapshot.docs[0].data();
+          console.log("Données brutes du projet:", projectData);
+          
+          // S'assurer que les données du projet sont correctement structurées
+          setAssociatedProject({
+            id: querySnapshot.docs[0].id,
+            ...projectData
+          });
+          
+          // Vérifier si le projet a des produits avec un statut
+          if (projectData.products && projectData.products.length > 0) {
+            console.log("Produits trouvés:", projectData.products);
+            console.log("Statut du produit:", projectData.products[0].status);
+          }
+        } else {
+          setAssociatedProject(null);
+          console.log("Aucun projet associé trouvé");
+        }
+      } catch (error) {
+        console.error("Erreur lors de la recherche du projet associé:", error);
+        setAssociatedProject(null);
+      }
+    };
+    
+    fetchAssociatedProject();
+  }, [appointment]);
   
   if (!appointment) return null;
+
+  // Déterminer le statut à afficher (priorité au statut du produit dans le projet)
+  // Vérifier si les produits existent dans la structure de données
+  const products = associatedProject?.products || [];
+  const productStatus = products.length > 0 ? products[0].status : undefined;
+  
+  console.log("Produits:", products);
+  console.log("Statut du produit:", productStatus);
+  console.log("Statut du projet:", associatedProject?.status);
+  console.log("Statut du rendez-vous:", appointment.status);
+  
+  const displayStatus = productStatus || associatedProject?.status || appointment.status;
+  console.log("Statut final affiché:", displayStatus);
+  
+  const mappedStatus = STATUS_MAPPING[displayStatus] || displayStatus;
+  const statusDisplayName = STATUS_DISPLAY_NAMES[mappedStatus] || mappedStatus;
+  const statusColor = PROJECT_STATUS_COLORS[mappedStatus as keyof typeof PROJECT_STATUS_COLORS] || '#999';
 
   // Add this to debug the commentaires structure
   console.log('Appointment data:', appointment);
@@ -82,6 +174,70 @@ export function ProjectDetailsModal({ isOpen, onClose, appointment }: ProjectDet
 
   const handleChangeDate = () => {
     setIsChangeDateModalOpen(true);
+  };
+
+  // Add this new function to handle project confirmation
+  const handleConfirmProject = async () => {
+    try {
+      console.log("Tentative de confirmation du projet avec ID:", appointment.id);
+      
+      // First, update the appointment status
+      const appointmentRef = doc(db, 'appointments', appointment.id);
+      await updateDoc(appointmentRef, {
+        status: 'confirmer',
+        updatedAt: new Date()
+      });
+      console.log("Statut de l'appointment mis à jour: confirmer");
+      
+      // Then try to find and update the associated project
+      if (associatedProject?.id) {
+        console.log("ID du projet trouvé:", associatedProject.id);
+        await updateProjectStatus(associatedProject.id, 'confirmer');
+        console.log("Projet confirmé avec succès");
+        
+        // Mettre à jour l'état local
+        setAssociatedProject({
+          ...associatedProject,
+          status: 'confirmer'
+        });
+        
+        // Force refresh of the calendar view
+        window.dispatchEvent(new CustomEvent('project-status-updated', { 
+          detail: { 
+            projectId: associatedProject.id, 
+            appointmentId: appointment.id,
+            status: 'confirmer' 
+          } 
+        }));
+      } else {
+        // Look for a project with the same name/title as the appointment
+        const projectsRef = collection(db, 'projects');
+        const q = query(projectsRef, where('name', '==', appointment.title));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const projectId = querySnapshot.docs[0].id;
+          console.log("ID du projet trouvé:", projectId);
+          await updateProjectStatus(projectId, 'confirmer');
+          console.log("Projet confirmé avec succès");
+          
+          // Force refresh of the calendar view
+          window.dispatchEvent(new CustomEvent('project-status-updated', { 
+            detail: { 
+              projectId, 
+              appointmentId: appointment.id,
+              status: 'confirmer' 
+            } 
+          }));
+        } else {
+          console.log("Aucun projet trouvé avec ce titre, mise à jour de l'appointment uniquement");
+        }
+      }
+      
+      onClose();
+    } catch (error) {
+      console.error('Erreur lors de la confirmation du projet:', error);
+    }
   };
 
   const handleSaveDateChange = async (newData: any) => {
@@ -170,8 +326,10 @@ export function ProjectDetailsModal({ isOpen, onClose, appointment }: ProjectDet
                         <span>Code postal : {appointment.client.postalCode}</span>
                       </div>
                       <div className="flex items-center text-sm">
-                        <AlertCircle className="w-4 h-4 mr-2 text-muted-foreground" />
-                        <span>Statut : {appointment.status}</span>
+                        <AlertCircle className="w-4 h-4 mr-2" style={{ color: statusColor }} />
+                        <span style={{ color: statusColor, fontWeight: 'medium' }}>
+                          Statut : {statusDisplayName}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -223,6 +381,18 @@ export function ProjectDetailsModal({ isOpen, onClose, appointment }: ProjectDet
 
 
                 <div className="flex justify-end pt-4 space-x-2">
+                  {/* Afficher le bouton Confirmer seulement si le statut n'est pas déjà confirmé ou terminé */}
+                  {mappedStatus !== 'confirmer' && mappedStatus !== 'terminer' && (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleConfirmProject}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                    >
+                      <Check className="w-4 h-4 mr-2" />
+                      Confirmer
+                    </motion.button>
+                  )}
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -256,7 +426,6 @@ export function ProjectDetailsModal({ isOpen, onClose, appointment }: ProjectDet
         teams={[]} // Passer les équipes disponibles si nécessaire
       />
     </>
-    
   );
 }
 
