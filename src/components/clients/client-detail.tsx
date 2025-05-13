@@ -1,5 +1,7 @@
 import React, { useState,useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Pencil } from 'lucide-react';
+import EditContactModal from './components/EditContactModal';
 import { UpdateClientModal } from './components/update-client-modal';
 import { useProducts } from '../../lib/hooks/useProducts';
 import { useAppointments } from '../../lib/hooks/useAppointments';
@@ -62,6 +64,7 @@ export function ClientDetail() {
   const [showSuccessToast, setShowSuccessToast] = useState(false);  
   const [maintenanceRecords, setMaintenanceRecords] = useState<any[]>([]);
   const { tickets } = useSAV();
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
 
 
@@ -202,6 +205,7 @@ const handleDeleteClient = async (clientId: string) => {
     console.error('Erreur lors de la suppression :', error);
   }
 };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -248,14 +252,19 @@ const handleDeleteClient = async (clientId: string) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <motion.div
-            whileHover={{ y: -5 }}
-            className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
-          >
-            <h2 className="text-xl font-semibold mb-6 flex items-center">
-              <Users className="w-5 h-5 mr-2 text-blue-500" />
-              Contact
-            </h2>
+        <motion.div
+  whileHover={{ y: -5 }}
+  className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
+>
+  <div className="flex justify-between items-center mb-6">
+    <h2 className="text-xl font-semibold flex items-center">
+      <Users className="w-5 h-5 mr-2 text-blue-500" />
+      Contact
+    </h2>
+    <button onClick={() => setIsModalOpen(true)} title="Modifier le contact">
+      <Pencil className="w-5 h-5 text-muted-foreground hover:text-primary transition" />
+    </button>
+  </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
@@ -290,6 +299,7 @@ const handleDeleteClient = async (clientId: string) => {
                 </div>
               </div>
             </div>
+
           </motion.div>
 
           <motion.div
@@ -607,6 +617,13 @@ const handleDeleteClient = async (clientId: string) => {
         isVisible={showSuccessToast}
         onClose={() => setShowSuccessToast(false)}
       />
+                  {isModalOpen && (
+    <EditContactModal
+      contact={client.contact}
+      onClose={() => setIsModalOpen(false)}
+      clientId={client.id}
+    />
+  )}
     </motion.div>
   );
 }
