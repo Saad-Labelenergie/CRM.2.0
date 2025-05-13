@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Users, Calendar, AlertTriangle } from 'lucide-react';
+import { X, Check, Users, Calendar, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
@@ -19,21 +19,42 @@ interface ChangeWeekTeamModalProps {
 export function ChangeWeekTeamModal({ isOpen, onClose, currentTeam, weekDates, onSave }: ChangeWeekTeamModalProps) {
   const { teams } = useScheduling();
   const [selectedTeam, setSelectedTeam] = React.useState<string>('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const teamsPerPage = 5; // Number of teams to display per page
 
   // Réinitialiser l'équipe sélectionnée quand la modale s'ouvre
   React.useEffect(() => {
     if (isOpen && currentTeam) {
       setSelectedTeam('');
+      setCurrentPage(1); // Reset to first page when modal opens
     }
   }, [isOpen, currentTeam]);
 
   const activeTeams = teams.filter(team => team.isActive && team.id !== currentTeam?.id);
+  
+  // Calculate pagination
+  const totalPages = Math.ceil(activeTeams.length / teamsPerPage);
+  const indexOfLastTeam = currentPage * teamsPerPage;
+  const indexOfFirstTeam = indexOfLastTeam - teamsPerPage;
+  const currentTeams = activeTeams.slice(indexOfFirstTeam, indexOfLastTeam);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (currentTeam && selectedTeam) {
       onSave(currentTeam.id, selectedTeam);
       onClose();
+    }
+  };
+
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
     }
   };
 
@@ -54,7 +75,7 @@ export function ChangeWeekTeamModal({ isOpen, onClose, currentTeam, weekDates, o
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="relative w-full max-w-md bg-card p-6 rounded-xl shadow-xl z-50 border border-border/50 mx-4"
+            className="relative w-full max-w-md bg-card p-6 rounded-xl shadow-xl z-50 border border-border/50 mx-4 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold flex items-center">
@@ -105,8 +126,8 @@ export function ChangeWeekTeamModal({ isOpen, onClose, currentTeam, weekDates, o
                   <label className="block text-sm font-medium text-muted-foreground mb-2">
                     Sélectionner une nouvelle équipe
                   </label>
-                  <div className="space-y-2">
-                    {activeTeams.map((team) => (
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {currentTeams.map((team) => (
                       <button
                         key={team.id}
                         type="button"
@@ -127,9 +148,36 @@ export function ChangeWeekTeamModal({ isOpen, onClose, currentTeam, weekDates, o
                       </button>
                     ))}
                   </div>
+                  
+                  {/* Pagination controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4">
+                      <div className="text-sm text-muted-foreground">
+                        Page {currentPage} sur {totalPages}
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          type="button"
+                          onClick={prevPage}
+                          disabled={currentPage === 1}
+                          className="p-1 rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={nextPage}
+                          disabled={currentPage === totalPages}
+                          className="p-1 rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
+                        >
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex justify-end space-x-2 pt-4">
+                <div className="flex justify-end space-x-2 pt-4 sticky bottom-0 bg-card pb-2">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}

@@ -52,7 +52,7 @@ export function Calendar() {
       const appDate = new Date(app.date);
       const isInCurrentWeek = appDate >= weekStart && appDate <= weekEnd;
       
-      // Filtrer par équipe sélectionnée
+   
       const isTeamSelected = selectedTeams.length === 0 || 
         (app.team && teams.some(t => selectedTeams.includes(t.id) && t.name === app.team));
       
@@ -369,10 +369,12 @@ export function Calendar() {
       </div>
 
       {/* Vue du planning */}
-      <TeamScheduleView 
-        filteredAppointments={filteredAppointments} 
-        filteredTeams={selectedTeams.length > 0 ? teams.filter(team => selectedTeams.includes(team.id)) : undefined}
-      />
+      <div className="calendar-container">
+        <TeamScheduleView 
+          filteredAppointments={filteredAppointments} 
+          filteredTeams={selectedTeams.length > 0 ? teams.filter(team => selectedTeams.includes(team.id)) : undefined}
+        />
+      </div>
     </div>
   );
 }

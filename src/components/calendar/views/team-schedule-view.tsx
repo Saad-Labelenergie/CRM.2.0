@@ -13,6 +13,7 @@ import { UpdateClientModal } from '../components/change-semain';
 import { collection, getDocs,query,where,updateDoc,doc,increment } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 
+// Modifier la constante WORKING_HOURS si nécessaire
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const WORKING_HOURS = { start: { hour: 9, minute: 0 }, end: { hour: 18, minute: 0 } };
 
@@ -357,7 +358,7 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                   return (
                     <div
                       key={day.toString()}
-                      className={`min-h-[120px] p-2 border-l border-border/50 relative ${
+                      className={`min-h-[100px] p-2 border-l border-border/50 relative ${
                         isToday(day) ? 'bg-accent/10' : ''
                       }`}
                     >

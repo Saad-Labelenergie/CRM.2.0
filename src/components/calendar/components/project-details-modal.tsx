@@ -21,7 +21,7 @@ import { fr } from 'date-fns/locale';
 import { UpdateClientModal } from './change-semain';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
 import { updateProjectStatus } from '../../../lib/hooks/useProjects';
-import { doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, where, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 
 // Définir les couleurs de statut comme dans team-schedule-view.tsx
@@ -100,6 +100,10 @@ export function ProjectDetailsModal({ isOpen, onClose, appointment }: ProjectDet
       if (!appointment) return;
       
       try {
+        // Log the appointment data for debugging
+        console.log("Appointment data for debugging:", appointment);
+        
+        // First try to find an associated project
         const projectsRef = collection(db, 'projects');
         const q = query(projectsRef, where('name', '==', appointment.title));
         const querySnapshot = await getDocs(q);
@@ -114,14 +118,114 @@ export function ProjectDetailsModal({ isOpen, onClose, appointment }: ProjectDet
             ...projectData
           });
           
+          // Vérifier si le projet a des commentaires
+          if (projectData.commentaires && projectData.commentaires.length > 0) {
+            console.log("Commentaires trouvés:", projectData.commentaires);
+          }
+          
           // Vérifier si le projet a des produits avec un statut
           if (projectData.products && projectData.products.length > 0) {
             console.log("Produits trouvés:", projectData.products);
             console.log("Statut du produit:", projectData.products[0].status);
           }
+          
+          // Récupérer les informations du client si disponibles
+          if (projectData.clientId) {
+            try {
+              const clientDocRef = doc(db, 'clients', projectData.clientId);
+              const clientSnapshot = await getDoc(clientDocRef);
+              if (clientSnapshot.exists()) {
+                const clientData = clientSnapshot.data();
+                console.log("Données du client depuis le projet:", clientData);
+                
+                // Mettre à jour les informations du projet avec les données du client
+                setAssociatedProject((prev: any) => ({
+                  ...prev,
+                  clientData: clientData
+                }));
+              }
+            } catch (error) {
+              console.error("Erreur lors de la récupération des données client:", error);
+            }
+          }
         } else {
-          setAssociatedProject(null);
           console.log("Aucun projet associé trouvé");
+          
+          // If no project is found by name, try to find by ID
+          if (appointment.id) {
+            try {
+              const projectDocRef = doc(db, 'projects', appointment.id);
+              const projectSnapshot = await getDoc(projectDocRef);
+              
+              if (projectSnapshot.exists()) {
+                const projectData = projectSnapshot.data();
+                console.log("Projet trouvé par ID:", projectData);
+                
+                setAssociatedProject({
+                  id: appointment.id,
+                  ...projectData
+                });
+                
+                // Check for comments in this project
+                if (projectData.commentaires && projectData.commentaires.length > 0) {
+                  console.log("Commentaires trouvés par ID:", projectData.commentaires);
+                }
+              } else {
+                console.log("Aucun projet trouvé avec cet ID:", appointment.id);
+              }
+            } catch (error) {
+              console.error("Erreur lors de la recherche du projet par ID:", error);
+            }
+          }
+        }
+        
+        // Regardless of whether a project was found, try to get client data directly
+        // This ensures we have client data even if no project is found
+        if (appointment.client && appointment.client.name) {
+          try {
+            // Try to find client by name
+            const clientsRef = collection(db, 'clients');
+            const clientQuery = query(clientsRef, where('name', '==', appointment.client.name));
+            const clientQuerySnapshot = await getDocs(clientQuery);
+            
+            if (!clientQuerySnapshot.empty) {
+              const clientData = clientQuerySnapshot.docs[0].data();
+              const clientId = clientQuerySnapshot.docs[0].id;
+              console.log("Client trouvé par nom:", clientData);
+              
+              // Set or update the associated project with client data
+              setAssociatedProject((prev: any) => ({
+                ...prev,
+                clientData: clientData,
+                clientId: clientId
+              }));
+            } else {
+              // If client not found by name, try to find by ID if available
+              if (appointment.client.id && 
+                  String(appointment.client.id) !== 'NaN' && 
+                  !isNaN(Number(appointment.client.id))) {
+                const clientDocRef = doc(db, 'clients', appointment.client.id.toString());
+                const clientSnapshot = await getDoc(clientDocRef);
+                
+                if (clientSnapshot.exists()) {
+                  const clientData = clientSnapshot.data();
+                  console.log("Client trouvé par ID:", clientData);
+                  
+                  setAssociatedProject((prev: any) => ({
+                    ...prev,
+                    clientData: clientData,
+                    clientId: appointment.client.id.toString()
+                  }));
+                } else {
+                  console.log("Aucun client trouvé avec cet ID:", appointment.client.id);
+                }
+              } else {
+                console.log("Aucun client trouvé avec ce nom:", appointment.client.name);
+              }
+            }
+          } catch (error) {
+            console.error("Erreur lors de la récupération des données client:", error);
+          }
         }
       } catch (error) {
         console.error("Erreur lors de la recherche du projet associé:", error);
@@ -341,40 +445,89 @@ export function ProjectDetailsModal({ isOpen, onClose, appointment }: ProjectDet
                   <p className="text-sm">{appointment.title}</p>
                 </div>
 
-                {/* Update this section for comments */}
-                {appointment?.commentaires && appointment.commentaires.length > 0 && (
-                  <div className="bg-accent/50 rounded-lg p-4">
-                    <h3 className="font-medium mb-4">Commentaires</h3>
-                    {appointment.commentaires.map((comment, index) => (
-                      <div key={comment.id} className="mb-4">
-                        <div className="flex justify-between text-sm text-muted-foreground mb-1">
-                          <span>{comment.authorName}</span>
-                          <span>{format(new Date(comment.date), 'dd/MM/yyyy HH:mm', { locale: fr })}</span>
+                {/* Section des commentaires - Always show the section, with a message if no comments */}
+                <div className="bg-accent/50 rounded-lg p-4">
+                  <h3 className="font-medium mb-4">Commentaires</h3>
+                  
+                  {/* Show comments if they exist */}
+                  {appointment?.commentaires && appointment.commentaires.length > 0 ? (
+                    <>
+                      {/* Commentaires du rendez-vous */}
+                      {appointment.commentaires.map((comment, index) => (
+                        <div key={`appointment-${comment.id}`} className="mb-4">
+                          <div className="flex justify-between text-sm text-muted-foreground mb-1">
+                            <span>{comment.authorName}</span>
+                            <span>{format(new Date(comment.date), 'dd/MM/yyyy HH:mm', { locale: fr })}</span>
+                          </div>
+                          <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
+                          {appointment.commentaires && 
+                          index < appointment.commentaires.length - 1 && (
+                            <hr className="my-2 border-border/50" />
+                          )}
                         </div>
-                        <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
-                        {appointment.commentaires && index < appointment.commentaires.length - 1 && (
-                          <hr className="my-2 border-border/50" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </>
+                  ) : associatedProject?.commentaires && associatedProject.commentaires.length > 0 ? (
+                    <>
+                      {/* Commentaires du projet associé */}
+                      {associatedProject.commentaires.map((comment: {
+                        authorName: string;
+                        content: string;
+                        date: string;
+                        id: string;
+                      }, index: number) => (
+                        <div key={`project-${comment.id || index}`} className="mb-4">
+                          <div className="flex justify-between text-sm text-muted-foreground mb-1">
+                            <span>{comment.authorName || "Utilisateur"}</span>
+                            <span>{comment.date ? format(new Date(comment.date), 'dd/MM/yyyy HH:mm', { locale: fr }) : ""}</span>
+                          </div>
+                          <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
+                          {associatedProject.commentaires && 
+                          index < associatedProject.commentaires.length - 1 && (
+                            <hr className="my-2 border-border/50" />
+                          )}
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Aucun commentaire disponible</p>
+                  )}
+                </div>
 
                 {/* Contacts */}
                 <div className="bg-accent/50 rounded-lg p-4">
                   <h3 className="font-medium mb-4">Contacts</h3>
                   <div className="space-y-2">
-                    {appointment.contact?.phone && (
+                    {/* Afficher le téléphone du contact */}
+                    {(appointment.contact?.phone || associatedProject?.clientData?.contact?.phone) && (
                       <div className="flex items-center text-sm">
                         <Phone className="w-4 h-4 mr-2 text-muted-foreground" />
-                        <span>{appointment.contact.phone}</span>
+                        <span>{appointment.contact?.phone || associatedProject?.clientData?.contact?.phone}</span>
                       </div>
                     )}
-                    {appointment.contact?.email && (
+                    
+                    {/* Afficher l'email du contact */}
+                    {(appointment.contact?.email || associatedProject?.clientData?.contact?.email) && (
                       <div className="flex items-center text-sm">
                         <Mail className="w-4 h-4 mr-2 text-muted-foreground" />
-                        <span>{appointment.contact.email}</span>
+                        <span>{appointment.contact?.email || associatedProject?.clientData?.contact?.email}</span>
                       </div>
+                    )}
+                    
+                    {/* Afficher le nom complet du contact */}
+                    {(associatedProject?.clientData?.contact?.firstName || associatedProject?.clientData?.contact?.lastName) && (
+                      <div className="flex items-center text-sm">
+                        <Users className="w-4 h-4 mr-2 text-muted-foreground" />
+                        <span>
+                          {associatedProject?.clientData?.contact?.firstName} {associatedProject?.clientData?.contact?.lastName}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Message si aucun contact n'est disponible */}
+                    {!appointment.contact?.phone && !appointment.contact?.email && 
+                     !associatedProject?.clientData?.contact?.phone && !associatedProject?.clientData?.contact?.email && (
+                      <p className="text-sm text-muted-foreground">Aucune information de contact disponible</p>
                     )}
                   </div>
                 </div>
