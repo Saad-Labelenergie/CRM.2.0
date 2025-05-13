@@ -391,7 +391,7 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
             name: p?.name ?? 'unknown-product',
             type: p?.type ?? 'unknown-type',
           })), 
-          status: formData.selectedTeam ? 'attribue' : 'en_attente',
+          status: 'placer',
           startDate: formData.installationDate ?? null,
           type: formData.selectedProducts?.[0]?.type?.toUpperCase() ?? 'STANDARD',
           team: formData.selectedTeam?.name ?? null,
@@ -483,13 +483,19 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
                       const existing = formData.selectedProducts.find(p => p.id === product.id);
                     
                       if (existing) {
-                        // Augmenter la quantité
-                        const updatedProducts = formData.selectedProducts.map(p =>
-                          p.id === product.id ? { ...p, quantity: p.quantity + 1 } : p
-                        );
-                        handleFieldUpdate('selectedProducts', updatedProducts);
+                        if (existing.quantity > 1) {
+                          // Décrémenter la quantité
+                          const updatedProducts = formData.selectedProducts.map(p =>
+                            p.id === product.id ? { ...p, quantity: p.quantity - 1 } : p
+                          );
+                          handleFieldUpdate('selectedProducts', updatedProducts);
+                        } else {
+                          // Retirer complètement le produit
+                          const updatedProducts = formData.selectedProducts.filter(p => p.id !== product.id);
+                          handleFieldUpdate('selectedProducts', updatedProducts);
+                        }
                       } else {
-                        // Ajouter avec quantité 1
+                        // Ajouter le produit avec une quantité de 1
                         handleFieldUpdate('selectedProducts', [...formData.selectedProducts, { ...product, quantity: 1 }]);
                       }
                     }}
