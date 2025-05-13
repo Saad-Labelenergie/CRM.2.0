@@ -78,7 +78,7 @@ export function NewUserModal({ isOpen, onClose, onSave }: NewUserModalProps) {
       case 'Administrateur':
         return '/images/Admin.png';
       default:
-        return '/default-avatar.png';
+        return 'avatars/avatar.png';
     }
   };
 

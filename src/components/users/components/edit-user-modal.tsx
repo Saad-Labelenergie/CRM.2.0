@@ -66,7 +66,7 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
       case 'Administrateur':
         return '/images/Admin.png';
       default:
-        return '/default-avatar.png';
+        return 'avatars/avatar.png';
     }
   };
 
