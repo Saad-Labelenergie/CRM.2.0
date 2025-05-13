@@ -468,14 +468,7 @@ const paginatedProjects = filteredProjects.slice((currentPage - 1) * itemsPerPag
           
           
         );})}
-        {/* Systeme de Pagination */}
-                  <div className="flex justify-center items-center gap-2 mt-6">
-  <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">« First</button>
-  <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">‹ Prev</button>
-  <span className="px-3">{currentPage} / {totalPages}</span>
-  <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">Next ›</button>
-  <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">Last »</button>
-</div>
+
       </motion.div>
       
          ) : (
@@ -576,15 +569,16 @@ const paginatedProjects = filteredProjects.slice((currentPage - 1) * itemsPerPag
 
 
           </table>
-          <div className="flex justify-center items-center gap-2 mt-6">
+
+        </div>
+        )}
+        <div className="flex justify-center items-center gap-2 mt-8">
   <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">« First</button>
   <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">‹ Prev</button>
   <span className="px-3">{currentPage} / {totalPages}</span>
   <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">Next ›</button>
   <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">Last »</button>
 </div>
-        </div>
-        )}
       <AnimatePresence>
   {cancelProjectId && (
     <CancelConfirmationModal 
