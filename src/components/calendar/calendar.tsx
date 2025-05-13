@@ -20,6 +20,8 @@ import { fr } from 'date-fns/locale';
 import { useCalendarStore } from '../../lib/calendar/calendar-store';
 import { useScheduling } from '../../lib/scheduling/scheduling-context';
 import { TeamScheduleView } from './views/team-schedule-view';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart as RechartsBarChart, 
+  Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
 // Définir les types de périodes pour les statistiques
 type StatsPeriod = 'week' | 'month' | 'quarter' | 'semester' | 'year' | 'all';
@@ -118,7 +120,8 @@ export function Calendar() {
     const byStatus = {
       attribue: filteredAppointments.filter(app => app.status === 'attribue').length,
       termine: filteredAppointments.filter(app => app.status === 'termine').length,
-      nonAttribue: filteredAppointments.filter(app => app.status === 'non_attribue' || !app.status).length,
+      // Calculer nonAttribue comme la différence entre le total et les attribués
+      nonAttribue: filteredAppointments.length - filteredAppointments.filter(app => app.status === 'attribue').length,
       aVenir: filteredAppointments.filter(app => {
         const appDate = new Date(app.date);
         return appDate > now;
@@ -151,6 +154,27 @@ export function Calendar() {
       default: return 'Période inconnue';
     }
   };
+
+  // Données pour le graphique en camembert
+  const pieChartData = useMemo(() => {
+    return [
+      { name: 'Attribués', value: stats.byStatus.attribue, color: '#10b981' },
+      { name: 'Terminés', value: stats.byStatus.termine, color: '#3b82f6' },
+      { name: 'Non attribués', value: stats.byStatus.nonAttribue, color: '#f59e0b' },
+    ];
+  }, [stats]);
+
+  // Données pour le graphique en barres des équipes
+  const teamBarChartData = useMemo(() => {
+    return teams
+      .filter(team => stats.byTeam[team.id] > 0)
+      .slice(0, 5) // Limiter à 5 équipes pour la lisibilité
+      .map(team => ({
+        name: team.name,
+        appointments: stats.byTeam[team.id],
+        color: team.color || '#888'
+      }));
+  }, [teams, stats]);
 
   return (
     <div className="space-y-6">
@@ -211,56 +235,150 @@ export function Calendar() {
         </div>
       </div>
 
-      {/* Statistiques du planning */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-card rounded-xl p-4 border border-border/50 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-muted-foreground">Total Rendez-vous</h3>
-            <CalendarIcon className="w-5 h-5 text-primary" />
+      {/* Statistiques du planning avec visualisations */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Carte des statistiques numériques */}
+        <div className="bg-card rounded-xl p-6 border border-border/50 shadow-sm">
+          <h3 className="text-lg font-medium mb-4">Aperçu des rendez-vous</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-accent/30 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium text-muted-foreground">Total</h4>
+                <CalendarIcon className="w-5 h-5 text-primary" />
+              </div>
+              <p className="text-2xl font-bold mt-2">{stats.totalAppointments}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {getPeriodLabel(statsPeriod)}
+              </p>
+            </div>
+            
+            <div className="bg-accent/30 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium text-muted-foreground">Attribués</h4>
+                <CheckCircle className="w-5 h-5 text-green-500" />
+              </div>
+              <p className="text-2xl font-bold mt-2">{stats.byStatus.attribue}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {stats.totalAppointments > 0 
+                  ? `${Math.round((stats.byStatus.attribue / stats.totalAppointments) * 100)}%`
+                  : '0%'}
+              </p>
+            </div>
+            
+            <div className="bg-accent/30 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium text-muted-foreground">Terminés</h4>
+                <Clock className="w-5 h-5 text-blue-500" />
+              </div>
+              <p className="text-2xl font-bold mt-2">{stats.byStatus.termine}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {stats.totalAppointments > 0 
+                  ? `${Math.round((stats.byStatus.termine / stats.totalAppointments) * 100)}%`
+                  : '0%'}
+              </p>
+            </div>
+            
+            <div className="bg-accent/30 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium text-muted-foreground">Non attribués</h4>
+                <AlertCircle className="w-5 h-5 text-amber-500" />
+              </div>
+              <p className="text-2xl font-bold mt-2">{stats.byStatus.nonAttribue}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {stats.totalAppointments > 0 
+                  ? `${Math.round((stats.byStatus.nonAttribue / stats.totalAppointments) * 100)}%`
+                  : '0%'}
+              </p>
+            </div>
           </div>
-          <p className="text-2xl font-bold mt-2">{stats.totalAppointments}</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {getPeriodLabel(statsPeriod)}
-          </p>
         </div>
-        
-        <div className="bg-card rounded-xl p-4 border border-border/50 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-muted-foreground">Attribués</h3>
-            <CheckCircle className="w-5 h-5 text-green-500" />
+
+        {/* Graphique en camembert */}
+        <div className="bg-card rounded-xl p-6 border border-border/50 shadow-sm">
+          <h3 className="text-lg font-medium mb-4">Répartition par statut</h3>
+          <div className="h-[250px] w-full">
+            {stats.totalAppointments > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <defs>
+                    {pieChartData.map((entry, index) => (
+                      <radialGradient key={`gradient-${index}`} id={`colorGradient-${index}`} cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+                        <stop offset="0%" stopColor={entry.color} stopOpacity={0.9} />
+                        <stop offset="80%" stopColor={entry.color} stopOpacity={0.8} />
+                        <stop offset="100%" stopColor={entry.color} stopOpacity={0.6} />
+                      </radialGradient>
+                    ))}
+                  </defs>
+                  <Pie
+                    data={pieChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    innerRadius={30}
+                    paddingAngle={4}
+                    dataKey="value"
+                    label={({ name, value, percent }) => 
+                      percent > 0.05 ? `${name} (${value})` : ''
+                    }
+                    animationBegin={0}
+                    animationDuration={1000}
+                    minAngle={3}
+                  >
+                    {pieChartData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={`url(#colorGradient-${index})`}
+                        stroke="var(--card)"
+                        strokeWidth={2}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value, name) => [`${value} rendez-vous (${Math.round((Number(value) / stats.totalAppointments) * 100)}%)`, name]}
+                    contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)' }}
+                  />
+                  <Legend 
+                    formatter={(value, entry) => {
+                      const { payload } = entry as any;
+                      const percent = payload.value / stats.totalAppointments;
+                      return `${value} (${Math.round(percent * 100)}%)`;
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground">
+                Aucune donnée disponible
+              </div>
+            )}
           </div>
-          <p className="text-2xl font-bold mt-2">{stats.byStatus.attribue}</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {stats.totalAppointments > 0 
-              ? `${Math.round((stats.byStatus.attribue / stats.totalAppointments) * 100)}% des rendez-vous`
-              : 'Aucun rendez-vous'}
-          </p>
         </div>
-        
-        <div className="bg-card rounded-xl p-4 border border-border/50 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-muted-foreground">Terminés</h3>
-            <Clock className="w-5 h-5 text-blue-500" />
+
+        {/* Graphique en barres des équipes */}
+        <div className="bg-card rounded-xl p-6 border border-border/50 shadow-sm lg:col-span-2">
+          <h3 className="text-lg font-medium mb-4">Rendez-vous par équipe (Top 5)</h3>
+          <div className="h-[250px] w-full">
+            {teamBarChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsBarChart data={teamBarChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => [`${value} rendez-vous`, '']} />
+                  <Legend />
+                  <Bar dataKey="appointments" name="Rendez-vous">
+                    {teamBarChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </RechartsBarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground">
+                Aucune donnée disponible
+              </div>
+            )}
           </div>
-          <p className="text-2xl font-bold mt-2">{stats.byStatus.termine}</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {stats.totalAppointments > 0 
-              ? `${Math.round((stats.byStatus.termine / stats.totalAppointments) * 100)}% des rendez-vous`
-              : 'Aucun rendez-vous'}
-          </p>
-        </div>
-        
-        <div className="bg-card rounded-xl p-4 border border-border/50 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-muted-foreground">Non attribués</h3>
-            <AlertCircle className="w-5 h-5 text-amber-500" />
-          </div>
-          <p className="text-2xl font-bold mt-2">{stats.byStatus.nonAttribue}</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {stats.totalAppointments > 0 
-              ? `${Math.round((stats.byStatus.nonAttribue / stats.totalAppointments) * 100)}% des rendez-vous`
-              : 'Aucun rendez-vous'}
-          </p>
         </div>
       </div>
 
