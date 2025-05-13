@@ -1,5 +1,6 @@
 import { useFirebase } from './useFirebase';
-import { getFirestore, doc, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 interface StepTimestamp {
   date: string;
@@ -50,22 +51,31 @@ export function useProjects() {
   return useFirebase<Project>('projects', { orderByField: 'startDate' });
 }
 
-export async function updateProjectStatus(projectId: string, newStatus: string) {
-  const db = getFirestore();
-  const projectRef = doc(db, 'projects', projectId);
-
+export const updateProjectStatus = async (projectId: string, newStatus: string) => {
   try {
-    await updateDoc(projectRef, { 
-      status: newStatus,
-      updatedAt: new Date() 
-    });
-    console.log(`Statut du projet ${projectId} mis à jour: ${newStatus}`);
-    return { id: projectId, status: newStatus };
+    // Vérifier si le document existe
+    const projectRef = doc(db, 'projects', projectId);
+    const projectSnap = await getDoc(projectRef);
+    
+    if (projectSnap.exists()) {
+      // Le document existe, on peut le mettre à jour
+      await updateDoc(projectRef, {
+        status: newStatus,
+        updatedAt: new Date()
+      });
+      console.log(`Statut du projet mis à jour: ${newStatus}`);
+    } else {
+      // Le document n'existe pas, on peut le créer ou chercher le bon ID
+      console.log(`Le projet avec l'ID ${projectId} n'existe pas dans Firestore`);
+      
+      // Rechercher le projet par d'autres moyens (par exemple par son nom)
+      // Cette partie dépend de votre structure de données
+    }
   } catch (error) {
     console.error('Erreur Firestore:', error);
     throw error;
   }
-}
+};
 
 export async function updateProjectSteps(projectId: string, updatedSteps: Step[]) {
   const db = getFirestore();
