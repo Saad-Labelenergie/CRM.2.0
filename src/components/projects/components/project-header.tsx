@@ -36,7 +36,7 @@ export function ProjectHeader({ onBack, projectName, clientName,onConfirmClick }
       
        <div className="flex items-center space-x-2">
         
-       {onConfirmClick && (
+       {/* {onConfirmClick && (
         
   <motion.button
     whileHover={status !== 'confirmer' ? { scale: 1.05 } : {}}
@@ -53,7 +53,7 @@ export function ProjectHeader({ onBack, projectName, clientName,onConfirmClick }
     
   </motion.button>
   
-)}
+)} */}
 
 
 
