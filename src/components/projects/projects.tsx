@@ -235,6 +235,8 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
   );
 };
 
+const [currentPage, setCurrentPage] = useState(1);
+const itemsPerPage = 6;
 
 const filteredProjects = projects.filter(project => {
   const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) || project.client.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -242,6 +244,8 @@ const filteredProjects = projects.filter(project => {
   const matchesTeam = selectedTeam === 'all' || project.team === selectedTeam;
   return matchesSearch && matchesStatus && matchesTeam;
 });
+const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
+const paginatedProjects = filteredProjects.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
 
   return (
@@ -367,7 +371,7 @@ const filteredProjects = projects.filter(project => {
         className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
       >
         
-        {filteredProjects.map((project) => {
+        {paginatedProjects.map((project) => {
           const projectProgress = statusProgressMap[project.status || 'confirmer'] ?? 0;
 
           return(
@@ -459,10 +463,21 @@ const filteredProjects = projects.filter(project => {
     <Ban className="w-4 h-4 text-red-500 inline mr-1" /> Annuler
   </motion.button>
             </div>
+            
           </motion.div>
           
+          
         );})}
+        {/* Systeme de Pagination */}
+                  <div className="flex justify-center items-center gap-2 mt-6">
+  <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">« First</button>
+  <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">‹ Prev</button>
+  <span className="px-3">{currentPage} / {totalPages}</span>
+  <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">Next ›</button>
+  <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">Last »</button>
+</div>
       </motion.div>
+      
          ) : (
           /* Nouvelle Vue Tableau */
           <div className="overflow-x-auto border rounded-lg">
@@ -479,7 +494,7 @@ const filteredProjects = projects.filter(project => {
             </thead>
             <tbody>
   <AnimatePresence>
-    {filteredProjects.map((project) => {
+    {paginatedProjects.map((project) => {
       const projectProgress = statusProgressMap[project.status || 'confirmer'] ?? 0;
 
       return (
@@ -561,6 +576,13 @@ const filteredProjects = projects.filter(project => {
 
 
           </table>
+          <div className="flex justify-center items-center gap-2 mt-6">
+  <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">« First</button>
+  <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">‹ Prev</button>
+  <span className="px-3">{currentPage} / {totalPages}</span>
+  <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">Next ›</button>
+  <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">Last »</button>
+</div>
         </div>
         )}
       <AnimatePresence>
