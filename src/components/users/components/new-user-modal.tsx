@@ -1,10 +1,7 @@
 import { useState } from 'react';
-import { X, Check,Edit2 } from 'lucide-react';
+import { X, Check, Edit2, Eye, EyeOff } from 'lucide-react';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
-import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
-// Remove bcryptjs import and keep the local import
 import { hashPassword } from '../../../lib/utils/password';
-import { Eye, EyeOff } from 'lucide-react';
 
 interface NewUserModalProps {
   isOpen: boolean;
@@ -15,6 +12,8 @@ interface NewUserModalProps {
 export function NewUserModal({ isOpen, onClose, onSave }: NewUserModalProps) {
   const { teams } = useScheduling();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+
   const [userData, setUserData] = useState({
     name: '',
     email: '',
@@ -26,16 +25,14 @@ export function NewUserModal({ isOpen, onClose, onSave }: NewUserModalProps) {
     team: '',
     avatar: ''
   });
-  const [showPassword, setShowPassword] = useState(false);
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = async () => {
       const imageDataUrl = reader.result as string;
-      
       try {
         const compressedImage = await compressImage(imageDataUrl, 200);
         setPreviewImage(compressedImage);
@@ -50,33 +47,53 @@ export function NewUserModal({ isOpen, onClose, onSave }: NewUserModalProps) {
     };
     reader.readAsDataURL(file);
   };
-const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.src = dataUrl;
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      let width = img.width;
-      let height = img.height;
-      if (width > maxWidth) {
-        height = Math.round((height * maxWidth) / width);
-        width = maxWidth;
-      }
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx?.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', 0.7)); 
-    };
-  });
-};
+
+  const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = dataUrl;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+    });
+  };
+
+  const getDefaultAvatar = (role: string) => {
+    switch (role) {
+      case 'Technicien':
+        return '/images/Technicien.png';
+      case 'manager':
+        return '/images/Manager.png';
+      case 'Administrateur':
+        return '/images/Admin.png';
+      default:
+        return '/default-avatar.png';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const hashedPassword = await hashPassword(userData.password);
+
+    const finalAvatar = userData.avatar || getDefaultAvatar(userData.role);
+
     onSave({
       ...userData,
-      password: hashedPassword
+      password: hashedPassword,
+      avatar: finalAvatar
     });
+
     setUserData({
       name: '',
       email: '',
@@ -90,6 +107,7 @@ const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
     });
     setPreviewImage(null);
   };
+
   return (
     <>
       {isOpen && (
@@ -103,16 +121,15 @@ const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Add image upload section at the top */}
               <div className="flex flex-col items-center space-y-4">
                 <div className="relative">
                   <img
-                    src={previewImage || '/default-avatar.png'}
+                    src={previewImage || getDefaultAvatar(userData.role)}
                     alt="Profile preview"
                     className="w-32 h-32 rounded-full object-cover border-4 border-primary/20"
                   />
-                  <label 
-                    htmlFor="avatar-upload" 
+                  <label
+                    htmlFor="avatar-upload"
                     className="absolute bottom-0 right-0 bg-primary text-primary-foreground p-2 rounded-full cursor-pointer hover:bg-primary/90 transition-colors"
                   >
                     <Edit2 className="w-4 h-4" />
@@ -126,7 +143,7 @@ const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
                   />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Click the edit icon to upload a profile photo
+                  Cliquez sur l’icône pour ajouter une photo de profil
                 </p>
               </div>
               <div>
@@ -164,11 +181,7 @@ const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-accent rounded-lg"
                   >
-                    {showPassword ? (
-                      <EyeOff className="w-4 h-4 text-muted-foreground" />
-                    ) : (
-                      <Eye className="w-4 h-4 text-muted-foreground" />
-                    )}
+                    {showPassword ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-muted-foreground" />}
                   </button>
                 </div>
               </div>
