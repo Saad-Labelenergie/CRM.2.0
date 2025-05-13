@@ -235,6 +235,7 @@ const CancelConfirmationModal = ({ cancelReason, setCancelReason, setCancelProje
   );
 };
 
+// Pagination Params
 const [currentPage, setCurrentPage] = useState(1);
 const itemsPerPage = 6;
 
@@ -572,6 +573,7 @@ const paginatedProjects = filteredProjects.slice((currentPage - 1) * itemsPerPag
 
         </div>
         )}
+        {/* Pagination */}
         <div className="flex justify-center items-center gap-2 mt-8">
   <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">« First</button>
   <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">‹ Prev</button>
