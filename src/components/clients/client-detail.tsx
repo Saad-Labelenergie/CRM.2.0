@@ -2,6 +2,7 @@ import React, { useState,useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Pencil } from 'lucide-react';
 import EditContactModal from './components/EditContactModal';
+import EditAddressModal from './components/EditAdressModal';
 import { UpdateClientModal } from './components/update-client-modal';
 import { useProducts } from '../../lib/hooks/useProducts';
 import { useAppointments } from '../../lib/hooks/useAppointments';
@@ -65,6 +66,7 @@ export function ClientDetail() {
   const [maintenanceRecords, setMaintenanceRecords] = useState<any[]>([]);
   const { tickets } = useSAV();
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false)
 
 
 
@@ -485,32 +487,38 @@ const handleDeleteClient = async (clientId: string) => {
         </div>
 
         <div className="space-y-6">
-          <motion.div
-            whileHover={{ y: -5 }}
-            className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
-          >
-            <h2 className="text-xl font-semibold mb-6 flex items-center">
-              <MapPin className="w-5 h-5 mr-2 text-red-500" />
-              Adresse
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <div className="text-sm text-muted-foreground">Rue</div>
-                <div className="font-medium mt-1">{client.address.street}</div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Code postal</div>
-                <div className="font-medium mt-1">{client.address.postalCode}</div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Ville</div>
-                <div className="font-medium mt-1">{client.address.city}</div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Pays</div>
-                <div className="font-medium mt-1">{client.address.country}</div>
-              </div>
-            </div>
+        <motion.div
+  whileHover={{ y: -5 }}
+  className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
+>
+  <div className="flex justify-between items-center mb-6">
+    <h2 className="text-xl font-semibold flex items-center">
+      <MapPin className="w-5 h-5 mr-2 text-red-500" />
+      Adresse
+    </h2>
+    <button onClick={() => setIsAddressModalOpen(true)} title="Modifier l'adresse">
+      <Pencil className="w-5 h-5 text-muted-foreground hover:text-primary transition" />
+    </button>
+  </div>
+
+  <div className="space-y-4">
+    <div>
+      <div className="text-sm text-muted-foreground">Rue</div>
+      <div className="font-medium mt-1">{client.address.street}</div>
+    </div>
+    <div>
+      <div className="text-sm text-muted-foreground">Code postal</div>
+      <div className="font-medium mt-1">{client.address.postalCode}</div>
+    </div>
+    <div>
+      <div className="text-sm text-muted-foreground">Ville</div>
+      <div className="font-medium mt-1">{client.address.city}</div>
+    </div>
+    <div>
+      <div className="text-sm text-muted-foreground">Pays</div>
+      <div className="font-medium mt-1">{client.address.country}</div>
+    </div>
+  </div>
           </motion.div>
 
           {client.tag && (
@@ -622,6 +630,13 @@ const handleDeleteClient = async (clientId: string) => {
       contact={client.contact}
       onClose={() => setIsModalOpen(false)}
       clientId={client.id}
+    />
+  )}
+    {isAddressModalOpen && (
+    <EditAddressModal
+      address={client.address}
+      clientId={client.id}
+      onClose={() => setIsAddressModalOpen(false)}
     />
   )}
     </motion.div>
