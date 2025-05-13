@@ -4,6 +4,7 @@ import { Pencil } from 'lucide-react';
 import EditContactModal from './components/EditContactModal';
 import EditAddressModal from './components/EditAdressModal';
 import EditTagModal from './components/EditTagModal';
+import EditProductsStepModal from './components/EditProductsModal';
 import { UpdateClientModal } from './components/update-client-modal';
 import { useProducts } from '../../lib/hooks/useProducts';
 import { useAppointments } from '../../lib/hooks/useAppointments';
@@ -69,6 +70,7 @@ export function ClientDetail() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false)
   const [isTagModalOpen, setIsTagModalOpen] = useState(false)
+  const [isProductsModalOpen, setIsProductsModalOpen] = useState(false)
 
 
 
@@ -307,51 +309,62 @@ const handleDeleteClient = async (clientId: string) => {
           </motion.div>
 
           <motion.div
-            whileHover={{ y: -5 }}
-            className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
-          >
-<h2 className="text-xl font-semibold mb-6 flex items-center justify-between">
-  <div className="flex items-center">
-  <Package className="w-5 h-5 mr-2 text-green-500" />
-  Produits
-  </div>
-  <motion.button
-    whileHover={{ scale: 1.05 }}
-    whileTap={{ scale: 0.95 }}
-    onClick={() => navigate(`/products`)}
-    className="text-primary hover:text-primary/80 transition-colors"
-  >
-    <ArrowRight className="w-5 h-5" />
-  </motion.button>
-</h2>
-<div className="space-y-4">
-  {assignedProducts.length > 0 ? (
-    <>
-      <ul className="divide-y divide-border">
-        {assignedProducts.map((product) => (
-          <li key={product.id} className="py-2">
-            <div className="flex justify-between items-center">
-              <span className="font-medium text-primary">{product.name}</span>
-              <span className="text-sm text-muted-foreground">{Number(product.price.ttc).toFixed(2)
-              } € TTC</span>
-            </div>
-          </li>
-        ))}
-      </ul>
-      <div className="mt-4 flex justify-end">
-        <div className="text-lg font-semibold text-green-600">
-          Total : {totalTTC.toFixed(2)} € TTC
-        </div>
-      </div>
-    </>
-  ) : (
-    <div className="text-center py-8 text-muted-foreground">
-      Aucune installation enregistrée
+  whileHover={{ y: -5 }}
+  className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
+>
+  <h2 className="text-xl font-semibold mb-6 flex items-center justify-between">
+    <div className="flex items-center">
+      <Package className="w-5 h-5 mr-2 text-green-500" />
+      Produits
     </div>
-  )}
-</div>
+    <div className="flex items-center gap-3">
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setIsProductsModalOpen(true)}
+        className="text-primary hover:text-primary/80 transition-colors"
+      >
+        <Pencil className="w-5 h-5" />
+      </motion.button>
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => navigate(`/products`)}
+        className="text-primary hover:text-primary/80 transition-colors"
+      >
+        <ArrowRight className="w-5 h-5" />
+      </motion.button>
+    </div>
+  </h2>
 
-          </motion.div>
+  <div className="space-y-4">
+    {assignedProducts.length > 0 ? (
+      <>
+        <ul className="divide-y divide-border">
+          {assignedProducts.map((product) => (
+            <li key={product.id} className="py-2">
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-primary">{product.name}</span>
+                <span className="text-sm text-muted-foreground">
+                  {Number(product.price.ttc).toFixed(2)} € TTC
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-4 flex justify-end">
+          <div className="text-lg font-semibold text-green-600">
+            Total : {totalTTC.toFixed(2)} € TTC
+          </div>
+        </div>
+      </>
+    ) : (
+      <div className="text-center py-8 text-muted-foreground">
+        Aucune installation enregistrée
+      </div>
+    )}
+  </div>
+  </motion.div>
 
           <motion.div
   whileHover={{ y: -5 }}
@@ -653,6 +666,13 @@ const handleDeleteClient = async (clientId: string) => {
         onClose={() => setIsTagModalOpen(false)}
       />
     )}
+{isProductsModalOpen && (
+  <EditProductsStepModal
+    clientId={client.id}
+    initialSelectedProducts={assignedProducts}
+    onClose={() => setIsProductsModalOpen(false)}
+    />
+)}
     </motion.div>
   );
 }
