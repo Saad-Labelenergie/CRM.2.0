@@ -274,28 +274,46 @@ export function Products() {
     <div className="flex-1 w-full">
       <h2 className="text-lg font-semibold mb-4">Stock disponible par produit</h2>
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={barData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-          <YAxis />
-          <Tooltip />
-          <Bar dataKey="stock" fill="#3B82F6" />
-        </BarChart>
-      </ResponsiveContainer>
+  <BarChart data={barData} barCategoryGap={30}>
+    <CartesianGrid strokeDasharray="3 3" />
+    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+    <YAxis allowDecimals={false} />
+    <Tooltip
+      contentStyle={{ backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #ccc' }}
+      labelStyle={{ fontWeight: 'bold' }}
+    />
+    <Legend />
+    <Bar
+      dataKey="stock"
+      fill="#3B82F6"
+      radius={[6, 6, 0, 0]}
+    />
+  </BarChart>
+</ResponsiveContainer>
+
     </div>
 
     {/* Chart 2 : Nombre de produits par marque */}
     <div className="flex-1 w-full">
       <h2 className="text-lg font-semibold mb-4">Nombre de produits par marque</h2>
       <ResponsiveContainer width="100%" height={300}>
-  <BarChart data={brandBarData}>
+  <BarChart data={brandBarData} barCategoryGap={30}>
     <CartesianGrid strokeDasharray="3 3" />
-    <XAxis dataKey="brand" tick= {{ fontSize: 12 }} />
-    <YAxis allowDecimals={false} /> {/* Affiche uniquement des entiers */}
-    <Tooltip />
-    <Bar dataKey="count" fill="#10B981" />
+    <XAxis dataKey="brand" tick={{ fontSize: 12 }} />
+    <YAxis allowDecimals={false} />
+    <Tooltip
+      contentStyle={{ backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #ccc' }}
+      labelStyle={{ fontWeight: 'bold' }}
+    />
+    <Legend />
+    <Bar
+      dataKey="count"
+      fill="#10B981"
+      radius={[6, 6, 0, 0]}
+    />
   </BarChart>
 </ResponsiveContainer>
+
 
     </div>
 
