@@ -1,10 +1,11 @@
-// Update imports to include useScheduling
+// ✅ Code modifié : EditUserModal avec avatar dynamique selon le rôle (sans upload)
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X,Edit2 } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
-import { Eye, EyeOff } from 'lucide-react';
 import { hashPassword } from '../../../lib/utils/password';
+
 interface User {
   id: string;
   name: string;
@@ -14,18 +15,20 @@ interface User {
   phone: string;
   status: 'active' | 'inactive';
   avatar?: string;
-  team?: string; 
+  team?: string;
   createdAt: Date;
   updatedAt: Date;
 }
+
 interface EditUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => void;
   user: User | null;
 }
+
 export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalProps) {
-  const { teams } = useScheduling(); // Add teams from context
+  const { teams } = useScheduling();
   const [userData, setUserData] = useState<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>({
     name: '',
     email: '',
@@ -34,9 +37,11 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
     phone: '',
     status: 'active',
     avatar: '',
-    team: '' 
+    team: ''
   });
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
   useEffect(() => {
     if (user) {
       setUserData({
@@ -47,66 +52,39 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
         phone: user.phone,
         status: user.status,
         avatar: user.avatar || '',
-        team: user.team || '' 
+        team: user.team || ''
       });
-      setPreviewImage(user.avatar || null);
     }
-  }, [user])
-  const [showPassword, setShowPassword] = useState(false);
-  const [newPassword, setNewPassword] = useState('');
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const imageDataUrl = reader.result as string;
-      
-      try {
-        const compressedImage = await compressImage(imageDataUrl, 200);
-        setPreviewImage(compressedImage);
-        setUserData(prev => ({
-          ...prev,
-          avatar: compressedImage 
-        }));
-      } catch (error) {
-        console.error('Erreur lors du traitement de l\'image:', error);
-        alert('Erreur lors du traitement de l\'image. Veuillez réessayer.');
-      }
-    };
-    reader.readAsDataURL(file);
+  }, [user]);
+
+  const getDefaultAvatar = (role: string) => {
+    switch (role) {
+      case 'Technicien':
+        return '/images/Technicien.png';
+      case 'manager':
+        return '/images/Manager.png';
+      case 'Administrateur':
+        return '/images/Admin.png';
+      default:
+        return '/default-avatar.png';
+    }
   };
-  const compressImage = (dataUrl: string, maxWidth: number): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.src = dataUrl;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.7)); 
-      };
-    });
-  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
     const finalUserData = {
       ...userData,
+      avatar: getDefaultAvatar(userData.role),
       ...(newPassword && { password: await hashPassword(newPassword) })
     };
+
     onSave(finalUserData);
     setNewPassword('');
     onClose();
   };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -125,30 +103,16 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Add image upload section at the top */}
               <div className="flex flex-col items-center space-y-4">
                 <div className="relative">
                   <img
-                    src={previewImage || userData.avatar}
+                    src={getDefaultAvatar(userData.role)}
                     alt={userData.name}
                     className="w-32 h-32 rounded-full object-cover border-4 border-primary/20"
                   />
-                  <label 
-                    htmlFor="avatar-upload" 
-                    className="absolute bottom-0 right-0 bg-primary text-primary-foreground p-2 rounded-full cursor-pointer hover:bg-primary/90 transition-colors"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </label>
-                  <input
-                    id="avatar-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Click the edit icon to upload a new photo
+                  La photo de profil change automatiquement selon le rôle sélectionné
                 </p>
               </div>
 
@@ -181,17 +145,6 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
                     onChange={(e) => setNewPassword(e.target.value)}
                     className="w-full px-4 py-2 pr-10 rounded-lg border focus:ring-2 focus:ring-primary/20"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-accent rounded-lg"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-4 h-4 text-muted-foreground" />
-                    ) : (
-                      <Eye className="w-4 h-4 text-muted-foreground" />
-                    )}
-                  </button>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -230,9 +183,7 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
                   >
                     <option value="">Sélectionner une équipe</option>
                     {teams.filter(team => team.isActive).map(team => (
-                      <option key={team.id} value={team.id}>
-                        {team.name}
-                      </option>
+                      <option key={team.id} value={team.id}>{team.name}</option>
                     ))}
                   </select>
                 </div>
