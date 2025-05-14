@@ -133,7 +133,7 @@ export function ClientDetail() {
   }
 
   const clientAppointments = appointments.filter(
-    (a) => String(a.client.id) === String(client.id)
+    (a) => String(a.client.name) === String(client.name)
   );
 
   const assignedProducts = products.filter(product =>
