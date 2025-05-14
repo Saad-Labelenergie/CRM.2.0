@@ -8,7 +8,9 @@ import {
   Plus,
   Trash,
   PenTool,
-  User
+  User,
+  ChevronRight,
+  ChevronLeft 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -308,21 +310,60 @@ export function NotificationPopup() {
       Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, filteredHistory.length)} sur {filteredHistory.length} entrées
     </span> */}
     <div className="flex space-x-1">
-      {Array.from({ length: totalPages }, (_, i) => (
+    {(() => {
+  const pageGroupSize = 10;
+  const currentGroup = Math.floor((currentPage - 1) / pageGroupSize);
+  const startPage = currentGroup * pageGroupSize + 1;
+  const endPage = Math.min(startPage + pageGroupSize - 1, totalPages);
+
+  const pageNumbers = [];
+  for (let i = startPage; i <= endPage; i++) {
+    pageNumbers.push(i);
+  }
+
+  return (
+    <div className="flex space-x-1 items-center">
+      {startPage > 1 && (
         <motion.button
-          key={i + 1}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => setCurrentPage(i + 1)}
+          onClick={() => setCurrentPage(startPage - 1)}
+          className="px-3 py-1 text-sm rounded-lg bg-muted text-muted-foreground hover:bg-muted/80"
+        >
+          <ChevronLeft />
+        </motion.button>
+      )}
+
+      {pageNumbers.map((pageNum) => (
+        <motion.button
+          key={pageNum}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setCurrentPage(pageNum)}
           className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-            currentPage === i + 1
+            currentPage === pageNum
               ? 'bg-primary text-white'
               : 'bg-muted text-muted-foreground hover:bg-muted/80'
           }`}
         >
-          {i + 1}
+          {pageNum}
         </motion.button>
       ))}
+
+      {endPage < totalPages && (
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setCurrentPage(endPage + 1)}
+          className="px-3 py-1 text-sm rounded-lg bg-muted text-muted-foreground hover:bg-muted/80"
+        >
+          <ChevronRight />
+        </motion.button>
+      )}
+    </div>
+  );
+})()}
+
     </div>
   </div>
 )}
