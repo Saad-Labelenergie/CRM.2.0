@@ -102,7 +102,7 @@ export function TeamDetail() {
       </div>
 
       <TeamStats team={team}/>
-      <TeamPerformance />
+      {/* <TeamPerformance /> */}
       <TeamMembers teamId={team.id} />
       <CompletedProjects teamID={team.id} />
       <SAVDetails teamId={team.id} teamName={team.name} />
