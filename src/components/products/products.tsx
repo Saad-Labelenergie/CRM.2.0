@@ -111,6 +111,12 @@ export function Products() {
     stock: (p.stock?.current ?? 0) - (p.stock?.reserved ?? 0)
   }));
 
+  const maxStock = Math.max(...barData.map(item => item.stock));
+const minStock = Math.min(...barData.map(item => item.stock));
+const absMax = Math.max(Math.abs(minStock), Math.abs(maxStock));
+const stepSize = Math.ceil((products.length || 1) / 5) * 5; // exemple de pas dynamique basé sur le nbre total
+
+const yDomain = [-absMax, absMax]; // toujours centré autour de 0
 
   return (
     <motion.div
@@ -277,19 +283,25 @@ export function Products() {
   <BarChart data={barData} barCategoryGap={30}>
     <CartesianGrid strokeDasharray="3 3" />
     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-    <YAxis allowDecimals={false} />
+    <YAxis
+      domain={[-absMax, absMax]}
+      tick={{ fontSize: 12 }}
+      interval={0}
+      allowDecimals={false}
+    />
     <Tooltip
       contentStyle={{ backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #ccc' }}
       labelStyle={{ fontWeight: 'bold' }}
     />
     <Legend />
-    <Bar
-      dataKey="stock"
-      fill="#3B82F6"
-      radius={[6, 6, 0, 0]}
-    />
+    <Bar dataKey="stock" radius={[6, 6, 0, 0]}>
+      {barData.map((entry, index) => (
+        <Cell key={`cell-${index}`} fill={entry.stock >= 0 ? '#3B82F6' : '#EF4444'} />
+      ))}
+    </Bar>
   </BarChart>
 </ResponsiveContainer>
+
 
     </div>
 
