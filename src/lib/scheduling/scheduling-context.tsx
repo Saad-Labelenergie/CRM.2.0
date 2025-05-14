@@ -33,6 +33,7 @@ interface Appointment {
     name: string;
     status: 'installed' | 'not_installed';
   }[];
+  projectId?: string; // Add this property to fix the TypeScript error
 }
 
 interface Project {

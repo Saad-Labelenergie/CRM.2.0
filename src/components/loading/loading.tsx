@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { AssignProjectModal } from './components/assign-project-modal';
 import { MaterialLoadingModal } from './components/material-loading-modal';
+import { LoadingStats } from './components/loading-stats';
 
 interface Project {
   id: string;
@@ -122,6 +123,28 @@ export function Loading() {
             p.team === team.name && 
             p.startDate === app.date
           );
+          
+          // Correction ici pour s'assurer que les statuts sont correctement convertis
+          const convertedMaterials = relatedProject?.materials
+            ? relatedProject.materials.map(m => ({
+                ...m,
+                status: m.status === 'installed'
+                  ? 'loaded' as const
+                  : m.status === 'not_installed'
+                  ? 'not_loaded' as const
+                  : (m.status as 'loaded' | 'not_loaded' | 'installed' | 'not_installed')
+              }))
+            : [
+                { id: 1, name: "Unité intérieure", status: "not_loaded" as const },
+                { id: 2, name: "Unité extérieure", status: "not_loaded" as const },
+                { id: 3, name: "Tuyauterie", status: "not_loaded" as const },
+                { id: 4, name: "Supports", status: "not_loaded" as const }
+              ];
+          
+          // Vérification de débogage
+          console.log('Projet chargé:', relatedProject?.name, 'Matériaux:', 
+            relatedProject?.materials, 'Convertis:', convertedMaterials);
+          
           return {
             id: app.id,
             name: app.title,
@@ -130,22 +153,7 @@ export function Loading() {
                    app.duration === '4h' ? 4 : 8, // Estimation basée sur la durée
             date: format(new Date(app.date), 'dd/MM/yyyy'),
             teamId: team.id,
-            // Correction ici : convertir les statuts Firestore en statuts d'affichage
-            materials: relatedProject?.materials
-              ? relatedProject.materials.map(m => ({
-                  ...m,
-                  status: m.status === 'installed'
-                    ? 'loaded'
-                    : m.status === 'not_installed'
-                    ? 'not_loaded'
-                    : (m.status as 'loaded' | 'not_loaded' | 'installed' | 'not_installed')
-                }))
-              : [
-                  { id: 1, name: "Unité intérieure", status: "not_loaded" as const },
-                  { id: 2, name: "Unité extérieure", status: "not_loaded" as const },
-                  { id: 3, name: "Tuyauterie", status: "not_loaded" as const },
-                  { id: 4, name: "Supports", status: "not_loaded" as const }
-                ],
+            materials: convertedMaterials,
             projectId: relatedProject?.id // Stocker l'ID du projet pour les mises à jour
           };
         });    
@@ -207,8 +215,6 @@ export function Loading() {
   const handleUpdateMaterials = async (projectId: string, materials: Material[]) => {
     try {
       console.log("Updating materials for project:", projectId, materials);
-      // Conserver le statut 'loaded' ou 'not_loaded' pour l'affichage local
-      const displayMaterials = [...materials];
       // Convert materials to the expected format for the backend
       const formattedMaterials = materials.map(material => {
         return {
@@ -219,21 +225,37 @@ export function Loading() {
                  material.status // Keep as is if already 'installed' or 'not_installed'
         };
       }); 
-      // Mettre à jour les matériaux du projet dans Firebase ou votre backend
-      await updateProjectMaterials(projectId, formattedMaterials); 
-      // Mettre à jour l'état local avec les matériaux originaux (avec loaded/not_loaded)
+      await updateProjectMaterials(projectId, formattedMaterials);
+      const relatedAppointment = appointments.find(app => 
+        app.projectId === projectId
+      );
+      
+      if (relatedAppointment) {
+        await updateAppointmentMaterials(relatedAppointment.id, formattedMaterials);
+      }
+      
+      // Mettre à jour l'état local avec les matériaux mis à jour
       setTeamsWithLoad(prevTeams => {
         return prevTeams.map(team => ({
           ...team,
           projects: team.projects.map(project => {
             if (project.projectId === projectId || project.id === projectId) {
-              console.log("Updating local project materials:", displayMaterials);
-              return { ...project, materials: displayMaterials };
+              console.log("Updating local project materials:", materials);
+              // Stocker les matériaux avec le statut d'affichage correct
+              return { 
+                ...project, 
+                materials: [...materials] 
+              };
             }
             return project;
           })
         }));
       });
+      
+      // Enregistrer les données dans le localStorage pour la persistance
+      const localStorageKey = `project_materials_${projectId}`;
+      localStorage.setItem(localStorageKey, JSON.stringify(materials));
+      
       setIsMaterialModalOpen(false);
     } catch (error) {
       console.error('Erreur lors de la mise à jour des matériaux:', error);
@@ -252,6 +274,7 @@ export function Loading() {
     (sum, team) => sum + countMaterialsToLoad(team),
     0
   );
+
   return (
     <motion.div
       variants={containerVariants}
@@ -265,135 +288,15 @@ export function Loading() {
           <p className="text-muted-foreground mt-1">Gérez la répartition des chantiers et le chargement des matériels</p>
         </div>
       </div>
-      {/* --- Bloc Statistiques --- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <motion.div
-          whileHover={{ y: -5 }}
-          className="bg-card p-4 rounded-xl border border-border/50 shadow-sm overflow-hidden relative"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <p className="text-sm text-muted-foreground">Équipes actives</p>
-              <h3 className="text-2xl font-bold mt-1">{totalTeams}</h3>
-            </div>
-            <div className="p-3 bg-blue-100/20 rounded-lg text-blue-500">
-              <Users className="w-6 h-6" />
-            </div>
-          </div>
-          {/* Mini chart */}
-          <div className="h-10 w-full mt-2">
-            <div className="flex items-end justify-between h-full gap-1">
-              {[4, 6, 5, 7, 8, totalTeams].map((value, i) => (
-                <div 
-                  key={i} 
-                  className="bg-blue-500/30 rounded-sm w-full"
-                  style={{ height: `${(value / 10) * 100}%` }}
-                ></div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div
-          whileHover={{ y: -5 }}
-          className="bg-card p-4 rounded-xl border border-border/50 shadow-sm overflow-hidden relative"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <p className="text-sm text-muted-foreground">Projets en cours</p>
-              <h3 className="text-2xl font-bold mt-1">{totalProjects}</h3>
-            </div>
-            <div className="p-3 bg-green-100/20 rounded-lg text-green-500">
-              <HardHat className="w-6 h-6" />
-            </div>
-          </div>
-          {/* Mini chart */}
-          <div className="h-10 w-full mt-2">
-            <div className="flex items-end justify-between h-full gap-1">
-              {[12, 15, 18, 14, 16, totalProjects].map((value, i) => (
-                <div 
-                  key={i} 
-                  className="bg-green-500/30 rounded-sm w-full"
-                  style={{ height: `${(value / 20) * 100}%` }}
-                ></div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div
-          whileHover={{ y: -5 }}
-          className="bg-card p-4 rounded-xl border border-border/50 shadow-sm overflow-hidden relative"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <p className="text-sm text-muted-foreground">Progression moyenne</p>
-              <h3 className="text-2xl font-bold mt-1">{avgProgress}%</h3>
-            </div>
-            <div className="p-3 bg-violet-100/20 rounded-lg text-violet-500">
-              <Scale className="w-6 h-6" />
-            </div>
-          </div>
-          {/* Mini chart - line chart style with full width */}
-          <div className="h-10 w-full mt-2 relative">
-            <svg className="w-full h-full" viewBox="0 0 100 30" preserveAspectRatio="none">
-              <path 
-                d="M0,30 L0,20 C10,15 20,25 30,20 C40,15 50,10 60,15 C70,20 80,10 90,5 L100,5" 
-                fill="rgba(124, 58, 237, 0.2)" 
-              />
-              <path 
-                d="M0,20 C10,15 20,25 30,20 C40,15 50,10 60,15 C70,20 80,10 90,5 L100,5" 
-                fill="none" 
-                stroke="rgb(124, 58, 237)" 
-                strokeWidth="2" 
-              />
-            </svg>
-          </div>
-        </motion.div>
-
-        <motion.div
-          whileHover={{ y: -5 }}
-          className="bg-card p-4 rounded-xl border border-border/50 shadow-sm overflow-hidden relative"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <p className="text-sm text-muted-foreground">Matériels à charger</p>
-              <h3 className="text-2xl font-bold mt-1">{totalMaterialsToLoad}</h3>
-            </div>
-            <div className="p-3 bg-amber-100/20 rounded-lg text-amber-500">
-              <Package className="w-6 h-6" />
-            </div>
-          </div>
-          {/* Circular progress chart */}
-          <div className="h-10 w-full mt-2 flex items-center justify-center">
-            <div className="w-10 h-10 rounded-full bg-amber-100/30 relative">
-              <svg className="w-10 h-10" viewBox="0 0 36 36">
-                <circle cx="18" cy="18" r="16" fill="none" stroke="#f0f0f0" strokeWidth="3"></circle>
-                <circle 
-                  cx="18" 
-                  cy="18" 
-                  r="16" 
-                  fill="none" 
-                  stroke="#f59e0b" 
-                  strokeWidth="3" 
-                  strokeDasharray={`${Math.min(totalMaterialsToLoad, 100)} 100`} 
-                  strokeLinecap="round" 
-                  transform="rotate(-90 18 18)"
-                ></circle>
-              </svg>
-            </div>
-            <div className="flex-1 ml-3">
-              <div className="h-2 bg-amber-100/30 rounded-full">
-                <div 
-                  className="h-2 bg-amber-500 rounded-full" 
-                  style={{ width: `${Math.min(totalMaterialsToLoad, 100)}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-      {/* --- Fin Bloc Statistiques --- */}
+      
+      {/* Using the extracted LoadingStats component */}
+      <LoadingStats 
+        totalTeams={totalTeams}
+        totalProjects={totalProjects}
+        avgProgress={avgProgress}
+        totalMaterialsToLoad={totalMaterialsToLoad}
+      />
+      
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
@@ -496,7 +399,19 @@ export function Loading() {
                   team.projects.map((project, index) => (
                     <div
                       key={project.id || index}
-                      className="bg-accent/50 rounded-lg p-4 space-y-2"
+                      className={`bg-accent/50 rounded-lg p-4 space-y-2 border-2 ${
+                        calculateProgress(project, documentsRemis[project.id] || false) === 0 
+                          ? 'border-red-500' : 
+                        calculateProgress(project, documentsRemis[project.id] || false) >= 100 
+                          ? 'border-green-500' : 
+                        calculateProgress(project, documentsRemis[project.id] || false) >= 75 
+                          ? 'border-blue-500' :
+                        calculateProgress(project, documentsRemis[project.id] || false) >= 50 
+                          ? 'border-amber-500' :
+                        calculateProgress(project, documentsRemis[project.id] || false) >= 25 
+                          ? 'border-orange-500' :
+                        'border-red-500'
+                      }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
