@@ -21,6 +21,9 @@ interface ContactStepProps {
 }
 
 export function ContactStep({ formData, errors, onUpdate }: ContactStepProps) {
+const phoneRegex = /^0\d{9}$/;
+const nameRegex = /^[A-Za-zÀ-ÿ\s\-']+$/;
+
   return (
     <div className="space-y-6">
       {/* Étiquettes */}
@@ -60,9 +63,14 @@ export function ContactStep({ formData, errors, onUpdate }: ContactStepProps) {
               Nom *
             </label>
             <input
-              type="text"
-              value={formData.contact.lastName}
-              onChange={(e) => onUpdate('contact.lastName', e.target.value)}
+  type="text"
+  value={formData.contact.lastName}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value === '' || nameRegex.test(value)) {
+      onUpdate('contact.lastName', value);
+    }
+  }}
               className="w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Nom"
             />
@@ -80,9 +88,14 @@ export function ContactStep({ formData, errors, onUpdate }: ContactStepProps) {
               Prénom *
             </label>
             <input
-              type="text"
-              value={formData.contact.firstName}
-              onChange={(e) => onUpdate('contact.firstName', e.target.value)}
+  type="text"
+  value={formData.contact.firstName}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value === '' || nameRegex.test(value)) {
+      onUpdate('contact.firstName', value);
+    }
+  }}
               className="w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Prénom"
             />
@@ -102,13 +115,25 @@ export function ContactStep({ formData, errors, onUpdate }: ContactStepProps) {
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
-                type="tel"
-                value={formData.contact.phone}
-                onChange={(e) => onUpdate('contact.phone', e.target.value)}
+  type="tel"
+  value={formData.contact.phone}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (/^\d*$/.test(value)) {
+      onUpdate('contact.phone', value);
+    }
+  }}
                 className="w-full pl-10 pr-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="+33 1 23 45 67 89"
               />
+
             </div>
+            {formData.contact.phone && !phoneRegex.test(formData.contact.phone) && (
+  <div className="text-destructive text-sm mt-1 flex items-center">
+    <AlertCircle className="w-4 h-4 mr-1" />
+    Le numéro de téléphone n'est pas valide.
+  </div>
+)}
             {errors['contact.phone'] && (
               <div className="text-destructive text-sm mt-1 flex items-center">
                 <AlertCircle className="w-4 h-4 mr-1" />
@@ -125,13 +150,25 @@ export function ContactStep({ formData, errors, onUpdate }: ContactStepProps) {
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
-                type="tel"
-                value={formData.contact.secondaryPhone}
-                onChange={(e) => onUpdate('contact.secondaryPhone', e.target.value)}
+  type="tel"
+  value={formData.contact.secondaryPhone}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (/^\d*$/.test(value)) {
+      onUpdate('contact.secondaryPhone', value);
+    }
+  }}
                 className="w-full pl-10 pr-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="+33 1 23 45 67 89"
               />
+
             </div>
+            {formData.contact.secondaryPhone && !phoneRegex.test(formData.contact.secondaryPhone) && (
+  <div className="text-destructive text-sm mt-1 flex items-center">
+    <AlertCircle className="w-4 h-4 mr-1" />
+    Le numéro de téléphone n'est pas valide.
+  </div>
+)}     
           </div>
 
           {/* Email principal */}
