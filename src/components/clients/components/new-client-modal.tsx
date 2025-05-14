@@ -28,6 +28,9 @@ type Step = 'contact' | 'address' | 'products' | 'planning';
 
 export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps) {
   const [step, setStep] = useState<Step>('contact');
+  const [comment, setComment] = useState('');
+const [hasPayment, setHasPayment] = useState(false);
+const [paymentAmount, setPaymentAmount] = useState('');
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [formData, setFormData] = useState({
@@ -297,7 +300,12 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
             durationInHours,
             durationInDays,
             durationText
-          }
+          },
+          RAC: {
+            hasToCollect: hasPayment,
+            amount: hasPayment ? parseFloat(paymentAmount) : 0
+          },
+          comment: comment.trim()
         };
         onSave(clientData);
   
@@ -510,6 +518,11 @@ export function NewClientModal({ isOpen, onClose, onSave }: NewClientModalProps)
                     errors={errors}
                     onTeamSelect={(team) => handleFieldUpdate('selectedTeam', team)}
                     onDateChange={(date) => handleFieldUpdate('installationDate', date)}
+                    onPaymentChange={(has, amount) => {
+                      setHasPayment(has);
+                      setPaymentAmount(amount);
+                    }}
+                    onCommentChange={(value) => setComment(value)}
                   />
                 )}
               </div>

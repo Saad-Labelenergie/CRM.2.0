@@ -5,7 +5,7 @@ interface Client {
   id: string;
   name: string;
   status?: 'completed' | 'pending' | 'in-progress';
-    // Add status field
+
   contact: {
     firstName: string;
     lastName: string;
@@ -14,18 +14,28 @@ interface Client {
     secondaryEmail?: string;
     secondaryPhone?: string;
   };
-  Product?:String;
-  productsIds?: String[];
+
+  Product?: string;
+  productsIds?: string[];
+
   address: {
     street: string;
     city: string;
     postalCode: string;
     country: string;
   };
+
+  RAC?: {
+    amount: number;
+    hasToCollect: boolean;
+    comment?: string;
+  };
+
   tag?: string;
   createdAt: Date;
   updatedAt: Date;
 }
+
 
 export function useClients() {
   const firebase = useFirebase<Client>('clients', { orderByField: 'name' });

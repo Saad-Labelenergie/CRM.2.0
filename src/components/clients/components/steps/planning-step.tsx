@@ -54,10 +54,13 @@ interface PlanningStepProps {
   selectedProducts: any[];
   selectedTeam: any;
   installationDate: string;
-  initialDate?: string;  // Add this line
+  initialDate?: string;
+  installationDurationInDays: number; // Add this line
   errors: Record<string, string>;
   onTeamSelect: (team: TeamAvailability) => void;
   onDateChange: (date: string) => void;
+  onPaymentChange: (hasPayment: boolean, amount: string) => void;
+  onCommentChange: (comment: string) => void;
 }
 
 // Dans le composant PlanningStep, ajoutons une vérification pour initialDate
@@ -66,10 +69,14 @@ export function PlanningStep({
   selectedTeam,
   installationDate,
   initialDate,
+  installationDurationInDays, // Receive from props
   errors,
   onTeamSelect,
-  onDateChange
+  onDateChange,
+  onPaymentChange,
+  onCommentChange
 }: PlanningStepProps) {
+
   // Ajoutons un log pour vérifier la valeur reçue
   console.log("PlanningStep - initialDate reçue:", initialDate);
   console.log("PlanningStep - installationDate actuelle:", installationDate);
@@ -103,7 +110,6 @@ export function PlanningStep({
   );
   
   // Add this calculation for installation duration in days
-  const installationDurationInDays = Math.ceil(totalInstallationTime / (8 * 60));
   const today = new Date();
 
   const getAvailableTeamsForDate = () => {
@@ -274,8 +280,9 @@ export function PlanningStep({
                 id="hasPayment"
                 checked={hasPaymentToCollect}
                 onChange={(e) => {
-                  setHasPaymentToCollect(e.target.checked);
-                  if (!e.target.checked) setPaymentAmount('');
+                  setHasPaymentToCollect(e.target.checked); // on met à jour l'état local
+                  if (!e.target.checked) setPaymentAmount(''); // on vide le champ si décoché
+                  onPaymentChange(e.target.checked, ''); // on envoie la nouvelle valeur au parent
                 }}
                 className="rounded border-gray-300 text-primary focus:ring-primary"
               />
@@ -290,7 +297,10 @@ export function PlanningStep({
                   <input
                     type="number"
                     value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    onChange={(e) => {
+                      setPaymentAmount(e.target.value); // on met à jour localement
+                      onPaymentChange(true, e.target.value); // on dit au parent : il y a un paiement + voici le montant
+                    }}
                     placeholder="Montant à récupérer"
                     className="w-full pl-8 pr-4 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     min="0"
@@ -311,7 +321,10 @@ export function PlanningStep({
           </h4>
           <textarea
             value={comment}
-            onChange={(e) => setComment(e.target.value)}
+            onChange={(e) => {
+              setComment(e.target.value); // mise à jour locale
+              onCommentChange(e.target.value); // on transmet la nouvelle valeur au parent
+            }}
             placeholder="Ajouter un commentaire pour l'équipe d'installation..."
             className="w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary h-24 resize-none"
           />

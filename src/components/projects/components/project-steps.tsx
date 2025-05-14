@@ -40,10 +40,12 @@ interface Step {
 
 interface ProjectStepsProps {
   steps: Step[];
-  showStepHistory: number[]; // Non utilisé mais conservé
-  onToggleHistory: (stepId: number) => void; // Non utilisé mais conservé
-  onStepStatusChange: (stepId: number, updatedSteps: Step[]) => void; // Ajoutez le paramètre
+  showStepHistory: number[];
+  onToggleHistory: (stepId: number) => void;
+  onStepStatusChange: (stepId: number, updatedSteps: Step[]) => void;
   projectId: string;
+  client: any; 
+  projectStatus: string;
 }
 
 const getStepIcon = (status: StepStatus) => {
@@ -68,7 +70,7 @@ const getStepLabel = (stepId: number) => {
       return 'Arriver sur place';
     case 3:
       return 'Photos avant chantier (6 photos)';
-    case 4:
+    case 4.5:
       return 'Récupération documents client';
     case 5:
       return 'Commencer';
@@ -81,17 +83,40 @@ const getStepLabel = (stepId: number) => {
   }
 };
 
-const isStepActive = (steps: Step[], currentStepIndex: number): boolean => {
-  if (currentStepIndex === 0) return true; // Première étape toujours active
-  if (currentStepIndex === 1) return steps[0].status === 'valide'; // Activation conditionnelle
-  // Ajouter plus de logique si nécessaire pour les autres étapes
-  return steps[currentStepIndex - 1].status === 'valide';
-};
 
-export function ProjectSteps({ steps, onStepStatusChange, projectId }: ProjectStepsProps) {
+
+
+
+export function ProjectSteps({ steps, onStepStatusChange, projectId, projectStatus}: ProjectStepsProps) {
   const [loadingStepId, setLoadingStepId] = useState<number | null>(null);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [confirmingStepId, setConfirmingStepId] = useState<number | null>(null);
+  const client = steps?.[0]?.clientInfo || null; // ou passe-le via props
+  const stepsWithRAC = [...steps];
+
+  const isStepActive = (steps: Step[], currentStepIndex: number): boolean => {
+    if (currentStepIndex === 0) return true; // Première étape toujours active
+    if (currentStepIndex === 1) return steps[0].status === 'valide'; // Activation conditionnelle
+    // Ajouter plus de logique si nécessaire pour les autres étapes
+    return stepsWithRAC[currentStepIndex - 1]?.status === 'valide';
+  };
+  
+
+  const hasRAC = (client: any): boolean => {
+    return client?.RAC?.hasToCollect === true;
+  };
+  
+  if (hasRAC(client) && !steps.find(step => step.id === 4.5)) {
+    const racStep = {
+      id: 4.5,
+      name: 'Reste à charge à récupérer',
+      status: 'en_attente' as StepStatus,
+      timestamps: {}
+    };
+  
+    const indexToInsert = steps.findIndex(step => step.id === 4);
+    stepsWithRAC.splice(indexToInsert + 1, 0, racStep);
+  }
 
   const handleStepStatusChange = async (stepId: number) => {
     setLoadingStepId(stepId);
@@ -153,7 +178,7 @@ const handleValidation = async () => {
       </h2>
       
       <div className="space-y-6">
-        {steps.map((step, index) => {
+        {stepsWithRAC.map((step, index) => {
           const isActive = isStepActive(steps, index);
 
           return (
@@ -188,12 +213,13 @@ const handleValidation = async () => {
                         }
                       }}
                       className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                        !isActive || loadingStepId === step.id
+                        !isActive || loadingStepId === step.id || projectStatus === 'placer'
                           ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800/30 dark:text-gray-500'
                           : 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400'
                       }`}
+                      
                       disabled={!isActive || loadingStepId === step.id}
-                    >
+                      >
                       {loadingStepId === step.id ? 'Traitement...' : 'Valider cette étape'}
                     </motion.button>
                   )}

@@ -130,10 +130,12 @@ export function ProjectDetail() {
 <ProjectSteps 
   steps={steps}
   showStepHistory={showStepHistory}
+  projectStatus ={project.status}
   onToggleHistory={handleToggleHistory}
   onStepStatusChange={onStepStatusChange}
-
   projectId={project.id}
+  client={project.client} 
+  
 />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
