@@ -298,7 +298,7 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
     <>
       <div className="min-w-[1200px]">
         <div className="grid grid-cols-[200px_repeat(5,1fr)] border-b border-border/50">
-          <div className="p-4 font-medium text-muted-foreground">Équipes</div>
+          <div className="p-6 font-medium text-muted-foreground">Équipes</div>
           {weekDays.map(day => (
             <div
               key={day.toString()}
@@ -358,7 +358,7 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                   return (
                     <div
                       key={day.toString()}
-                      className={`min-h-[100px] p-2 border-l border-border/50 relative ${
+                      className={`min-h-[25px] p-0.5 border-l border-border/50 relative ${
                         isToday(day) ? 'bg-accent/10' : ''
                       }`}
                     >
@@ -478,12 +478,16 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
                                 ...positionStyle,
                               }}
                             >
-                              <div className="text-sm font-semibold overflow-hidden uppercase">
-                                {appointment.client.name}
+                              <div className="text-xs font-semibold overflow-hidden uppercase truncate max-h-5">
+                                {appointment.client.department ? 
+                                  `${appointment.client.department} - ${appointment.client.name}` : 
+                                  appointment.client.name}
+                                {appointment.client.postalCode && 
+                                  ` (${appointment.client.postalCode.substring(0, 2)})`}
                               </div>
                               {appointment.title && (
                                 <div className="text-xs font-medium mt-1 text-white">
-                                  {appointment.title}
+                                  {/* {appointment.title} */}
                                 </div>
                               )}
                               <div className="absolute top-1 right-1 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">

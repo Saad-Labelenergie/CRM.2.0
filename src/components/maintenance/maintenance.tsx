@@ -24,6 +24,7 @@ import { Toast } from '../ui/toast';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { downloadContractPdf } from '../../utils/contract-pdf-generator'; 
+import { MaintenanceStats } from './components/maintenance-stats';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -306,99 +307,11 @@ export function Maintenance() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <motion.div variants={itemVariants} className="bg-card rounded-xl p-6 shadow-lg border border-border/50">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium text-muted-foreground">Total</div>
-              <div className="text-3xl font-bold mt-2">{maintenanceStats.total}</div>
-            </div>
-            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
-              <Tool className="w-6 h-6 text-primary" />
-            </div>
-          </div>
-          <div className="h-10 w-full mt-2">
-            <svg className="w-full h-full" viewBox="0 0 100 30" preserveAspectRatio="none">
-              <path 
-                d={generateChartPath(monthlyStats.total, 'fill')}
-                fill="rgba(124, 58, 237, 0.2)" 
-              />
-              <path 
-                d={generateChartPath(monthlyStats.total, 'line')}
-                fill="none" 
-                stroke="rgb(124, 58, 237)" 
-                strokeWidth="2" 
-              />
-            </svg>
-          </div>
-        </motion.div>
-
-        <motion.div variants={itemVariants} className="bg-card rounded-xl p-6 shadow-lg border border-border/50">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium text-muted-foreground">Effectuées</div>
-              <div className="text-3xl font-bold mt-2">{maintenanceStats.completed}</div>
-            </div>
-            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-500" />
-            </div>
-          </div>
-          <div className="h-10 w-full mt-2">
-            <svg className="w-full h-full" viewBox="0 0 100 30" preserveAspectRatio="none">
-              <path 
-                d={generateChartPath(monthlyStats.completed, 'fill')}
-                fill="rgba(34, 197, 94, 0.2)" 
-              />
-              <path 
-                d={generateChartPath(monthlyStats.completed, 'line')}
-                fill="none" 
-                stroke="rgb(34, 197, 94)" 
-                strokeWidth="2" 
-              />
-            </svg>
-          </div>
-        </motion.div>
-
-        <motion.div variants={itemVariants} className="bg-card rounded-xl p-6 shadow-lg border border-border/50">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium text-muted-foreground">En attente</div>
-              <div className="text-3xl font-bold mt-2">{maintenanceStats.pending}</div>
-            </div>
-            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-orange-500" />
-            </div>
-          </div>
-          <div className="h-10 w-full mt-2">
-            <svg className="w-full h-full" viewBox="0 0 100 30" preserveAspectRatio="none">
-              <path 
-                d={generateChartPath(monthlyStats.pending, 'fill')}
-                fill="rgba(249, 115, 22, 0.2)" 
-              />
-              <path 
-                d={generateChartPath(monthlyStats.pending, 'line')}
-                fill="none" 
-                stroke="rgb(249, 115, 22)" 
-                strokeWidth="2" 
-              />
-            </svg>
-          </div>
-        </motion.div>
-
-        <motion.div variants={itemVariants} className="bg-card rounded-xl p-6 shadow-lg border border-border/50">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium text-muted-foreground">Prochaine échéance</div>
-              <div className="text-3xl font-bold mt-2">
-                {maintenanceStats.nextDue ? format(new Date(maintenanceStats.nextDue), 'dd MMM', { locale: fr }) : '-'}
-              </div>
-            </div>
-            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-blue-500" />
-            </div>
-          </div>
-        </motion.div>
-      </div>
+      {/* Remplacer l'ancienne section de statistiques par le composant MaintenanceStats */}
+      <MaintenanceStats 
+        maintenanceStats={maintenanceStats}
+        monthlyStats={monthlyStats}
+      />
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
