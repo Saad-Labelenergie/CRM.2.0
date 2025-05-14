@@ -40,7 +40,7 @@ const navigation = [
   { name: 'Chantiers', href: '/projects', icon: HardHat, roles: ['administrateur', 'technicien', 'manager'] },
   { name: 'SAV', href: '/sav', icon: Wrench, roles: ['administrateur', 'manager'] },
   { name: 'Entretien', href: '/maintenance', icon: Tool, roles: ['administrateur'] },
-  { name: 'Utilisateurs', href: '/users', icon: UserCog, roles: ['administrateur','technicien'] },
+  { name: 'Utilisateurs', href: '/users', icon: UserCog, roles: ['administrateur'] },
   {name : 'Vehicules' , href:'/vehicule',icon:TruckIcon ,roles :['administrateur']}
 ];
 
