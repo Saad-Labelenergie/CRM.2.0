@@ -119,8 +119,8 @@ export function NotificationPopup() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-primary">Historique des Modifications</h1>
-          <p className="text-muted-foreground mt-1">Suivez les modifications apportées aux dossiers clients</p>
+          <h1 className="text-2xl font-bold text-primary">Historique des Modifications</h1>
+          <h2 className="text-1xl  text-primary">Suivez les modifications apportées aux dossiers clients</h2>
         </div>
       </div>
 
@@ -303,29 +303,30 @@ export function NotificationPopup() {
 
       {/* Pagination */}
       {filteredHistory.length > 0 && (
-        <div className="flex justify-between items-center mt-4">
-          <span className="text-sm text-muted-foreground">
-            Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, filteredHistory.length)} sur {filteredHistory.length} entrées
-          </span>
-          <div className="flex space-x-2">
-            {Array.from({ length: totalPages }, (_, i) => (
-              <motion.button
-                key={i + 1}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setCurrentPage(i + 1)}
-                className={`px-3 py-1 rounded-lg ${
-                  currentPage === i + 1
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-accent hover:bg-accent/80'
-                }`}
-              >
-                {i + 1}
-              </motion.button>
-            ))}
-          </div>
-        </div>
-      )}
+  <div className="sticky bottom-0 left-0 w-full bg-card border-t border-border py-3 px-4 shadow-md flex justify-between items-center z-10">
+    {/* <span className="text-sm text-muted-foreground">
+      Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, filteredHistory.length)} sur {filteredHistory.length} entrées
+    </span> */}
+    <div className="flex space-x-1">
+      {Array.from({ length: totalPages }, (_, i) => (
+        <motion.button
+          key={i + 1}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setCurrentPage(i + 1)}
+          className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+            currentPage === i + 1
+              ? 'bg-primary text-white'
+              : 'bg-muted text-muted-foreground hover:bg-muted/80'
+          }`}
+        >
+          {i + 1}
+        </motion.button>
+      ))}
+    </div>
+  </div>
+)}
+
     </motion.div>
   );
 }
