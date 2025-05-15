@@ -282,7 +282,24 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
             });
           });
         }
+  // 🔁 Mettre à jour le statut du projet lié à "annuler"
+  if (selectedAppointment.projectId) {
+    const projectRef = doc(db, 'projects', selectedAppointment.projectId);
+    await updateDoc(projectRef, {
+      status: 'annuler',
+      cancellationReason: 'rendez-vous supprimé',
+      updatedAt: new Date()
+    });
   
+    // 🔄 Optionnel : mise à jour de l'UI en temps réel
+    window.dispatchEvent(new CustomEvent('project-status-updated', {
+      detail: {
+        projectId: selectedAppointment.projectId,
+        appointmentId: selectedAppointment.id,
+        status: 'annuler'
+      }
+    }));
+  }
         // 🗑️ Supprimer le rendez-vous
         await deleteAppointment(appointmentToDelete);
   
