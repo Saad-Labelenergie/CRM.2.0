@@ -13,6 +13,8 @@ import { updateProjectStatus } from '../../../lib/hooks/useProjects';
 import { doc,updateDoc } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 import { updateProjectSteps } from '../../../lib/hooks/useProjects';
+import { useClients } from '../../../lib/hooks/useClients'; // adapt to your path
+
 
 
 
@@ -22,6 +24,9 @@ export function ProjectDetail() {
   const { projects, updateProjectMaterials } = useScheduling();
   const [showStepHistory, setShowStepHistory] = useState<number[]>([]);
   const [showAllComments, setShowAllComments] = useState(false);
+  const project = projects.find(p => p.id === id);
+  type StepStatus = 'en_attente' | 'valide';
+
 
   const defaultSteps: Step[] = [
     { id: 2, name: "Arriver sur place", status: 'en_attente', timestamps: {} },
@@ -34,12 +39,60 @@ export function ProjectDetail() {
   
   const [steps, setSteps] = useState<Step[]>(defaultSteps);
 
+  const clients = useClients().data;
+    const clientsHook = useClients();
+  console.log("🧠 Données retour useClients:", clientsHook);
+  
+
   useEffect(() => {
     const projectFromStore = projects.find(p => p.id === id);
-    if (projectFromStore?.steps && projectFromStore.steps.length > 0) {
-      setSteps(projectFromStore.steps);
+    if (!projectFromStore) return;
+  
+    let currentSteps = projectFromStore.steps?.length > 0
+      ? [...projectFromStore.steps]
+      : [...defaultSteps];
+  
+    const projectClientName = projectFromStore.client?.name?.toLowerCase() || '';
+  
+    if (!Array.isArray(clients)) {
+      console.warn("⚠️ Données clients non disponibles ou pas un tableau:", clients);
+      setSteps(currentSteps);
+      return;
     }
-  }, [projects, id]);
+  
+    const matchingClient = clients.find(client =>
+      `${client.contact?.firstName} ${client.contact?.lastName}`.toLowerCase() === projectClientName
+    );
+  
+    console.log("🎯 Nom projet:", projectClientName);
+    console.log("🧠 Client correspondant:", matchingClient);
+  
+    const hasRAC = matchingClient?.RAC?.hasToCollect === true;
+    const racExists = currentSteps.some(step => step.id === 4.5);
+  
+    if (hasRAC && !racExists) {
+      const racStep = {
+        id: 4.5,
+        name: 'Reste à charge à récupérer',
+        status: 'en_attente' as StepStatus,
+        timestamps: {}
+      };
+  
+      const index = currentSteps.findIndex(step => step.id === 4);
+      if (index !== -1) {
+        currentSteps.splice(index + 1, 0, racStep);
+        console.log("✅ Étape RAC insérée après étape 4");
+      } else {
+        console.warn("⚠️ Étape ID 4 introuvable, RAC non inséré");
+      }
+    }
+  
+    setSteps(currentSteps);
+  }, [projects, id, clients]);
+  
+  
+  
+  
   
   //Changement fait - a voir apres
   const onStepStatusChange = (stepId: number, updatedSteps: Step[]) => {
@@ -53,7 +106,6 @@ export function ProjectDetail() {
   
   
   
-  const project = projects.find(p => p.id === id);
 
   if (!project) {
     return (

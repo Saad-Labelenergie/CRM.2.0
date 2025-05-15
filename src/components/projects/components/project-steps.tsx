@@ -21,6 +21,8 @@ async function updateProjectStatus(projectId: string, newStatus: string, user: s
   }
 }
 
+
+
 type StepStatus = 'en_attente' | 'valide';
 
 interface StepTimestamp {
@@ -70,8 +72,10 @@ const getStepLabel = (stepId: number) => {
       return 'Arriver sur place';
     case 3:
       return 'Photos avant chantier (6 photos)';
-    case 4.5:
+    case 4:
       return 'Récupération documents client';
+      case 4.5:
+        return'Récuperation du reste a charge';
     case 5:
       return 'Commencer';
     case 6:
@@ -168,6 +172,7 @@ const handleValidation = async () => {
   setConfirmingStepId(null);
 };
 
+
   return (
     <motion.div
       className="bg-card p-6 rounded-xl shadow-lg border border-border/50"
@@ -193,13 +198,23 @@ const handleValidation = async () => {
                       {step.name}
                     </div>
                     <div className={`text-sm ${!isActive ? 'text-gray-400 dark:text-gray-500' : 'text-muted-foreground'}`}>
+                    <div className={`text-sm ${!isActive ? 'text-gray-400 dark:text-gray-500' : 'text-muted-foreground'}`}>
   {step.id === 2 && step.status === 'valide' && step.timestamps.valide ? (
     <span className="text-green-600">
       {step.timestamps.valide.date} à {step.timestamps.valide.time}
     </span>
+  ) : step.id === 4.5 && client?.RAC?.amount ? (
+    <>
+      {getStepLabel(step.id)}<br />
+      <span className="font-semibold text-blue-600">
+        Montant à récupérer : {client.RAC.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+      </span>
+    </>
   ) : (
     getStepLabel(step.id)
   )}
+</div>
+
 </div>
                   </div>
                   {step.status !== 'valide' && (
