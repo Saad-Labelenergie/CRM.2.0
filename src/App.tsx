@@ -24,6 +24,7 @@ import { SAVProvider } from './contexts/sav-context';
 import VehiculesPage from './components/vehicule/vehicule';
 import { TicketDetailPage } from './components/sav/ticket-detail-page';
 import { UserProfile } from './components/users/user-profile';
+import { PrintIntervention } from './components/calendar/components/print-intervention';
 
 // Composant de protection de route
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -74,6 +75,7 @@ function App() {
                     <Route path="/sav/:ticketId" element={<TicketDetailPage />} />
                     // Add this route inside your Routes component
                     <Route path="/profile" element={<UserProfile />} />
+                    <Route path="/print-intervention/:id" element={<PrintIntervention />} />
                   </Routes>
                 </Layout>
               </SAVProvider>

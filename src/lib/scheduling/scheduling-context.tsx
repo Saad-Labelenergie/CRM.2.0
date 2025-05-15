@@ -229,16 +229,16 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  const updateProjectMaterials = async (projectId: string, materials: { id: number; name: string; status: 'installed' | 'not_installed'; }[]) => {
+  const updateProjectMaterials = async (projectId: string, materials: { id: number; name: string; status: 'installed' | 'not_installed'; comments?: string; }[]) => {
     const project = projects.find(p => p.id === projectId);
     if (!project) return;
-
+  
     // Check if all materials are installed
     const allInstalled = materials.every(m => m.status === 'installed');
     const anyInstalled = materials.some(m => m.status === 'installed');
     const today = new Date();
     const startDate = new Date(project.startDate);
-
+  
     // Determine new status
     let newStatus = project.status;
     if (allInstalled) {
@@ -250,9 +250,9 @@ export function SchedulingProvider({ children }: { children: React.ReactNode }) 
     } else {
       newStatus = 'en_attente';
     }
-
+  
     await updateProject(projectId, {
-      materials,
+      materials, // Ceci inclut maintenant les commentaires
       status: newStatus
     });
   };
@@ -448,6 +448,7 @@ interface LoadingRecord {
     status: 'not_loaded' | 'loaded';
     updatedAt: Date;
     updatedBy?: string;
+    comments?: string; // Ajouter le champ comments
   }[];
   documentsSubmitted: boolean;
   progress: number;
