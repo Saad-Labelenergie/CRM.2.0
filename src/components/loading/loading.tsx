@@ -18,10 +18,12 @@ interface Project {
   projectId?: string;
   documentsSubmitted?: boolean; 
 }
+// Update the Material interface to include comments
 interface Material {
   id: number;
   name: string;
-  status: 'not_loaded' | 'loaded' | 'installed' | 'not_installed';
+  status: 'loaded' | 'not_loaded' | 'installed' | 'not_installed';
+  comments?: string; // Add comments field
 }
 interface TeamWithLoad {
   id: string;
@@ -221,46 +223,48 @@ export function Loading() {
           id: material.id,
           name: material.name,
           status: material.status === 'loaded' ? 'installed' as const : 
-                 material.status === 'not_loaded' ? 'not_installed' as const :
-                 material.status // Keep as is if already 'installed' or 'not_installed'
-        };
-      }); 
-      await updateProjectMaterials(projectId, formattedMaterials);
-      const relatedAppointment = appointments.find(app => 
-        app.projectId === projectId
-      );
-      
-      if (relatedAppointment) {
-        await updateAppointmentMaterials(relatedAppointment.id, formattedMaterials);
-      }
-      
-      // Mettre à jour l'état local avec les matériaux mis à jour
-      setTeamsWithLoad(prevTeams => {
-        return prevTeams.map(team => ({
-          ...team,
-          projects: team.projects.map(project => {
-            if (project.projectId === projectId || project.id === projectId) {
-              console.log("Updating local project materials:", materials);
-              // Stocker les matériaux avec le statut d'affichage correct
-              return { 
-                ...project, 
-                materials: [...materials] 
-              };
-            }
-            return project;
-          })
-        }));
-      });
-      
-      // Enregistrer les données dans le localStorage pour la persistance
-      const localStorageKey = `project_materials_${projectId}`;
-      localStorage.setItem(localStorageKey, JSON.stringify(materials));
-      
-      setIsMaterialModalOpen(false);
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour des matériaux:', error);
-    }
-  };
+                   material.status === 'not_loaded' ? 'not_installed' as const :
+                   material.status, // Keep as is if already 'installed' or 'not_installed'
+                   // Préserver les commentaires lors de la mise à jour
+                   comments: material.comments || ''
+                 };
+                 }) 
+                 await updateProjectMaterials(projectId, formattedMaterials);
+                 const relatedAppointment = appointments.find(app => 
+                   app.projectId === projectId
+                 );
+                 
+                 if (relatedAppointment) {
+                   await updateAppointmentMaterials(relatedAppointment.id, formattedMaterials);
+                 }
+                 
+                 // Mettre à jour l'état local avec les matériaux mis à jour
+                 setTeamsWithLoad(prevTeams => {
+                   return prevTeams.map(team => ({
+                     ...team,
+                     projects: team.projects.map(project => {
+                       if (project.projectId === projectId || project.id === projectId) {
+                         console.log("Updating local project materials:", materials);
+                         // Stocker les matériaux avec le statut d'affichage correct
+                         return { 
+                           ...project, 
+                           materials: [...materials] 
+                         };
+                       }
+                       return project;
+                     })
+                   }));
+                 });
+                 
+                 // Enregistrer les données dans le localStorage pour la persistance
+                 const localStorageKey = `project_materials_${projectId}`;
+                 localStorage.setItem(localStorageKey, JSON.stringify(materials));
+                 
+                 setIsMaterialModalOpen(false);
+               } catch (error) {
+                 console.error("Error updating materials:", error);
+               }
+             };
   // Calcul des statistiques globales
   const totalTeams = teamsWithLoad.length;
   const totalProjects = teamsWithLoad.reduce((sum, team) => sum + team.projects.length, 0);
@@ -481,17 +485,25 @@ export function Loading() {
                             {project.materials.map((material) => (
                               <div 
                                 key={material.id} 
-                                className={`flex items-center p-2 rounded-md text-xs ${
+                                className={`flex flex-col p-2 rounded-md text-xs ${
                                   material.status === 'loaded' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
                                   'bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400'
                                 }`}
                               >
-                                {material.status === 'loaded' ? (
-                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                ) : (
-                                  <Package className="w-3 h-3 mr-1" />
+                                <div className="flex items-center">
+                                  {material.status === 'loaded' ? (
+                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                  ) : (
+                                    <Package className="w-3 h-3 mr-1" />
+                                  )}
+                                  {material.name}
+                                </div>
+                                {/* Display comment if it exists */}
+                                {material.comments && (
+                                  <div className="mt-1 text-xs italic text-muted-foreground border-t border-border/30 pt-1">
+                                    "{material.comments}"
+                                  </div>
                                 )}
-                                {material.name}
                               </div>
                             ))}
                           </div>
