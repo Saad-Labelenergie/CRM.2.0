@@ -34,7 +34,7 @@
     "headlessui": "^0.0.0",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
-    "lucide-react": "^0.344.0",
+    "lucide-react": "^0.510.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.22.1",

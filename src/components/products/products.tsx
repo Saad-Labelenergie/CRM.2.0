@@ -22,7 +22,8 @@ import {
   Layers,
   AlertTriangle,
   PieChart,
-  
+  CircleAlert,
+  TriangleAlert 
 } from 'lucide-react';
 import { NewProductModal } from './components/new-product-modal';
 import { ManageFournisseursModal } from './components/manage-fournisseur-modal';
@@ -438,6 +439,7 @@ const yDomain = [-absMax, absMax]; // toujours centré autour de 0
                 <th className="text-left p-4 font-medium text-muted-foreground">Stock Réel</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Stock Réservé</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Stock Retour</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Alert</th>
 
                 {/* <th className="text-right p-4 font-medium text-muted-foreground">Prix</th> */}
                 {/* <th className="text-center p-4 font-medium text-muted-foreground">Actions</th> */}
@@ -470,6 +472,18 @@ const yDomain = [-absMax, absMax]; // toujours centré autour de 0
                   <td>
                     {product.stock?.returned || 0} unités
                   </td>
+                  <td className="p-4">
+  <div className="flex items-center gap-2">
+    {(product.stock?.current ?? 0) <= 0 && (
+      <TriangleAlert className="w-4 h-4 text-red-500" />
+    )}
+    {(product.stock?.current ?? 0) > 0 &&
+      (product.stock?.current ?? 0) < (product.stock?.optimal ?? 0) && (
+        <CircleAlert className="w-4 h-4 text-yellow-500" />
+    )}
+  </div>
+</td>
+
                   {/* <td className="p-4 text-right">
                     {product.purchasePrice?.toFixed(2) || '0.00'} €
                   </td> */}
