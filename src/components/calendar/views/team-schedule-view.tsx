@@ -284,22 +284,30 @@ export function TeamScheduleView({ filteredAppointments, filteredTeams }: TeamSc
         }
   // 🔁 Mettre à jour le statut du projet lié à "annuler"
   if (selectedAppointment.projectId) {
-    const projectRef = doc(db, 'projects', selectedAppointment.projectId);
-    await updateDoc(projectRef, {
-      status: 'annuler',
-      cancellationReason: 'rendez-vous supprimé',
-      updatedAt: new Date()
-    });
+    try {
+      const projectRef = doc(db, 'projects', selectedAppointment.projectId);
+      await updateDoc(projectRef, {
+        status: 'annuler',
+        cancellationReason: 'rendez-vous supprimé',
+        updatedAt: new Date()
+      });
   
-    // 🔄 Optionnel : mise à jour de l'UI en temps réel
-    window.dispatchEvent(new CustomEvent('project-status-updated', {
-      detail: {
-        projectId: selectedAppointment.projectId,
-        appointmentId: selectedAppointment.id,
-        status: 'annuler'
-      }
-    }));
+      console.log('✅ Statut du projet mis à jour pour', selectedAppointment.projectId);
+  
+      window.dispatchEvent(new CustomEvent('project-status-updated', {
+        detail: {
+          projectId: selectedAppointment.projectId,
+          appointmentId: selectedAppointment.id,
+          status: 'annuler'
+        }
+      }));
+    } catch (err) {
+      console.error('❌ Erreur lors de la mise à jour du statut du projet:', err);
+    }
+  } else {
+    console.warn('⚠️ Aucun projectId trouvé pour ce rendez-vous.');
   }
+  
         // 🗑️ Supprimer le rendez-vous
         await deleteAppointment(appointmentToDelete);
   

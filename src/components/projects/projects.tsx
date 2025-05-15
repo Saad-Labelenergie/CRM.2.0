@@ -241,7 +241,9 @@ const [currentPage, setCurrentPage] = useState(1);
 const itemsPerPage = 6;
 
 const filteredProjects = projects.filter(project => {
-  const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) || project.client.name.toLowerCase().includes(searchTerm.toLowerCase());
+  const matchesSearch =
+  (project.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+  (project.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
   const matchesStatus = activeTab === 'all' || project.status === activeTab;
   const matchesTeam = selectedTeam === 'all' || project.team === selectedTeam;
   return matchesSearch && matchesStatus && matchesTeam;
