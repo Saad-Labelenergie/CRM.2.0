@@ -14,16 +14,18 @@ import {
   Mail,
   AlertCircle,
   ArrowRight,
-  Check
+  Check,
+  Edit2,
+  Printer
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { UpdateClientModal } from './change-semain';
+import { EditProjectProductModal } from './edit-project-product-modal';
 import { useScheduling } from '../../../lib/scheduling/scheduling-context';
 import { updateProjectStatus } from '../../../lib/hooks/useProjects';
 import { doc, updateDoc, collection, query, where, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
-
 // Définir les couleurs de statut comme dans team-schedule-view.tsx
 const PROJECT_STATUS_COLORS = {
   'confirmer': '#E67C73',  // Confirmé - rouge clair
@@ -91,6 +93,7 @@ interface ProjectDetailsModalProps {
 export function ProjectDetailsModal({ isOpen, onClose, appointment }: ProjectDetailsModalProps) {
   const navigate = useNavigate();
   const [isChangeDateModalOpen, setIsChangeDateModalOpen] = useState(false);
+  const [isEditProductModalOpen, setIsEditProductModalOpen] = useState(false);
   const { updateAppointmentTeam } = useScheduling();
   const [associatedProject, setAssociatedProject] = useState<any>(null);
   
@@ -111,6 +114,9 @@ export function ProjectDetailsModal({ isOpen, onClose, appointment }: ProjectDet
         if (!querySnapshot.empty) {
           const projectData = querySnapshot.docs[0].data();
           console.log("Données brutes du projet:", projectData);
+          
+          // Vérifier spécifiquement les données RAC
+          console.log("Données RAC:", projectData.RAC);
           
           // S'assurer que les données du projet sont correctement structurées
           setAssociatedProject({
@@ -235,6 +241,88 @@ export function ProjectDetailsModal({ isOpen, onClose, appointment }: ProjectDet
     
     fetchAssociatedProject();
   }, [appointment]);
+
+  // Fonction pour récupérer spécifiquement les données RAC
+  useEffect(() => {
+    const fetchRACData = async () => {
+      if (!appointment) return;
+      
+      try {
+        // Si nous avons un ID de projet associé, essayons de récupérer les données RAC directement
+        if (associatedProject?.id) {
+          console.log("Tentative de récupération des données RAC pour le projet:", associatedProject.id);
+          const projectRef = doc(db, 'projects', associatedProject.id);
+          const projectSnap = await getDoc(projectRef);
+          
+          if (projectSnap.exists()) {
+            const projectData = projectSnap.data();
+            console.log("Données complètes du projet:", projectData);
+            console.log("Vérification des données RAC:", projectData.RAC);
+            
+            // Mettre à jour l'état avec les données RAC
+            if (projectData.RAC) {
+              setAssociatedProject((prev: any) => ({
+                ...prev,
+                RAC: projectData.RAC
+              }));
+            }
+          }
+        } else {
+          // Si nous n'avons pas d'ID de projet, essayons de chercher par le titre de l'appointment
+          console.log("Recherche de projet par titre:", appointment.title);
+          const projectsRef = collection(db, 'projects');
+          const q = query(projectsRef, where('name', '==', appointment.title));
+          const querySnapshot = await getDocs(q);
+          
+          if (!querySnapshot.empty) {
+            const projectData = querySnapshot.docs[0].data();
+            const projectId = querySnapshot.docs[0].id;
+            console.log("Projet trouvé par titre:", projectData);
+            console.log("Données RAC du projet trouvé:", projectData.RAC);
+            
+            setAssociatedProject((prev: any) => ({
+              ...prev,
+              id: projectId,
+              ...projectData
+            }));
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération des données RAC:", error);
+      }
+    };
+    
+    fetchRACData();
+  }, [appointment, associatedProject?.id]);
+  
+
+  // Ajouter un écouteur d'événement pour rafraîchir les données après une mise à jour des produits
+  useEffect(() => {
+    const handleProductUpdate = (event: CustomEvent) => {
+      console.log("Événement de mise à jour des produits détecté:", event.detail);
+      
+      // Mettre à jour l'état local avec les nouveaux produits
+      if (event.detail.projectId === associatedProject?.id) {
+        console.log("Mise à jour des produits dans le modal de détails");
+        setAssociatedProject((prev: any) => ({
+          ...prev,
+          products: event.detail.products,
+          name: event.detail.products[0]?.name
+        }));
+      }
+    };
+
+    // Ajouter l'écouteur d'événement
+    window.addEventListener('project-product-updated', handleProductUpdate as EventListener);
+    
+    // Nettoyer l'écouteur d'événement
+    return () => {
+      window.removeEventListener('project-product-updated', handleProductUpdate as EventListener);
+    };
+  }, [associatedProject?.id]);
+  
+  // Ajoutez un log pour vérifier les données RAC dans le rendu
+  console.log("RAC dans associatedProject:", associatedProject?.RAC);
   
   if (!appointment) return null;
 
@@ -272,7 +360,10 @@ export function ProjectDetailsModal({ isOpen, onClose, appointment }: ProjectDet
   };
 
   const handleViewClient = () => {
-    navigate(`/clients/${appointment.client.id}`);
+    // Use the clientId from associatedProject if available, otherwise use the appointment client id
+    const clientId = associatedProject?.clientId || appointment.client.id;
+    console.log("Navigating to client with ID:", clientId);
+    navigate(`/clients/${clientId}`);
     onClose();
   };
 
@@ -363,6 +454,16 @@ export function ProjectDetailsModal({ isOpen, onClose, appointment }: ProjectDet
     }
   };
 
+  // Ajouter cette fonction pour gérer la mise à jour des produits
+  const handleProductUpdate = () => {
+    if (associatedProject?.id) {
+      setIsEditProductModalOpen(true);
+    } else {
+      console.log("Aucun projet associé trouvé pour modifier le produit");
+      // Optionnellement afficher une notification toast ici
+    }
+  };
+
   return (
     <>
       <AnimatePresence>
@@ -386,12 +487,25 @@ export function ProjectDetailsModal({ isOpen, onClose, appointment }: ProjectDet
                   <FileText className="w-5 h-5 mr-2 text-primary" />
                   Détails du chantier
                 </h2>
-                <button
-                  onClick={onClose}
-                  className="p-2 hover:bg-accent rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const printUrl = `/print-intervention/${appointment.id}`;
+                      window.open(printUrl, '_blank');
+                    }}
+                    className="p-2 hover:bg-accent rounded-lg transition-colors flex items-center gap-1 text-sm"
+                    title="Imprimer la fiche d'intervention"
+                  >
+                    <Printer className="w-4 h-4" />
+                    Imprimer
+                  </button>
+                  <button
+                    onClick={onClose}
+                    className="p-2 hover:bg-accent rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-6">
@@ -435,59 +549,122 @@ export function ProjectDetailsModal({ isOpen, onClose, appointment }: ProjectDet
                           Statut : {statusDisplayName}
                         </span>
                       </div>
+                      
+                      {/* Ajout de l'affichage du RAC */}
+                      {associatedProject?.RAC && associatedProject.RAC.hasToCollect && (
+                        <div className="flex items-center text-sm mt-2">
+                          <div className="w-4 h-4 mr-2 flex items-center justify-center text-amber-500">€</div>
+                          <span className="font-medium text-amber-500">
+                            RAC : {associatedProject.RAC.amount} €
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Description */}
                 <div className="bg-accent/50 rounded-lg p-4">
-                  <h3 className="font-medium mb-4">Produit</h3>
-                  <p className="text-sm">{appointment.title}</p>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-medium">Produit{products.length > 1 ? 's' : ''}</h3>
+                    {associatedProject?.id && (
+                      <button 
+                        onClick={handleProductUpdate}
+                        className="p-1 hover:bg-background rounded-md transition-colors"
+                        title="Modifier les produits"
+                      >
+                        <Edit2 className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="text-sm">
+                    {products.length > 0 ? (
+                      <div className="flex flex-col gap-1">
+                        {products.map((product: any, index: number) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <Package className="w-3 h-3 text-muted-foreground" />
+                            <span>{product.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p>{appointment.title}</p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Section des commentaires - Always show the section, with a message if no comments */}
                 <div className="bg-accent/50 rounded-lg p-4">
                   <h3 className="font-medium mb-4">Commentaires</h3>
                   
-                  {/* Show comments if they exist */}
-                  {appointment?.commentaires && appointment.commentaires.length > 0 ? (
+                  {/* Debug logging - Fixed to return null instead of void */}
+                  {(() => {
+                    console.log('Comment debugging:', {
+                      appointmentComments: appointment.commentaires,
+                      projectComments: associatedProject?.commentaires,
+                      rawProject: associatedProject
+                    });
+                    return null;
+                  })()}
+                  
+                  {/* Show comments if they exist - handle different data structures */}
+                  {appointment.commentaires && appointment.commentaires.length > 0 ? (
                     <>
                       {/* Commentaires du rendez-vous */}
                       {appointment.commentaires.map((comment, index) => (
-                        <div key={`appointment-${comment.id}`} className="mb-4">
+                        <div key={`appointment-${index}-${comment.id || ''}`} className="mb-4">
                           <div className="flex justify-between text-sm text-muted-foreground mb-1">
-                            <span>{comment.authorName}</span>
-                            <span>{format(new Date(comment.date), 'dd/MM/yyyy HH:mm', { locale: fr })}</span>
+                            <span>{comment.authorName || 'Utilisateur'}</span>
+                            <span>{comment.date ? format(new Date(comment.date), 'dd/MM/yyyy HH:mm', { locale: fr }) : ''}</span>
                           </div>
                           <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
-                          {appointment.commentaires && 
-                          index < appointment.commentaires.length - 1 && (
+                          {index < (appointment.commentaires?.length || 0) - 1 && (
                             <hr className="my-2 border-border/50" />
                           )}
                         </div>
                       ))}
                     </>
-                  ) : associatedProject?.commentaires && associatedProject.commentaires.length > 0 ? (
+                  ) : associatedProject?.commentaires ? (
                     <>
-                      {/* Commentaires du projet associé */}
-                      {associatedProject.commentaires.map((comment: {
-                        authorName: string;
-                        content: string;
-                        date: string;
-                        id: string;
-                      }, index: number) => (
-                        <div key={`project-${comment.id || index}`} className="mb-4">
-                          <div className="flex justify-between text-sm text-muted-foreground mb-1">
-                            <span>{comment.authorName || "Utilisateur"}</span>
-                            <span>{comment.date ? format(new Date(comment.date), 'dd/MM/yyyy HH:mm', { locale: fr }) : ""}</span>
-                          </div>
-                          <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
-                          {associatedProject.commentaires && 
-                          index < associatedProject.commentaires.length - 1 && (
-                            <hr className="my-2 border-border/50" />
-                          )}
-                        </div>
-                      ))}
+                      {/* Handle both array and object structures for project comments */}
+                      {Array.isArray(associatedProject.commentaires) ? (
+                        associatedProject.commentaires.length > 0 ? (
+                          associatedProject.commentaires.map((comment: any, index: number) => (
+                            <div key={`project-array-${index}-${comment.id || ''}`} className="mb-4">
+                              <div className="flex justify-between text-sm text-muted-foreground mb-1">
+                                <span>{comment.authorName || "Utilisateur"}</span>
+                                <span>{comment.date ? format(new Date(comment.date), 'dd/MM/yyyy HH:mm', { locale: fr }) : ""}</span>
+                              </div>
+                              <p className="text-sm whitespace-pre-wrap">{typeof comment.content === 'string' ? comment.content : JSON.stringify(comment)}</p>
+                              {index < (associatedProject.commentaires?.length || 0) - 1 && (
+                                <hr className="my-2 border-border/50" />
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Aucun commentaire disponible</p>
+                        )
+                      ) : typeof associatedProject.commentaires === 'object' ? (
+                        // Handle object structure (non-array)
+                        Object.keys(associatedProject.commentaires).length > 0 ? (
+                          Object.entries(associatedProject.commentaires).map(([key, comment]: [string, any], index: number) => (
+                            <div key={`project-obj-${index}-${key}`} className="mb-4">
+                              <div className="flex justify-between text-sm text-muted-foreground mb-1">
+                                <span>{comment.authorName || "Utilisateur"}</span>
+                                <span>{comment.date ? format(new Date(comment.date), 'dd/MM/yyyy HH:mm', { locale: fr }) : ""}</span>
+                              </div>
+                              <p className="text-sm whitespace-pre-wrap">{typeof comment.content === 'string' ? comment.content : JSON.stringify(comment)}</p>
+                              {index < Object.keys(associatedProject.commentaires).length - 1 && (
+                                <hr className="my-2 border-border/50" />
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Aucun commentaire disponible</p>
+                        )
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Aucun commentaire disponible</p>
+                      )}
                     </>
                   ) : (
                     <p className="text-sm text-muted-foreground">Aucun commentaire disponible</p>
@@ -531,7 +708,33 @@ export function ProjectDetailsModal({ isOpen, onClose, appointment }: ProjectDet
                     )}
                   </div>
                 </div>
+                
 
+                {/* Section RAC - Affichée même s'il n'y a pas un RAC à collecter */}
+                <div className="bg-accent/50 rounded-lg p-4">
+                  <h3 className="font-medium mb-4 flex items-center">
+                    <span className="mr-2 text-muted-foreground">€</span>
+                    Reste à Charge (RAC)
+                  </h3>
+                  
+                  {associatedProject?.RAC && associatedProject.RAC.hasToCollect === true ? (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-amber-700 dark:text-amber-400">Montant à collecter</span>
+                        <span className="text-lg font-bold text-amber-700 dark:text-amber-400">{associatedProject.RAC.amount} €</span>
+                      </div>
+                      <div className="text-xs text-amber-600 dark:text-amber-500 bg-amber-100 dark:bg-amber-800/30 p-2 rounded">
+                        <p>Ce montant doit être collecté par l'équipe d'installation lors de l'intervention.</p>
+                        <p className="mt-1">Client : {appointment.client.name}</p>
+                        {associatedProject?.clientData?.contact?.phone && (
+                          <p className="mt-1">Téléphone : {associatedProject.clientData.contact.phone}</p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Aucun reste à charge à collecter pour cette intervention.</p>
+                  )}
+                </div>
 
                 <div className="flex justify-end pt-4 space-x-2">
                   {/* Afficher le bouton Confirmer seulement si le statut n'est pas déjà confirmé ou terminé */}
@@ -578,8 +781,15 @@ export function ProjectDetailsModal({ isOpen, onClose, appointment }: ProjectDet
         appointment={appointment}
         teams={[]} // Passer les équipes disponibles si nécessaire
       />
+
+      {associatedProject?.id && (
+        <EditProjectProductModal
+          isOpen={isEditProductModalOpen}
+          onClose={() => setIsEditProductModalOpen(false)}
+          projectId={associatedProject.id}
+          currentProducts={associatedProject.products || []}
+        />
+      )}
     </>
   );
-}
-
-
+};
