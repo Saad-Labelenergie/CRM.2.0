@@ -138,7 +138,7 @@ export function PrintIntervention() {
       <div id="print-content" className="print-container p-8 max-w-4xl mx-auto bg-white">
         {/* En-tête */}
         <div className="border-b-2 border-gray-300 pb-4 mb-6">
-          <h1 className="text-2xl font-bold text-center mb-2">FICHE D'INTERVENTION</h1>
+          <h1 className="text-2xl font-bold text-center mb-2">Bon de livraison</h1>
           <div className="flex justify-between items-center">
             <div>
               <p className="text-sm">Référence: {appointment.id.substring(0, 8).toUpperCase()}</p>

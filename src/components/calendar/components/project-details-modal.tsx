@@ -737,17 +737,18 @@ export function ProjectDetailsModal({ isOpen, onClose, appointment }: ProjectDet
                 </div>
 
                 <div className="flex justify-end pt-4 space-x-2">
-                  {/* Afficher le bouton Confirmer seulement si le statut n'est pas déjà confirmé ou terminé */}
-                  {mappedStatus !== 'confirmer' && mappedStatus !== 'terminer' && (
-                    <motion.button
+
+                    {/* Afficher le bouton Confirmer seulement si le statut est "placer" */}
+                    {mappedStatus === 'placer' && (
+                      <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={handleConfirmProject}
                       className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
-                    >
-                      <Check className="w-4 h-4 mr-2" />
+                       >
+                       <Check className="w-4 h-4 mr-2" />
                       Confirmer
-                    </motion.button>
+                   </motion.button>
                   )}
                   <motion.button
                     whileHover={{ scale: 1.02 }}
