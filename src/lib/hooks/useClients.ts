@@ -1,7 +1,7 @@
 import {Product} from './useProducts';
 import { useFirebase } from './useFirebase';
 
-interface Client {
+export interface Client {
   id: string;
   name: string;
   status?: 'completed' | 'pending' | 'in-progress';
@@ -13,6 +13,10 @@ interface Client {
     phone: string;
     secondaryEmail?: string;
     secondaryPhone?: string;
+  };
+  regie?: {
+    id: string;
+    name: string;
   };
 
   Product?: string;
@@ -30,6 +34,7 @@ interface Client {
     hasToCollect: boolean;
     comment?: string;
   };
+
 
   tag?: string;
   createdAt: Date;

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Tags, User, AlertCircle, Phone, Mail } from 'lucide-react';
+import { Tags, User, AlertCircle, Phone, Mail,Building } from 'lucide-react';
+import { useRegie } from '../../../../lib/hooks/useregie';
 
 const TAGS = ['MPR', 'Financement'] as const;
 type Tag = typeof TAGS[number];
@@ -23,32 +24,73 @@ interface ContactStepProps {
 export function ContactStep({ formData, errors, onUpdate }: ContactStepProps) {
 const phoneRegex = /^0\d{9}$/;
 const nameRegex = /^[A-Za-zÀ-ÿ\s\-']+$/;
+const { regies } = useRegie();
 
   return (
     <div className="space-y-6">
-      {/* Étiquettes */}
-      <div className="bg-accent/50 rounded-lg p-4 space-y-4">
-        <h3 className="font-medium flex items-center">
-          <Tags className="w-4 h-4 mr-2" />
-          Étiquette
-        </h3>
-        <div className="flex flex-wrap gap-2">
-          {TAGS.map((tag) => (
-            <button
-              key={tag}
-              type="button"
-              onClick={() => onUpdate('tag', formData.tag === tag ? null : tag)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                formData.tag === tag
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-accent hover:bg-accent/80'
-              }`}
-            >
-              {tag}
-            </button>
-          ))}
-        </div>
-      </div>
+{/* Étiquette + Régie côte à côte */}
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  {/* Étiquette */}
+  <div className="bg-accent/50 rounded-lg p-4 space-y-4">
+    <h3 className="font-medium flex items-center">
+      <Tags className="w-4 h-4 mr-2" />
+      Étiquette
+    </h3>
+    <div className="flex flex-wrap gap-2">
+      {TAGS.map((tag) => (
+        <button
+          key={tag}
+          type="button"
+          onClick={() => onUpdate('tag', formData.tag === tag ? null : tag)}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            formData.tag === tag
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted hover:bg-muted/70'
+          }`}
+        >
+          {tag}
+        </button>
+      ))}
+    </div>
+  </div>
+
+  {/* Régie */}
+  <div className="bg-accent/50 rounded-lg p-4 space-y-4">
+  <h3 className="font-medium flex items-center">
+    <Building className="w-4 h-4 mr-2" />
+    Régie *
+  </h3>
+  <select
+    value={formData.regie?.id || ''}
+    onChange={(e) => {
+      const selectedRegie = regies.find(r => r.id === e.target.value);
+      if (selectedRegie) {
+        onUpdate('regie', {
+          id: selectedRegie.id,
+          name: selectedRegie.nom
+        });
+      } else {
+        onUpdate('regie', undefined);
+      }
+    }}
+    className="w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+  >
+    <option value="">-- Sélectionner une régie --</option>
+    {regies.map(regie => (
+      <option key={regie.id} value={regie.id}>
+        {regie.nom}
+      </option>
+    ))}
+  </select>
+  {errors['regie'] && (
+    <div className="text-destructive text-sm mt-1 flex items-center">
+      <AlertCircle className="w-4 h-4 mr-1" />
+      {errors['regie']}
+    </div>
+  )}
+</div>
+
+</div>
 
       {/* Contact */}
       <div className="bg-accent/50 rounded-lg p-4 space-y-4">

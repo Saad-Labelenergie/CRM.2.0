@@ -9,6 +9,7 @@ import { db } from '../../lib/firebase';
 import {
   collection, addDoc, updateDoc, doc, deleteDoc
 } from 'firebase/firestore';
+import { Link } from 'react-router-dom';
 
 export default function Regie() {
   const { regies, loading } = useRegie();
@@ -121,21 +122,20 @@ export default function Regie() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             
             {paginatedRegies.map((regie) => (
-              <div key={regie.id} className="p-4 border rounded-lg bg-white dark:bg-muted shadow-sm flex justify-between items-center">
-                <Building />
-                <div>
-                  <h3 className="font-semibold text-lg">{regie.nom}</h3>
-                  <p className="text-sm text-muted-foreground">ID : {regie.id}</p>
-                </div>
-                <button
-  onClick={() => setRegieToDelete({ id: regie.id, nom: regie.nom })}
-  className="text-red-600 hover:text-red-800 transition"
-  title="Supprimer"
+              <Link
+  key={regie.id}
+  to={`/regie/${regie.id}`}
+  state={{ name: regie.nom }}
+  className="block p-4 border rounded-lg bg-white dark:bg-muted shadow-sm hover:bg-accent/30 transition cursor-pointer"
 >
-  <Trash2 className="w-5 h-5" />
-</button>
-
-              </div>
+  <div className="flex justify-between items-center">
+    <div>
+      <h3 className="font-semibold text-lg">{regie.nom}</h3>
+      <p className="text-sm text-muted-foreground">ID : {regie.id}</p>
+    </div>
+    <Building className="text-muted-foreground" />
+  </div>
+</Link>
             ))}
           </div>
           </>

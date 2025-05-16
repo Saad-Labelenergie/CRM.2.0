@@ -48,6 +48,10 @@ const [paymentAmount, setPaymentAmount] = useState('');
       postalCode: '',
       country: 'France',
     },
+    regie: undefined as { 
+      id: string; 
+      name: string 
+    } | undefined,
     tag: null as 'MPR' | 'Financement' | null,
     selectedProducts: [] as any[],
     installationDate: '',
@@ -301,6 +305,7 @@ const [paymentAmount, setPaymentAmount] = useState('');
             durationInDays,
             durationText
           },
+          regie: formData.regie,
           RAC: {
             hasToCollect: hasPayment,
             amount: hasPayment ? parseFloat(paymentAmount) : 0
