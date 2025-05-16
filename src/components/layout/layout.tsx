@@ -6,6 +6,7 @@ import {
   LayoutDashboard, 
   Users, 
   Building2,
+  Building,
   Package,
   Calendar as CalendarIcon,
   Bell,
@@ -32,6 +33,7 @@ import { db } from '../../lib/firebase';
 
 const navigation = [
   { name: 'Tableau de bord', href: '/', icon: LayoutDashboard, roles: ['administrateur', 'technicien', 'manager'] },
+  {name:'Régie', href:'/regie',icon:Building,roles:['administrateur']},
   { name: 'Dossiers', href: '/clients', icon: FolderOpen, roles: ['administrateur'] },
   { name: 'Produits', href: '/products', icon: Package, roles: ['administrateur'] },
   { name: 'Planning', href: '/calendar', icon: CalendarIcon, roles: ['administrateur', 'technicien', 'manager'] },
