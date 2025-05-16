@@ -125,11 +125,11 @@ export function SAVDetails({ teamId, teamName }: Props) {
                   <Clock className="w-4 h-4 mr-1" /> Installé le {new Date(ticket.installationDate).toLocaleDateString('fr-FR')
                   }
                 </div>
-                <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                {/* <span className={`px-2 py-1 text-xs rounded-full font-medium ${
                   ticket.priority === 'haute' ? 'bg-red-100 text-red-700' : ticket.priority === 'moyenne' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'
                 }`}>
                   Priorité {ticket.priority}
-                </span>
+                </span> */}
               </div>
             </motion.div>
           ))}
