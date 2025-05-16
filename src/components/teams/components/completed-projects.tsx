@@ -192,16 +192,16 @@ export function CompletedProjects({ teamID }: CompletedProjectsProps) {
                       {typeof project.client === 'object' ? project.client?.name : project.client}
                     </p>
                   </div>
-                  <div className="text-right">
+                  {/* <div className="text-right">
                     <div className="flex items-center justify-end">
                       <Star className="w-4 h-4 text-yellow-500 fill-yellow-500 mr-1" />
                       <span className="font-medium">{project.satisfaction ?? '-'}</span>
                     </div>
                     <p className="text-sm text-muted-foreground">{project.date ?? '-'}</p>
-                  </div>
+                  </div> */}
                 </div>
 
-                <div className="mt-2 flex items-center justify-between">
+                {/* <div className="mt-2 flex items-center justify-between">
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Clock className="w-4 h-4 mr-1" />
                     Durée : {project.duration ?? '-'}
@@ -209,7 +209,7 @@ export function CompletedProjects({ teamID }: CompletedProjectsProps) {
                   <span className="text-xs px-2 py-1 rounded-full bg-orange-100 text-orange-700">
                     {project.type}
                   </span>
-                </div>
+                </div> */}
 
                 <div className="flex justify-end mt-4">
                   <motion.button
